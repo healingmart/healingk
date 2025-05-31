@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
   
   try {
     const region = req.query.region || '서울';
-    const apiKey = process.env.KOREA_TOURISM_API_KEY;
+    const apiKey = process.env.TOURISM_API_KEY;
     
     if (!apiKey) {
       return res.json({
