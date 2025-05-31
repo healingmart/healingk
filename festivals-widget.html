@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>힐링K 축제 위젯</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        .festival-widget {
+            max-width: 450px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border-radius: 20px;
+            padding: 20px;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin: 20px auto;
+        }
+        
+        .widget-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .widget-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .widget-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .festival-tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            background: rgba(255,255,255,0.2);
+            font-weight: 600;
+        }
+        
+        .festival-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .festival-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .festival-item:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(5px);
+        }
+        
+        .festival-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+        
+        .festival-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .festival-status {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+        
+        .festival-status.ongoing {
+            background: rgba(46, 204, 113, 0.8);
+        }
+        
+        .festival-status.upcoming {
+            background: rgba(52, 152, 219, 0.8);
+        }
+        
+        .festival-details {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .festival-location {
+            flex: 1;
+        }
+        
+        .festival-date {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        
+        .festival-stats {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .stats-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .widget-footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .no-festivals {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        /* 스크롤바 스타일 */
+        .festival-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .festival-list::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        
+        .festival-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="festival-widget">
+        <div class="widget-header">
+            <div class="widget-title">🎪 축제 실시간</div>
+            <div class="widget-subtitle">전국 축제 현황</div>
+        </div>
+        
+        <div class="festival-tabs">
+            <button class="tab-btn active" data-tab="ongoing">진행중</button>
+            <button class="tab-btn" data-tab="weekend">주말</button>
+            <button class="tab-btn" data-tab="upcoming">예정</button>
+        </div>
+        
+        <div id="festival-content">
+            <div class="loading">축제 정보 로딩 중...</div>
+        </div>
+        
+        <div class="festival-stats" id="festival-stats" style="display: none;">
+            <div class="stats-row">
+                <span>🎪 전체 축제</span>
+                <span id="total-count">-</span>
+            </div>
+            <div class="stats-row">
+                <span>🔥 진행중</span>
+                <span id="ongoing-count">-</span>
+            </div>
+            <div class="stats-row">
+                <span>🌟 인기지역</span>
+                <span id="popular-region">-</span>
+            </div>
+        </div>
+        
+        <div class="widget-footer">
+            <span id="update-time">업데이트 중...</span> • 
+            <span onclick="refreshFestival()" style="cursor: pointer;">새로고침</span>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'ongoing';
+        let festivalData = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFestivalData();
+            setupTabs();
+            
+            // 10분마다 자동 업데이트
+            setInterval(loadFestivalData, 10 * 60 * 1000);
+        });
+        
+        function setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.dataset.tab;
+                    renderFestivals();
+                });
+            });
+        }
+        
+        async function loadFestivalData() {
+            try {
+                const response = await fetch('/api/festivals');
+                const data = await response.json();
+                
+                if (data.success) {
+                    festivalData = data.data;
+                    renderFestivals();
+                    updateStats();
+                    document.getElementById('update-time').textContent = 
+                        new Date().toLocaleTimeString('ko-KR');
+                } else {
+                    showError('축제 정보를 불러올 수 없습니다.');
+                }
+            } catch (error) {
+                console.error('축제 데이터 로드 오류:', error);
+                showError('네트워크 오류가 발생했습니다.');
+            }
+        }
+        
+        function renderFestivals() {
+            const content = document.getElementById('festival-content');
+            
+            if (!festivalData) {
+                content.innerHTML = '<div class="loading">데이터 로딩 중...</div>';
+                return;
+            }
+            
+            let festivals = [];
+            if (currentTab === 'ongoing') {
+                festivals = festivalData.ongoing || [];
+            } else if (currentTab === 'weekend') {
+                festivals = festivalData.thisWeekend || [];
+            } else if (currentTab === 'upcoming') {
+                festivals = festivalData.upcoming || [];
+            }
+            
+            if (festivals.length === 0) {
+                content.innerHTML = `
+                    <div class="no-festivals">
+                        ${currentTab === 'ongoing' ? '진행중인 축제가 없습니다' : 
+                          currentTab === 'weekend' ? '이번 주말 축제가 없습니다' : 
+                          '예정된 축제가 없습니다'}
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = `
+                <div class="festival-list">
+                    ${festivals.slice(0, 8).map(festival => `
+                        <div class="festival-item" onclick="openFestivalDetail('${festival.id}')">
+                            <div class="festival-header">
+                                <div class="festival-title">${festival.title}</div>
+                                <div class="festival-status ${festival.status}">
+                                    ${festival.status === 'ongoing' ? '진행중' : 
+                                      festival.status === 'upcoming' ? '예정' : '주말'}
+                                </div>
+                            </div>
+                            <div class="festival-details">
+                                <div class="festival-location">📍 ${festival.region} ${festival.location.length > 15 ? festival.location.slice(0, 15) + '...' : festival.location}</div>
+                                <div class="festival-date">${festival.daysLeft || festival.startDate}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            content.innerHTML = html;
+        }
+        
+        function updateStats() {
+            if (!festivalData || !festivalData.stats) return;
+            
+            const stats = festivalData.stats;
+            document.getElementById('total-count').textContent = stats.total + '개';
+            document.getElementById('ongoing-count').textContent = stats.ongoing + '개';
+            document.getElementById('popular-region').textContent = 
+                stats.popularRegions?.[0]?.region || '정보 없음';
+            
+            document.getElementById('festival-stats').style.display = 'block';
+        }
+        
+        function showError(message) {
+            document.getElementById('festival-content').innerHTML = `
+                <div class="no-festivals">${message}</div>
+            `;
+        }
+        
+        function refreshFestival() {
+            document.getElementById('festival-content').innerHTML = 
+                '<div class="loading">새로고침 중...</div>';
+            loadFestivalData();
+        }
+        
+        function openFestivalDetail(festivalId) {
+            // 축제 상세정보 팝업 또는 새 창
+            console.log('축제 상세정보:', festivalId);
+            alert('축제 상세정보 기능은 곧 추가될 예정입니다!');
+        }
+    </script>
+</body>
+</html>
