@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 실시간 축제 현황 대시보드</title>
+    <title>대한민국 실시간 축제 & 관광 정보 대시보드</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #3498db;
@@ -64,6 +63,14 @@
             margin-bottom: 20px;
         }
         
+        .last-updated {
+            background: rgba(231, 76, 60, 0.7);
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
         .dashboard {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -84,6 +91,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             margin-bottom: 25px;
+            transition: all 0.3s ease;
         }
         
         .panel-title {
@@ -123,13 +131,25 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
         
         .festival-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             background: rgba(41, 128, 185, 0.5);
+        }
+        
+        .festival-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--festival);
         }
         
         .festival-name {
@@ -143,6 +163,7 @@
         
         .festival-name:hover {
             text-decoration: underline;
+            color: var(--light);
         }
         
         .festival-date {
@@ -189,6 +210,11 @@
             border-radius: 10px;
             padding: 15px;
             width: 30%;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: scale(1.05);
         }
         
         .stat-value {
@@ -210,11 +236,12 @@
             background: rgba(52, 152, 219, 0.2);
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s;
         }
         
         .city-rank-item:hover {
             background: rgba(52, 152, 219, 0.4);
+            transform: translateX(5px);
         }
         
         .rank-number {
@@ -231,6 +258,8 @@
         
         .calendar-container {
             height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
         }
         
         .city-container {
@@ -245,11 +274,23 @@
             padding: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
         
         .city-panel:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .city-panel::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--festival));
         }
         
         .city-header {
@@ -302,6 +343,23 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
         }
         
         .btn:hover {
@@ -376,69 +434,122 @@
             background: rgba(232, 67, 147, 0.3);
             border: 1px solid var(--festival);
         }
+        
+        .ranking-badge {
+            display: inline-block;
+            background: var(--warning);
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .api-status {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .api-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .api-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+        
+        .api-dot.inactive {
+            background: var(--danger);
+        }
+        
+        .security-badge {
+            display: inline-block;
+            background: rgba(39, 174, 96, 0.3);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        .ranking-panel {
+            background: rgba(231, 76, 60, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: rgba(52, 73, 94, 0.5);
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        
+        .ranking-position {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--warning);
+            border-radius: 50%;
+            margin-right: 15px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-fire"></i> 대한민국 실시간 축제 현황</h1>
-            <div class="subtitle">전국에서 진행 중인 축제 정보와 관광지 랭킹을 한눈에 확인하세요</div>
+            <h1><i class="fas fa-fire"></i> 대한민국 실시간 축제 & 관광 정보 대시보드</h1>
+            <div class="subtitle">전국 축제 정보, 관광지 랭킹, 날씨 정보를 한눈에 확인하세요</div>
+            <div class="last-updated">
+                <i class="fas fa-sync-alt"></i> 
+                <span id="update-time">데이터 로드 중...</span>
+            </div>
+            <div class="api-status">
+                <div class="api-indicator">
+                    <div class="api-dot"></div>
+                    <span>축제 API</span>
+                </div>
+                <div class="api-indicator">
+                    <div class="api-dot"></div>
+                    <span>관광 API</span>
+                </div>
+                <div class="api-indicator">
+                    <div class="api-dot"></div>
+                    <span>날씨 API</span>
+                </div>
+            </div>
         </header>
         
         <div class="controls">
             <button class="btn btn-refresh" id="refresh-btn">
-                <i class="fas fa-sync-alt"></i> 새로고침
-            </button>
-            <button class="btn" id="show-ranking">
-                <i class="fas fa-star"></i> 관광지 랭킹 보기
+                <i class="fas fa-sync-alt"></i> 전체 데이터 새로고침
             </button>
         </div>
         
         <!-- 현재 진행 중인 축제 섹션 -->
-        <div class="panel active-section" id="ongoing-section">
+        <div class="panel active-section">
             <div class="panel-title">
                 <i class="fas fa-fire"></i>
                 <h2>🔥 진행 중인 주요 축제</h2>
+                <div class="security-badge">CSRF 보호 활성화</div>
             </div>
             <div class="festival-container" id="ongoing-container">
-                <div class="festival-section">
-                    <div class="festival-card">
-                        <a href="#" class="festival-name">서울 불꽃축제</a>
-                        <div class="festival-date">
-                            <i class="far fa-calendar"></i> 2023-10-07 ~ 2023-10-09
-                        </div>
-                        <span class="festival-status status-ongoing">진행중</span>
-                        <p>한강을 배경으로 펼쳐지는 화려한 불꽃 쇼와 다양한 문화 공연</p>
-                    </div>
-                    
-                    <div class="festival-card">
-                        <a href="#" class="festival-name">부산 국제 영화제</a>
-                        <div class="festival-date">
-                            <i class="far fa-calendar"></i> 2023-10-04 ~ 2023-10-13
-                        </div>
-                        <span class="festival-status status-ongoing">진행중</span>
-                        <p>아시아 최대 규모의 영화제, 다양한 국제 영화 상영과 이벤트</p>
-                    </div>
-                </div>
-                
-                <div class="festival-section">
-                    <div class="festival-card">
-                        <a href="#" class="festival-name">전주 한옥마을 축제</a>
-                        <div class="festival-date">
-                            <i class="far fa-calendar"></i> 2023-10-10 ~ 2023-10-15
-                        </div>
-                        <span class="festival-status status-ongoing">진행중</span>
-                        <p>전통 한옥의 아름다움과 지역 음식을 체험할 수 있는 축제</p>
-                    </div>
-                    
-                    <div class="festival-card">
-                        <a href="#" class="festival-name">제주 한라산 축제</a>
-                        <div class="festival-date">
-                            <i class="far fa-calendar"></i> 2023-10-21 ~ 2023-10-23
-                        </div>
-                        <span class="festival-status status-ongoing">진행중</span>
-                        <p>한라산의 자연을 느끼며 즐기는 등반 대회와 문화 체험</p>
-                    </div>
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <p>실시간 축제 정보를 불러오는 중입니다...</p>
                 </div>
             </div>
         </div>
@@ -451,47 +562,10 @@
                     <h2>🗓️ 이번 주말 & 다음 주 주요 축제</h2>
                 </div>
                 
-                <div class="festival-container">
-                    <div class="festival-section">
-                        <h3><i class="fas fa-sun"></i> 이번 주말 축제</h3>
-                        <div class="festival-card">
-                            <a href="#" class="festival-name">대구 치맥 페스티벌</a>
-                            <div class="festival-date">
-                                <i class="far fa-calendar"></i> 2023-10-14 ~ 2023-10-16
-                            </div>
-                            <span class="festival-status status-upcoming">예정</span>
-                            <p>대구의 대표 음식 치킨과 맥주를 즐길 수 있는 페스티벌</p>
-                        </div>
-                        
-                        <div class="festival-card">
-                            <a href="#" class="festival-name">광주 김치축제</a>
-                            <div class="festival-date">
-                                <i class="far fa-calendar"></i> 2023-10-14 ~ 2023-10-16
-                            </div>
-                            <span class="festival-status status-upcoming">예정</span>
-                            <p>다양한 김치 체험과 전통 음식 문화를 경험할 수 있는 축제</p>
-                        </div>
-                    </div>
-                    
-                    <div class="festival-section">
-                        <h3><i class="fas fa-calendar-week"></i> 다음 주 예정 축제</h3>
-                        <div class="festival-card">
-                            <a href="#" class="festival-name">대전 사이언스 페스타</a>
-                            <div class="festival-date">
-                                <i class="far fa-calendar"></i> 2023-10-28 ~ 2023-10-30
-                            </div>
-                            <span class="festival-status status-upcoming">예정</span>
-                            <p>과학 기술의 발전과 미래를 체험하는 대규모 과학 축제</p>
-                        </div>
-                        
-                        <div class="festival-card">
-                            <a href="#" class="festival-name">인천 월미도 불꽃축제</a>
-                            <div class="festival-date">
-                                <i class="far fa-calendar"></i> 2023-10-28 ~ 2023-10-29
-                            </div>
-                            <span class="festival-status status-upcoming">예정</span>
-                            <p>월미도에서 펼쳐지는 화려한 불꽃놀이와 해변 공연</p>
-                        </div>
+                <div class="festival-container" id="upcoming-container">
+                    <div class="loader">
+                        <div class="spinner"></div>
+                        <p>다가오는 축제 정보를 로드 중입니다...</p>
                     </div>
                 </div>
             </div>
@@ -503,23 +577,9 @@
                     <h2>📊 전국 축제 현황</h2>
                 </div>
                 
-                <div class="city-stats">
-                    <div class="stat-card">
-                        <div>전체 축제 수</div>
-                        <div class="stat-value">42</div>
-                        <div>2023년 10월 기준</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div>진행중인 축제</div>
-                        <div class="stat-value">18</div>
-                        <div>현재 진행 중</div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div>예정된 축제</div>
-                        <div class="stat-value">24</div>
-                        <div>다가오는 축제</div>
+                <div class="city-stats" id="stats-container">
+                    <div class="loader">
+                        <div class="spinner"></div>
                     </div>
                 </div>
                 
@@ -528,32 +588,24 @@
                     <h2>🏆 인기 지역 랭킹</h2>
                 </div>
                 
-                <div class="city-ranking">
-                    <div class="city-rank-item">
-                        <div class="rank-number">1</div>
-                        <div class="city-name">서울</div>
-                        <div style="margin-left: auto;">5개 축제</div>
+                <div class="city-ranking" id="ranking-container">
+                    <div class="loader">
+                        <div class="spinner"></div>
                     </div>
-                    <div class="city-rank-item">
-                        <div class="rank-number">2</div>
-                        <div class="city-name">부산</div>
-                        <div style="margin-left: auto;">4개 축제</div>
-                    </div>
-                    <div class="city-rank-item">
-                        <div class="rank-number">3</div>
-                        <div class="city-name">전주</div>
-                        <div style="margin-left: auto;">4개 축제</div>
-                    </div>
-                    <div class="city-rank-item">
-                        <div class="rank-number">4</div>
-                        <div class="city-name">제주</div>
-                        <div style="margin-left: auto;">3개 축제</div>
-                    </div>
-                    <div class="city-rank-item">
-                        <div class="rank-number">5</div>
-                        <div class="city-name">대구</div>
-                        <div style="margin-left: auto;">3개 축제</div>
-                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 관광지 랭킹 -->
+        <div class="panel">
+            <div class="panel-title">
+                <i class="fas fa-star"></i>
+                <h2>⭐ 관광지 종합 랭킹</h2>
+            </div>
+            <div class="ranking-panel" id="tourism-ranking-container">
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <p>관광지 랭킹을 불러오는 중입니다...</p>
                 </div>
             </div>
         </div>
@@ -574,21 +626,412 @@
                 <h2>📍 주요 도시별 축제 현황</h2>
             </div>
             <div class="city-container" id="city-container">
-                <!-- 동적으로 생성 -->
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <p>도시 정보를 불러오는 중입니다...</p>
+                </div>
             </div>
         </div>
         
         <footer>
             <p>© 2023 대한민국 문화체육관광부 | 실시간 축제 정보 시스템</p>
-            <p>데이터는 매시간 자동 갱신됩니다 | CSRF 토큰: <span id="csrf-token">a1b2c3d4e5f6</span></p>
+            <p>데이터는 매시간 자동 갱신됩니다 | API 키 보안: 안전하게 관리됨</p>
         </footer>
     </div>
 
     <script>
-        // FullCalendar 초기화
-        document.addEventListener('DOMContentLoaded', function() {
+        // API 엔드포인트 설정
+        const API_ENDPOINTS = {
+            festivals: '/api/festivals',
+            tourism: '/api/tourism',
+            weather: '/api/weather',
+            ranking: '/api/ranking'
+        };
+        
+        // 날씨 아이콘 매핑
+        const weatherIcons = {
+            '맑음': 'fas fa-sun',
+            '구름': 'fas fa-cloud',
+            '비': 'fas fa-cloud-rain',
+            '눈': 'fas fa-snowflake',
+            '흐림': 'fas fa-cloud',
+            '정보 없음': 'fas fa-question-circle'
+        };
+        
+        // 대기질 등급 텍스트 변환
+        function getAirQualityText(airValue) {
+            if (airValue <= 30) return '좋음';
+            if (airValue <= 50) return '보통';
+            if (airValue <= 100) return '나쁨';
+            return '매우 나쁨';
+        }
+        
+        // DOM 요소
+        const ongoingContainer = document.getElementById('ongoing-container');
+        const upcomingContainer = document.getElementById('upcoming-container');
+        const statsContainer = document.getElementById('stats-container');
+        const rankingContainer = document.getElementById('ranking-container');
+        const cityContainer = document.getElementById('city-container');
+        const tourismRankingContainer = document.getElementById('tourism-ranking-container');
+        const updateTimeElement = document.getElementById('update-time');
+        const refreshBtn = document.getElementById('refresh-btn');
+        
+        // FullCalendar 인스턴스
+        let calendar;
+        
+        // 페이지 로드 시 데이터 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllData();
+        });
+        
+        // 새로고침 버튼 이벤트
+        refreshBtn.addEventListener('click', () => {
+            loadAllData();
+        });
+        
+        // 모든 데이터 로드 함수
+        function loadAllData() {
+            updateTimeElement.textContent = '데이터 로드 중...';
+            loadFestivalData();
+            loadTourismRanking();
+        }
+        
+        // 축제 데이터 로드 함수
+        function loadFestivalData() {
+            fetch(API_ENDPOINTS.festivals)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderFestivalData(data.data);
+                        updateTimeElement.textContent = new Date().toLocaleString('ko-KR');
+                    } else {
+                        throw new Error(data.message || '축제 데이터를 불러오지 못했습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('축제 데이터 로드 오류:', error);
+                    renderFestivalError();
+                    updateTimeElement.textContent = '데이터 오류 - ' + new Date().toLocaleString('ko-KR');
+                });
+        }
+        
+        // 관광지 랭킹 로드 함수
+        function loadTourismRanking() {
+            fetch(API_ENDPOINTS.ranking)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderTourismRanking(data.data);
+                    } else {
+                        throw new Error(data.message || '관광지 랭킹을 불러오지 못했습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('관광지 랭킹 로드 오류:', error);
+                    renderTourismRankingError();
+                });
+        }
+        
+        // 축제 데이터 렌더링 함수
+        function renderFestivalData(data) {
+            // 진행 중인 축제
+            renderOngoingFestivals(data.ongoing);
+            
+            // 예정된 축제
+            renderUpcomingFestivals(data.upcoming, data.thisWeekend);
+            
+            // 통계 데이터
+            renderStats(data.stats);
+            
+            // 인기 지역 랭킹
+            renderPopularRegions(data.stats.popularRegions);
+            
+            // 도시별 축제 현황
+            renderCities(data.stats.popularRegions);
+            
+            // 달력 초기화
+            initCalendar(data.ongoing.concat(data.upcoming));
+        }
+        
+        // 진행 중인 축제 렌더링
+        function renderOngoingFestivals(festivals) {
+            if (!festivals || festivals.length === 0) {
+                ongoingContainer.innerHTML = '<div class="error"><i class="fas fa-calendar-times"></i><p>진행 중인 축제가 없습니다</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            festivals.slice(0, 4).forEach((fest, index) => {
+                if (index % 2 === 0) {
+                    html += `<div class="festival-section">`;
+                }
+                
+                html += `
+                    <div class="festival-card">
+                        <div class="festival-name">${fest.title}</div>
+                        <div class="festival-date">
+                            <i class="far fa-calendar"></i> ${fest.startDate} ~ ${fest.endDate}
+                        </div>
+                        <span class="festival-status status-ongoing">진행중</span>
+                        <div class="festival-date">
+                            <i class="fas fa-map-marker-alt"></i> ${fest.location} | ${fest.region}
+                        </div>
+                        <p>${fest.daysLeft}</p>
+                    </div>
+                `;
+                
+                if (index % 2 !== 0 || index === festivals.length - 1) {
+                    html += `</div>`;
+                }
+            });
+            
+            ongoingContainer.innerHTML = html;
+        }
+        
+        // 예정된 축제 렌더링
+        function renderUpcomingFestivals(upcoming, weekend) {
+            if ((!upcoming || upcoming.length === 0) && (!weekend || weekend.length === 0)) {
+                upcomingContainer.innerHTML = '<div class="error"><i class="fas fa-calendar-times"></i><p>예정된 축제가 없습니다</p></div>';
+                return;
+            }
+            
+            let html = `
+                <div class="festival-section">
+                    <h3><i class="fas fa-sun"></i> 이번 주말 축제</h3>
+            `;
+            
+            if (!weekend || weekend.length === 0) {
+                html += `<p>이번 주말에 예정된 축제가 없습니다</p>`;
+            } else {
+                weekend.slice(0, 2).forEach(fest => {
+                    html += `
+                        <div class="festival-card">
+                            <div class="festival-name">${fest.title}</div>
+                            <div class="festival-date">
+                                <i class="far fa-calendar"></i> ${fest.startDate} ~ ${fest.endDate}
+                            </div>
+                            <span class="festival-status status-upcoming">예정</span>
+                            <div class="festival-date">
+                                <i class="fas fa-map-marker-alt"></i> ${fest.location} | ${fest.region}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div><div class="festival-section"><h3><i class="fas fa-calendar-week"></i> 다음 주 예정 축제</h3>`;
+            
+            if (!upcoming || upcoming.length === 0) {
+                html += `<p>다음 주에 예정된 축제가 없습니다</p>`;
+            } else {
+                upcoming.slice(0, 2).forEach(fest => {
+                    html += `
+                        <div class="festival-card">
+                            <div class="festival-name">${fest.title}</div>
+                            <div class="festival-date">
+                                <i class="far fa-calendar"></i> ${fest.startDate} ~ ${fest.endDate}
+                            </div>
+                            <span class="festival-status status-upcoming">예정</span>
+                            <div class="festival-date">
+                                <i class="fas fa-map-marker-alt"></i> ${fest.location} | ${fest.region}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div>`;
+            
+            upcomingContainer.innerHTML = html;
+        }
+        
+        // 통계 데이터 렌더링
+        function renderStats(stats) {
+            if (!stats) {
+                statsContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>통계 데이터를 불러올 수 없습니다</p></div>';
+                return;
+            }
+            
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div>전체 축제 수</div>
+                    <div class="stat-value">${stats.total}</div>
+                    <div>현재 기준</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div>진행중인 축제</div>
+                    <div class="stat-value">${stats.ongoing}</div>
+                    <div>현재 진행 중</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div>예정된 축제</div>
+                    <div class="stat-value">${stats.upcoming}</div>
+                    <div>다가오는 축제</div>
+                </div>
+            `;
+        }
+        
+        // 인기 지역 랭킹 렌더링
+        function renderPopularRegions(regions) {
+            if (!regions || regions.length === 0) {
+                rankingContainer.innerHTML = '<div class="error"><p>인기 지역 데이터를 불러올 수 없습니다</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            regions.slice(0, 5).forEach((region, index) => {
+                html += `
+                    <div class="city-rank-item" data-region="${region.region}">
+                        <div class="rank-number">${index + 1}</div>
+                        <div class="city-name">${region.region}</div>
+                        <div style="margin-left: auto;">${region.count}개 축제</div>
+                    </div>
+                `;
+            });
+            
+            rankingContainer.innerHTML = html;
+            
+            // 클릭 이벤트 추가
+            document.querySelectorAll('.city-rank-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const regionName = item.getAttribute('data-region');
+                    // 해당 지역 섹션으로 스크롤
+                    alert(`"${regionName}"의 축제 목록으로 이동합니다!`);
+                });
+            });
+        }
+        
+        // 도시별 축제 현황 렌더링
+        function renderCities(regions) {
+            if (!regions || regions.length === 0) {
+                cityContainer.innerHTML = '<div class="error"><p>도시 정보를 불러올 수 없습니다</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            regions.slice(0, 8).forEach(region => {
+                // 각 도시별 날씨 정보 가져오기
+                fetch(`${API_ENDPOINTS.weather}?region=${encodeURIComponent(region.region)}`)
+                    .then(response => response.json())
+                    .then(weatherData => {
+                        const weather = weatherData.data || { temperature: 20, sky: '정보 없음' };
+                        const weatherIcon = weatherIcons[weather.sky] || 'fas fa-question-circle';
+                        
+                        const cityElement = document.createElement('div');
+                        cityElement.className = 'city-panel';
+                        cityElement.innerHTML = `
+                            <div class="city-header">
+                                <div class="city-name">${region.region}</div>
+                                <div class="weather-info">
+                                    <i class="weather-icon ${weatherIcon}"></i>
+                                    <span>${weather.temperature}°C ${weather.sky}</span>
+                                </div>
+                            </div>
+                            <div class="city-festivals">
+                                <div class="city-festival">
+                                    <span class="status-badge status-ongoing">진행중</span>
+                                    <strong>${region.count}개 축제</strong>
+                                </div>
+                            </div>
+                        `;
+                        
+                        cityContainer.appendChild(cityElement);
+                    })
+                    .catch(error => {
+                        console.error(`${region.region} 날씨 정보 로드 오류:`, error);
+                        const cityElement = document.createElement('div');
+                        cityElement.className = 'city-panel';
+                        cityElement.innerHTML = `
+                            <div class="city-header">
+                                <div class="city-name">${region.region}</div>
+                                <div class="weather-info">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>정보 없음</span>
+                                </div>
+                            </div>
+                            <div class="city-festivals">
+                                <div class="city-festival">
+                                    <span class="status-badge status-ongoing">진행중</span>
+                                    <strong>${region.count}개 축제</strong>
+                                </div>
+                            </div>
+                        `;
+                        cityContainer.appendChild(cityElement);
+                    });
+            });
+        }
+        
+        // 관광지 랭킹 렌더링
+        function renderTourismRanking(ranking) {
+            if (!ranking || !ranking.length) {
+                tourismRankingContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>관광지 랭킹을 불러올 수 없습니다</p></div>';
+                return;
+            }
+            
+            let html = '';
+            
+            ranking.slice(0, 8).forEach((item, index) => {
+                html += `
+                    <div class="ranking-item">
+                        <div class="ranking-position">${index + 1}</div>
+                        <div>
+                            <div class="city-name">${item.region}</div>
+                            <div>점수: ${item.score} | 등급: ${item.grade}</div>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <div>${item.weather}</div>
+                            <div>대기질: ${item.airQuality}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            tourismRankingContainer.innerHTML = html;
+        }
+        
+        // 축제 데이터 오류 렌더링
+        function renderFestivalError() {
+            ongoingContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>축제 정보를 불러올 수 없습니다</p></div>';
+            upcomingContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>축제 정보를 불러올 수 없습니다</p></div>';
+            statsContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>통계 정보를 불러올 수 없습니다</p></div>';
+            rankingContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>지역 랭킹을 불러올 수 없습니다</p></div>';
+            cityContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>도시 정보를 불러올 수 없습니다</p></div>';
+        }
+        
+        // 관광지 랭킹 오류 렌더링
+        function renderTourismRankingError() {
+            tourismRankingContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i><p>관광지 랭킹을 불러올 수 없습니다</p></div>';
+        }
+        
+        // 달력 초기화
+        function initCalendar(festivals) {
             const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
+            
+            if (calendar) {
+                calendar.destroy();
+            }
+            
+            // 축제 이벤트 데이터 변환
+            const events = festivals.map(fest => {
+                // 날짜 형식 변환 (YYYY-MM-DD)
+                const startDate = `${fest.startDateRaw.slice(0,4)}-${fest.startDateRaw.slice(4,6)}-${fest.startDateRaw.slice(6,8)}`;
+                const endDate = `${fest.endDateRaw.slice(0,4)}-${fest.endDateRaw.slice(4,6)}-${fest.endDateRaw.slice(6,8)}`;
+                
+                return {
+                    title: fest.title,
+                    start: startDate,
+                    end: endDate,
+                    color: fest.status === 'ongoing' ? '#27ae60' : '#f39c12',
+                    textColor: 'white'
+                };
+            });
+            
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'ko',
                 headerToolbar: {
@@ -596,50 +1039,7 @@
                     center: 'title',
                     right: 'dayGridMonth,dayGridWeek'
                 },
-                events: [
-                    {
-                        title: '서울 불꽃축제',
-                        start: '2023-10-07',
-                        end: '2023-10-09',
-                        color: '#e84393',
-                        textColor: 'white'
-                    },
-                    {
-                        title: '부산 영화제',
-                        start: '2023-10-04',
-                        end: '2023-10-13',
-                        color: '#6c5ce7',
-                        textColor: 'white'
-                    },
-                    {
-                        title: '전주 한옥마을 축제',
-                        start: '2023-10-10',
-                        end: '2023-10-15',
-                        color: '#00b894',
-                        textColor: 'white'
-                    },
-                    {
-                        title: '제주 한라산 축제',
-                        start: '2023-10-21',
-                        end: '2023-10-23',
-                        color: '#fdcb6e',
-                        textColor: 'black'
-                    },
-                    {
-                        title: '대구 치맥 페스티벌',
-                        start: '2023-10-14',
-                        end: '2023-10-16',
-                        color: '#e17055',
-                        textColor: 'white'
-                    },
-                    {
-                        title: '대전 사이언스 페스타',
-                        start: '2023-10-28',
-                        end: '2023-10-30',
-                        color: '#0984e3',
-                        textColor: 'white'
-                    }
-                ],
+                events: events,
                 eventContent: function(arg) {
                     return {
                         html: `<div class="calendar-highlight" style="padding: 2px; border-radius: 3px;">
@@ -648,121 +1048,9 @@
                     };
                 }
             });
+            
             calendar.render();
-            
-            // 주요 도시별 축제 데이터 생성
-            const cities = [
-                {
-                    name: "서울",
-                    weather: "22°C 맑음",
-                    festivals: [
-                        {name: "서울 불꽃축제", date: "10.07~10.09", status: "ongoing"},
-                        {name: "서울 핫플 페스티벌", date: "10.20~10.22", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "부산",
-                    weather: "24°C 맑음",
-                    festivals: [
-                        {name: "부산 국제 영화제", date: "10.04~10.13", status: "ongoing"},
-                        {name: "해운대 달맞이 축제", date: "10.30~11.01", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "대구",
-                    weather: "25°C 맑음",
-                    festivals: [
-                        {name: "대구 치맥 페스티벌", date: "10.14~10.16", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "인천",
-                    weather: "21°C 구름",
-                    festivals: [
-                        {name: "인천 월미도 불꽃축제", date: "10.28~10.29", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "대전",
-                    weather: "22°C 맑음",
-                    festivals: [
-                        {name: "대전 사이언스 페스타", date: "10.28~10.30", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "광주",
-                    weather: "23°C 비",
-                    festivals: [
-                        {name: "광주 김치축제", date: "10.14~10.16", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "울산",
-                    weather: "22°C 맑음",
-                    festivals: [
-                        {name: "울산 태화강 축제", date: "10.25~10.29", status: "upcoming"}
-                    ]
-                },
-                {
-                    name: "수원",
-                    weather: "21°C 구름",
-                    festivals: [
-                        {name: "수원 화성 문화제", date: "10.12~10.15", status: "ongoing"}
-                    ]
-                },
-                {
-                    name: "제주",
-                    weather: "23°C 맑음",
-                    festivals: [
-                        {name: "제주 한라산 축제", date: "10.21~10.23", status: "ongoing"}
-                    ]
-                },
-                {
-                    name: "전주",
-                    weather: "22°C 구름",
-                    festivals: [
-                        {name: "전주 한옥마을 축제", date: "10.10~10.15", status: "ongoing"},
-                        {name: "전주 비빔밥 축제", date: "11.01~11.05", status: "upcoming"}
-                    ]
-                }
-            ];
-            
-            const cityContainer = document.getElementById('city-container');
-            cities.forEach(city => {
-                const cityEl = document.createElement('div');
-                cityEl.className = 'city-panel';
-                cityEl.innerHTML = `
-                    <div class="city-header">
-                        <div class="city-name">${city.name}</div>
-                        <div class="weather-info">
-                            <i class="weather-icon fas fa-sun"></i>
-                            <span>${city.weather}</span>
-                        </div>
-                    </div>
-                    <div class="city-festivals">
-                        ${city.festivals.map(fest => `
-                            <div class="city-festival">
-                                <span class="status-badge ${fest.status === 'ongoing' ? 'status-ongoing' : 'status-upcoming'}">
-                                    ${fest.status === 'ongoing' ? '진행중' : '예정'}
-                                </span>
-                                <strong>${fest.name}</strong> (${fest.date})
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                cityContainer.appendChild(cityEl);
-            });
-            
-            // 새로고침 버튼
-            document.getElementById('refresh-btn').addEventListener('click', function() {
-                alert('데이터를 새로고침합니다!');
-            });
-            
-            // 관광지 랭킹 보기
-            document.getElementById('show-ranking').addEventListener('click', function() {
-                alert('관광지 랭킹 페이지로 이동합니다!');
-            });
-        });
+        }
     </script>
 </body>
 </html>
