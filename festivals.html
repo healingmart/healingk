@@ -645,42 +645,8 @@
         <div class="section-title">
             <i class="fas fa-trophy"></i> <h2>지역별 관광지 랭킹</h2>
         </div>
-        <div class="ranking-grid">
-            <div class="ranking-card">
-                <div class="rank-badge rank-1">1</div>
-                <div class="ranking-info">
-                    <div class="ranking-region">제주</div>
-                    <div class="ranking-score">92점 • S등급</div>
-                    <div class="ranking-factors">맑은 날씨, 좋은 대기질</div>
-                </div>
-            </div>
-            
-            <div class="ranking-card">
-                <div class="rank-badge rank-2">2</div>
-                <div class="ranking-info">
-                    <div class="ranking-region">강릉</div>
-                    <div class="ranking-score">88점 • A등급</div>
-                    <div class="ranking-factors">쾌적한 기온, 강수 없음</div>
-                </div>
-            </div>
-            
-            <div class="ranking-card">
-                <div class="rank-badge rank-3">3</div>
-                <div class="ranking-info">
-                    <div class="ranking-region">부산</div>
-                    <div class="ranking-score">85점 • A등급</div>
-                    <div class="ranking-factors">좋은 대기질, 맑은 날씨</div>
-                </div>
-            </div>
-            
-            <div class="ranking-card">
-                <div class="rank-badge rank-other">4</div>
-                <div class="ranking-info">
-                    <div class="ranking-region">전주</div>
-                    <div class="ranking-score">82점 • A등급</div>
-                    <div class="ranking-factors">쾌적한 기온</div>
-                </div>
-            </div>
+        <div class="ranking-grid" id="rankingGrid">
+            <!-- 랭킹 데이터가 여기에 동적으로 로드됩니다 -->
         </div>
         
         <div class="section-title">
@@ -688,7 +654,7 @@
         </div>
         <div class="tour-list">
             <div class="tour-card">
-                <div class="tour-image" style="background-image: url('https://placehold.co/600x400/FF6347/FFFFFF?text=서울+N서울타워');">
+                <div class="tour-image" style="background-image: url('https://images.unsplash.com/photo-1506812574058-fc75fa93fead?q=80&w=1470&auto=format&fit=crop')">
                     <div class="tour-number">1</div>
                 </div>
                 <div class="tour-content">
@@ -703,7 +669,7 @@
             </div>
             
             <div class="tour-card">
-                <div class="tour-image" style="background-image: url('https://placehold.co/600x400/4682B4/FFFFFF?text=부산+해운대');">
+                <div class="tour-image" style="background-image: url('https://images.unsplash.com/photo-1596422846543-75c6fc197f07?q=80&w=1464&auto=format&fit=crop')">
                     <div class="tour-number">2</div>
                 </div>
                 <div class="tour-content">
@@ -718,7 +684,7 @@
             </div>
             
             <div class="tour-card">
-                <div class="tour-image" style="background-image: url('https://placehold.co/600x400/32CD32/FFFFFF?text=제주+성산일출봉');">
+                <div class="tour-image" style="background-image: url('https://images.unsplash.com/photo-1593692909680-4e1a1d5e9c5f?q=80&w=1470&auto=format&fit=crop')">
                     <div class="tour-number">3</div>
                 </div>
                 <div class="tour-content">
@@ -736,51 +702,8 @@
         <div class="section-title">
             <i class="fas fa-calendar-day"></i> <h2>이번 주말 축제</h2>
         </div>
-        <div class="festival-grid">
-            <div class="festival-card">
-                <div class="festival-image" style="background-image: url('https://placehold.co/600x400/FFD700/000000?text=서울+빛초롱축제');">
-                    <div class="festival-status ongoing">진행중</div>
-                </div>
-                <div class="festival-content">
-                    <div class="festival-title">서울 빛초롱 축제</div>
-                    <div class="festival-location"><i class="fas fa-map-pin"></i> 청계천 일대</div>
-                    <div class="festival-dates">
-                        <span>05.01 ~ 06.15</span>
-                        <span class="days-left">15일 남음</span>
-                    </div>
-                    <div class="festival-description">청계천을 아름답게 수놓는 빛의 향연, 다양한 조명 설치물과 공연이 펼쳐집니다.</div>
-                </div>
-            </div>
-            
-            <div class="festival-card">
-                <div class="festival-image" style="background-image: url('https://placehold.co/600x400/20B2AA/FFFFFF?text=부산+바다축제');">
-                    <div class="festival-status ongoing">진행중</div>
-                </div>
-                <div class="festival-content">
-                    <div class="festival-title">부산 바다축제</div>
-                    <div class="festival-location"><i class="fas fa-map-pin"></i> 해운대 해수욕장</div>
-                    <div class="festival-dates">
-                        <span>05.20 ~ 06.05</span>
-                        <span class="days-left">8일 남음</span>
-                    </div>
-                    <div class="festival-description">해운대 바다를 배경으로 펼쳐지는 다양한 해양 레포츠와 공연, 불꽃쇼가 있는 축제입니다.</div>
-                </div>
-            </div>
-            
-            <div class="festival-card">
-                <div class="festival-image" style="background-image: url('https://placehold.co/600x400/98FB98/000000?text=제주+유채꽃축제');">
-                    <div class="festival-status ongoing">진행중</div>
-                </div>
-                <div class="festival-content">
-                    <div class="festival-title">제주 유채꽃 축제</div>
-                    <div class="festival-location"><i class="fas fa-map-pin"></i> 서귀포시</div>
-                    <div class="festival-dates">
-                        <span>05.25 ~ 06.10</span>
-                        <span class="days-left">12일 남음</span>
-                    </div>
-                    <div class="festival-description">노란 유채꽃으로 물든 제주의 봄을 만끽할 수 있는 축제, 사진 촬영 명소가 가득합니다.</div>
-                </div>
-            </div>
+        <div class="festival-grid" id="festivalGrid">
+            <!-- 축제 데이터가 여기에 동적으로 로드됩니다 -->
         </div>
         
         <div class="footer">
@@ -796,8 +719,8 @@
         // DOM 요소 캐싱
         const regionButtons = document.querySelectorAll('.region-btn');
         const combinedDataElement = document.querySelector('.combined-data');
-        const festivalsElement = document.querySelector('.festival-grid');
-        const rankingElement = document.querySelector('.ranking-grid');
+        const festivalGrid = document.getElementById('festivalGrid');
+        const rankingGrid = document.getElementById('rankingGrid');
         
         // 현재 선택된 지역
         let currentRegion = '서울';
@@ -911,7 +834,7 @@
                         startDate: '2023-05-01',
                         endDate: '2023-06-15',
                         status: 'ongoing',
-                        image: 'https://placehold.co/600x400?text=Festival',
+                        image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1469&auto=format&fit=crop',
                         daysLeft: Math.floor(Math.random() * 20) + 5
                     },
                     {
@@ -921,7 +844,7 @@
                         startDate: '2023-05-10',
                         endDate: '2023-06-05',
                         status: 'ongoing',
-                        image: 'https://placehold.co/600x400?text=Festival',
+                        image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=1470&auto=format&fit=crop',
                         daysLeft: Math.floor(Math.random() * 10) + 5
                     },
                     {
@@ -931,7 +854,7 @@
                         startDate: '2023-05-20',
                         endDate: '2023-06-10',
                         status: 'ongoing',
-                        image: 'https://placehold.co/600x400?text=Festival',
+                        image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1470&auto=format&fit=crop',
                         daysLeft: Math.floor(Math.random() * 15) + 5
                     }
                 ];
@@ -1020,7 +943,7 @@
         
         // 축제 데이터 UI 업데이트
         function updateFestivalsUI(festivals) {
-            festivalsElement.innerHTML = '';
+            festivalGrid.innerHTML = '';
             
             festivals.slice(0, 3).forEach(festival => {
                 const festivalElement = document.createElement('div');
@@ -1035,28 +958,34 @@
                         <div class="festival-title">${festival.title}</div>
                         <div class="festival-location"><i class="fas fa-map-pin"></i> ${festival.location}</div>
                         <div class="festival-dates">
-                            <span>${festival.startDate} ~ ${festival.endDate}</span>
+                            <span>${formatDate(festival.startDate)} ~ ${formatDate(festival.endDate)}</span>
                             <span class="days-left">${festival.daysLeft}일 남음</span>
                         </div>
                         <div class="festival-description">${festival.title}은 ${festival.location}에서 개최되는 문화 축제입니다.</div>
                     </div>
                 `;
-                festivalsElement.appendChild(festivalElement);
+                festivalGrid.appendChild(festivalElement);
             });
         }
         
-        // 랭킹 데이터 UI 업데이트
+        // 날짜 포맷팅 함수
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return `${date.getMonth() + 1}.${date.getDate()}`;
+        }
+        
+        // 랭킹 데이터 UI 업데이트 (오류 수정)
         function updateRankingUI(ranking) {
-            rankingElement.innerHTML = '';
+            rankingGrid.innerHTML = '';
             
             ranking.slice(0, 8).forEach(item => {
                 const rankClass = item.rank === 1 ? 'rank-1' : 
                                 item.rank === 2 ? 'rank-2' : 
                                 item.rank === 3 ? 'rank-3' : 'rank-other';
                 
-                const rankingElement = document.createElement('div');
-                rankingElement.className = 'ranking-card';
-                rankingElement.innerHTML = `
+                const card = document.createElement('div');
+                card.className = 'ranking-card';
+                card.innerHTML = `
                     <div class="rank-badge ${rankClass}">${item.rank}</div>
                     <div class="ranking-info">
                         <div class="ranking-region">${item.region}</div>
@@ -1064,7 +993,7 @@
                         <div class="ranking-factors">${item.factors.join(', ')}</div>
                     </div>
                 `;
-                rankingElement.appendChild(rankingElement);
+                rankingGrid.appendChild(card);
             });
         }
         
