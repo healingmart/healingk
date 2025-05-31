@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 주요 도시 실시간 축제 현황 & 날씨 랭킹</title>
+    <title>대한민국 관광지 실시간 랭킹 대시보드</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -273,13 +273,24 @@
         .grade-B { color: #f1c40f; }
         .grade-C { color: #e67e22; }
         .grade-D { color: #e74c3c; }
+        
+        .error {
+            text-align: center;
+            padding: 30px;
+            color: #ff6b6b;
+        }
+        
+        .error i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-trophy"></i> 대한민국 주요 도시 실시간 축제 현황</h1>
-            <div class="subtitle">축제 정보와 날씨를 종합한 관광지 랭킹</div>
+            <h1><i class="fas fa-trophy"></i> 대한민국 관광지 실시간 랭킹</h1>
+            <div class="subtitle">실시간 점수와 관광 정보를 종합한 랭킹</div>
             <div class="last-updated">
                 <i class="fas fa-sync-alt"></i> 
                 <span id="update-time">데이터 로드 중...</span>
@@ -290,12 +301,12 @@
             <div class="panel">
                 <div class="panel-title">
                     <i class="fas fa-list-ol"></i>
-                    <h2>도시별 축제 랭킹</h2>
+                    <h2>도시별 관광지 랭킹</h2>
                 </div>
                 <div class="ranking-list" id="ranking-container">
                     <div class="loader">
                         <div class="spinner"></div>
-                        <p>축제 정보를 불러오는 중입니다...</p>
+                        <p>관광지 정보를 불러오는 중입니다...</p>
                     </div>
                 </div>
             </div>
@@ -316,18 +327,18 @@
                 <i class="fas fa-sync-alt"></i> 새로고침
             </button>
             <button class="btn" id="filter-btn">
-                <i class="fas fa-filter"></i> 축제 있는 도시만 보기
+                <i class="fas fa-star"></i> 상위 5개 도시만 보기
             </button>
         </div>
         
         <footer>
-            <p>© 2023 대한민국 문화관광부 | 실시간 축제 정보 제공 시스템</p>
-            <p>데이터는 10분 간격으로 자동 갱신됩니다</p>
+            <p>© 2023 대한민국 문화관광부 | 실시간 관광지 정보 제공 시스템</p>
+            <p>데이터는 5분 간격으로 자동 갱신됩니다</p>
         </footer>
     </div>
 
     <script>
-        // API 엔드포인트 (실제 배포 시 교체 필요)
+        // 실제 API 엔드포인트
         const API_URL = 'https://healingk.vercel.app/api/ranking';
         
         // 날씨 아이콘 매핑
@@ -342,12 +353,9 @@
         
         // 등급별 색상
         const gradeColors = {
-            'A+': '#27ae60',
-            'A': '#2ecc71',
-            'B+': '#f1c40f',
-            'B': '#f39c12',
-            'C+': '#e67e22',
-            'C': '#d35400',
+            'A': '#27ae60',
+            'B': '#f1c40f',
+            'C': '#e67e22',
             'D': '#e74c3c',
             'F': '#c0392b'
         };
@@ -368,11 +376,11 @@
         refreshBtn.addEventListener('click', fetchRankingData);
         
         // 필터 버튼 이벤트
-        let showFestivalOnly = false;
+        let showTop5Only = false;
         filterBtn.addEventListener('click', function() {
-            showFestivalOnly = !showFestivalOnly;
-            this.textContent = showFestivalOnly ? 
-                '전체 도시 보기' : '축제 있는 도시만 보기';
+            showTop5Only = !showTop5Only;
+            this.textContent = showTop5Only ? 
+                '전체 도시 보기' : '상위 5개 도시만 보기';
             renderRanking(currentData);
         });
         
@@ -384,12 +392,17 @@
             rankingContainer.innerHTML = `
                 <div class="loader">
                     <div class="spinner"></div>
-                    <p>축제 정보를 불러오는 중입니다...</p>
+                    <p>관광지 정보를 불러오는 중입니다...</p>
                 </div>
             `;
             
             fetch(API_URL)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('API 응답 오류: ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         currentData = data.data;
@@ -400,11 +413,15 @@
                     }
                 })
                 .catch(error => {
+                    console.error('API 오류:', error);
                     rankingContainer.innerHTML = `
                         <div class="error">
                             <i class="fas fa-exclamation-triangle"></i>
                             <p>${error.message}</p>
-                            <button class="btn" onclick="fetchRankingData()">다시 시도</button>
+                            <p>API 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.</p>
+                            <button class="btn" onclick="fetchRankingData()" style="margin-top: 15px;">
+                                <i class="fas fa-redo"></i> 다시 시도
+                            </button>
                         </div>
                     `;
                 });
@@ -413,8 +430,8 @@
         // 랭킹 데이터 렌더링
         function renderRanking(data) {
             // 필터 적용
-            let filteredData = showFestivalOnly ? 
-                data.filter(city => city.festival && city.festival.name) : 
+            let filteredData = showTop5Only ? 
+                data.filter((_, index) => index < 5) : 
                 data;
             
             // 랭킹 컨테이너 업데이트
@@ -429,28 +446,20 @@
                                 city.rank === 2 ? 'rank-2' : 
                                 city.rank === 3 ? 'rank-3' : 'rank-4-10';
                 
-                // 날씨 아이콘
-                const weatherIconClass = weatherIcons[city.weather.includes('맑음') ? '맑음' : 
-                                       city.weather.includes('구름') ? '구름' : 
-                                       city.weather.includes('비') ? '비' : 
-                                       city.weather.includes('눈') ? '눈' : 
-                                       city.weather.includes('안개') ? '안개' : '정보 없음';
+                // 날씨 정보 파싱 (API 응답 형식에 맞게 수정)
+                let weatherText = city.weather || '정보 없음';
+                let weatherIconText = '정보 없음';
                 
-                // 축제 정보
-                let festivalHtml = '<div class="festival-info">현재 진행 중인 축제가 없습니다</div>';
-                if (city.festival && city.festival.name) {
-                    festivalHtml = `
-                        <div class="festival-info">
-                            <a href="${city.festival.link}" class="festival-name" target="_blank">
-                                <i class="fas fa-ticket-alt"></i> ${city.festival.name}
-                            </a>
-                            <span class="festival-date">
-                                <i class="far fa-calendar-alt"></i> ${city.festival.date}
-                            </span>
-                            <span class="score-badge">추천 점수: ${city.score}</span>
-                        </div>
-                    `;
-                }
+                if (weatherText.includes('맑음')) weatherIconText = '맑음';
+                else if (weatherText.includes('구름')) weatherIconText = '구름';
+                else if (weatherText.includes('비')) weatherIconText = '비';
+                else if (weatherText.includes('눈')) weatherIconText = '눈';
+                else if (weatherText.includes('안개')) weatherIconText = '안개';
+                
+                const weatherIconClass = weatherIcons[weatherIconText];
+                
+                // 축제 정보 (API에 축제 정보가 없으므로 기본값 설정)
+                let festivalHtml = '<div class="festival-info">추천: ' + (city.recommendation || '정보 없음') + '</div>';
                 
                 cityCard.innerHTML = `
                     <div class="rank-badge ${rankClass}">
@@ -461,13 +470,17 @@
                             <div class="city-name">${city.region}</div>
                             <div class="weather-info">
                                 <i class="weather-icon ${weatherIconClass}"></i>
-                                <span>${city.weather}</span>
+                                <span>${weatherText}</span>
                             </div>
                         </div>
                         <div class="grade-${city.grade.charAt(0)}">
                             <i class="fas fa-star"></i> 등급: ${city.grade}
                         </div>
+                        <div class="score-badge">종합 점수: ${city.score}</div>
                         ${festivalHtml}
+                        <div style="margin-top: 10px; font-size: 0.9rem; color: #ddd;">
+                            <i class="fas fa-info-circle"></i> ${city.factors?.join(', ') || '추가 정보 없음'}
+                        </div>
                     </div>
                 `;
                 
@@ -475,7 +488,7 @@
             });
             
             // 차트 업데이트
-            updateScoreChart(data);
+            updateScoreChart(filteredData);
         }
         
         // 점수 차트 업데이트
@@ -546,101 +559,100 @@
             });
         }
         
-        // 초기 샘플 데이터 (API 연결 전 테스트용)
+        // 초기 샘플 데이터 (API 연결 실패 시 테스트용)
         const sampleData = [
             {
-                rank: 1,
-                region: "부산",
-                score: 92,
-                grade: "A+",
-                weather: "24°C 맑음",
-                festival: {
-                    name: "부산 국제 영화제",
-                    date: "2023-10-04 ~ 2023-10-13",
-                    link: "https://www.biff.kr"
-                }
+                "rank": 1,
+                "region": "서울",
+                "score": 85,
+                "grade": "A",
+                "factors": ["날씨 좋음", "축제 진행 중"],
+                "recommendation": "관광 추천",
+                "weather": "22°C 맑음",
+                "airQuality": "좋음"
             },
             {
-                rank: 2,
-                region: "전주",
-                score: 88,
-                grade: "A",
-                weather: "22°C 구름 조금",
-                festival: {
-                    name: "전주 한옥마을 축제",
-                    date: "2023-10-10 ~ 2023-10-15",
-                    link: "https://www.jjfestival.or.kr"
-                }
+                "rank": 2,
+                "region": "부산",
+                "score": 82,
+                "grade": "A",
+                "factors": ["해변 관광", "신선한 해산물"],
+                "recommendation": "해수욕 추천",
+                "weather": "24°C 맑음",
+                "airQuality": "보통"
             },
             {
-                rank: 3,
-                region: "제주",
-                score: 85,
-                grade: "A",
-                weather: "23°C 맑음",
-                festival: {
-                    name: "제주 한라산 국제 걷기대회",
-                    date: "2023-10-21 ~ 2023-10-23",
-                    link: "https://www.jejuwalkfest.com"
-                }
+                "rank": 3,
+                "region": "제주",
+                "score": 80,
+                "grade": "B",
+                "factors": ["자연 경관", "여유로운 분위기"],
+                "recommendation": "휴양지 추천",
+                "weather": "23°C 구름",
+                "airQuality": "좋음"
             },
             {
-                rank: 4,
-                region: "서울",
-                score: 82,
-                grade: "B+",
-                weather: "21°C 구름",
-                festival: {
-                    name: "서울 불꽃축제",
-                    date: "2023-10-07 ~ 2023-10-09",
-                    link: "https://www.seoulfireworks.com"
-                }
+                "rank": 4,
+                "region": "강릉",
+                "score": 78,
+                "grade": "B",
+                "factors": ["커피 거리", "바다 경관"],
+                "recommendation": "카페 투어 추천",
+                "weather": "21°C 맑음",
+                "airQuality": "보통"
             },
             {
-                rank: 5,
-                region: "강릉",
-                score: 78,
-                grade: "B",
-                weather: "20°C 맑음",
-                festival: null
+                "rank": 5,
+                "region": "전주",
+                "score": 76,
+                "grade": "B",
+                "factors": ["한옥마을", "맛집"],
+                "recommendation": "전통 음식 체험",
+                "weather": "22°C 구름",
+                "airQuality": "좋음"
             },
             {
-                rank: 6,
-                region: "대구",
-                score: 75,
-                grade: "B",
-                weather: "22°C 비",
-                festival: {
-                    name: "대구 치맥 페스티벌",
-                    date: "2023-10-14 ~ 2023-10-16",
-                    link: "https://www.dgchimaek.com"
-                }
+                "rank": 6,
+                "region": "대구",
+                "score": 72,
+                "grade": "C",
+                "factors": ["야경", "대학가"],
+                "recommendation": "야간 관광 추천",
+                "weather": "25°C 맑음",
+                "airQuality": "보통"
             },
             {
-                rank: 7,
-                region: "광주",
-                score: 70,
-                grade: "B",
-                weather: "23°C 맑음",
-                festival: null
+                "rank": 7,
+                "region": "광주",
+                "score": 68,
+                "grade": "C",
+                "factors": ["예술", "문화"],
+                "recommendation": "박물관 방문",
+                "weather": "23°C 비",
+                "airQuality": "보통"
             },
             {
-                rank: 8,
-                region: "대전",
-                score: 65,
-                grade: "C+",
-                weather: "21°C 구름",
-                festival: {
-                    name: "대전 사이언스 페스타",
-                    date: "2023-10-28 ~ 2023-10-30",
-                    link: "https://www.djsciencefest.com"
-                }
+                "rank": 8,
+                "region": "대전",
+                "score": 65,
+                "grade": "C",
+                "factors": ["과학", "연구"],
+                "recommendation": "과학관 방문",
+                "weather": "22°C 구름",
+                "airQuality": "보통"
             }
         ];
         
-        // 샘플 데이터로 초기 렌더링 (실제 구현 시 주석 처리)
-        renderRanking(sampleData);
-        updateTimeElement.textContent = new Date().toLocaleString('ko-KR');
+        // API 호출 후 10초 내 응답 없으면 샘플 데이터 표시
+        setTimeout(() => {
+            if (!currentData.length) {
+                console.warn('API 응답 시간 초과. 샘플 데이터 표시');
+                currentData = sampleData;
+                renderRanking(sampleData);
+                updateTimeElement.textContent = new Date().toLocaleString('ko-KR');
+                updateTimeElement.innerHTML += ' <span style="color:#ffdd59">(샘플 데이터)</span>';
+            }
+        }, 10000);
     </script>
 </body>
 </html>
