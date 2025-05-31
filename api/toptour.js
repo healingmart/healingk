@@ -1,12 +1,12 @@
-// toptour.js
- 
-// 여행지 데이터 배열 (상세 정보 추가)
+// api/toptour.js
+
+// 여행지 데이터 배열 (상세 정보 포함)
 const places = [
     {
         id: "seoul",
         name: "1. 서울 (Seoul)",
         description: "대한민국의 수도이자 천만 인구가 살아가는 메가시티. 전통과 현대가 공존하는 매력적인 도시입니다. 고궁, 쇼핑, 미식, 문화 체험 등 다양한 즐길 거리가 있습니다.",
-        image: "https://placehold.co/800x400/FF6347/FFFFFF?text=서울+N서울타워+이미지", // 실제 이미지 URL로 교체하세요
+        image: "https://placehold.co/800x400/FF6347/FFFFFF?text=서울+N서울타워+이미지",
         details: {
             recommendedActivities: [
                 "경복궁, 창덕궁 등 고궁 투어하며 역사 체험하기",
@@ -216,133 +216,12 @@ const places = [
     }
 ];
 
-let currentPlaceIndex = 0;
+// Vercel 서버리스 함수 형태로 내보냅니다.
+// 이 함수는 HTTP 요청을 받으면 places 배열을 JSON 형태로 응답합니다.
+module.exports = (req, res) => {
+    // 응답 헤더를 JSON으로 설정
+    res.setHeader('Content-Type', 'application/json');
 
-// DOM 요소를 즉시 찾지 않고, DOM 로드 후 초기화 함수에서 찾도록 변경
-let tourImage, tourPlaceName, tourDescription, prevBtn, nextBtn, tourProgress, quickNavItemsContainer;
-let tourRecommendedActivities, tourTips, tourBestTimeToVisit; // 상세 정보를 표시할 요소 추가
-
-// 장소 정보를 화면에 표시하는 함수
-function displayPlace(index) {
-    if (index < 0 || index >= places.length) return;
-
-    const place = places[index];
-    tourImage.src = place.image;
-    tourImage.alt = place.name + " 이미지";
-    tourPlaceName.textContent = place.name;
-    tourDescription.textContent = place.description;
-
-    // 상세 정보 표시
-    if (place.details) {
-        tourRecommendedActivities.innerHTML = place.details.recommendedActivities.map(activity => `<li>${activity}</li>`).join('');
-        tourTips.innerHTML = place.details.tips.map(tip => `<li>${tip}</li>`).join('');
-        tourBestTimeToVisit.textContent = place.details.bestTimeToVisit || "정보 없음";
-    } else { // 혹시 details 객체가 없는 경우를 대비
-        tourRecommendedActivities.innerHTML = '<li>정보 없음</li>';
-        tourTips.innerHTML = '<li>정보 없음</li>';
-        tourBestTimeToVisit.textContent = "정보 없음";
-    }
-
-
-    tourProgress.textContent = `${index + 1} / ${places.length}`;
-
-    prevBtn.disabled = index === 0;
-    nextBtn.disabled = index === places.length - 1;
-
-    updateQuickNavActiveState(index);
-}
-
-// 다음 장소로 이동하는 함수
-function nextPlace() {
-    if (currentPlaceIndex < places.length - 1) {
-        currentPlaceIndex++;
-        displayPlace(currentPlaceIndex);
-    }
-}
-
-// 이전 장소로 이동하는 함수
-function prevPlace() {
-    if (currentPlaceIndex > 0) {
-        currentPlaceIndex--;
-        displayPlace(currentPlaceIndex);
-    }
-}
-
-// 특정 장소로 바로 이동하는 함수
-function jumpToPlace(index) {
-    currentPlaceIndex = index;
-    displayPlace(currentPlaceIndex);
-}
-
-// 빠른 이동 버튼 생성 함수
-function createQuickNavItems() {
-    places.forEach((place, index) => {
-        const item = document.createElement('span');
-        item.classList.add('quick-nav-item');
-        const placeKoreanName = place.name.substring(place.name.indexOf(' ') + 1, place.name.indexOf('(') -1 ).trim();
-        item.textContent = `${index + 1}. ${placeKoreanName}`;
-        item.setAttribute('data-index', index);
-        item.addEventListener('click', () => jumpToPlace(index));
-        quickNavItemsContainer.appendChild(item);
-    });
-}
-
-// 빠른 이동 버튼 활성 상태 업데이트 함수
-function updateQuickNavActiveState(activeIndex) {
-    const items = quickNavItemsContainer.querySelectorAll('.quick-nav-item');
-    items.forEach((item, index) => {
-        if (index === activeIndex) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-}
-
-// DOM이 로드된 후 실행될 초기화 함수
-function initTour() {
-    // DOM 요소 가져오기
-    tourImage = document.getElementById('tour-image');
-    tourPlaceName = document.getElementById('tour-place-name');
-    tourDescription = document.getElementById('tour-description');
-    prevBtn = document.getElementById('prev-btn');
-    nextBtn = document.getElementById('next-btn');
-    tourProgress = document.getElementById('tour-progress');
-    quickNavItemsContainer = document.getElementById('quick-nav-items');
-
-    // 상세 정보 표시를 위한 DOM 요소
-    tourRecommendedActivities = document.getElementById('tour-recommended-activities');
-    tourTips = document.getElementById('tour-tips');
-    tourBestTimeToVisit = document.getElementById('tour-best-time-to-visit');
-
-
-    // 요소들이 모두 로드되었는지 확인
-    if (!tourImage || !prevBtn || !quickNavItemsContainer || !tourRecommendedActivities || !tourTips || !tourBestTimeToVisit) {
-        console.error("Tour DOM elements not found. Script might be loaded before DOM or IDs are incorrect. Check all getElementById calls.");
-        return;
-    }
-
-    // 이벤트 리스너 등록
-    prevBtn.addEventListener('click', prevPlace);
-    nextBtn.addEventListener('click', nextPlace);
-
-    // 초기 장소 표시 및 빠른 이동 버튼 생성
-    createQuickNavItems();
-    displayPlace(currentPlaceIndex);
-
-    // 키보드 화살표 키로 네비게이션
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft') {
-            prevPlace();
-        } else if (event.key === 'ArrowRight') {
-            nextPlace();
-        }
-    });
-}
-
-// DOMContentLoaded 이벤트가 발생하면 initTour 함수 실행
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initTour);
-} else {
-    initTour();
-}
+    // HTTP 상태 코드 200 (OK)과 함께 places 데이터를 JSON으로 전송
+    res.status(200).json(places);
+};
