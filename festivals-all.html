@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>힐링K 축제 위젯</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css">
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f8f8f8; }
+    .widget-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .widget-header {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 16px;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      gap: 10px;
+    }
+    select, button {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    #calendar { padding: 10px; }
+    .csrf-indicator {
+      text-align: right;
+      font-size: 12px;
+      color: gray;
+      padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="widget-header">
+      <h2>🎪 힐링K 축제 캘린더</h2>
+      <p>도시별 & 달별 축제 한눈에 보기</p>
+    </div>
+    <div class="controls">
+      <select id="citySelect">
+        <option value="all">전체 지역</option>
+        <option value="seoul">서울</option>
+        <option value="busan">부산</option>
+        <!-- 기타 도시 추가 -->
+      </select>
+      <select id="monthSelect"></select>
+      <button id="toggleViewBtn">리스트 보기</button>
+    </div>
+    <div id="calendar"></div>
+    <div class="csrf-indicator">
+      🔒 CSRF 보호 활성화됨
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script>
+    const token = '{{csrf_token}}'; // 서버에서 삽입되는 토큰
+    const calendarEl = document.getElementById('calendar');
+    const citySelect = document.getElementById('citySelect');
+    const monthSelect = document.getElementById('monthSelect');
+    const toggleViewBtn = document.getElementById('toggleViewBtn');
+    let currentView = 'calendar';
+    let calendar;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      for (let m = 0; m < 12; m++) {
+        const option = document.createElement('option');
+        option.value = m+1;
+        option.textContent = `${m+1}월`;
+        monthSelect.appendChild(option);
+      }
+
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: fetchEvents,
+        eventClick: function(info) {
+          alert(`축제 상세정보\n\n제목: ${info.event.title}\n장소: ${info.event.extendedProps.location}`);
+        }
+      });
+      calendar.render();
+    });
+
+    citySelect.addEventListener('change', () => calendar.refetchEvents());
+    monthSelect.addEventListener('change', () => calendar.refetchEvents());
+    toggleViewBtn.addEventListener('click', () => {
+      currentView = currentView === 'calendar' ? 'list' : 'calendar';
+      calendar.changeView(currentView === 'calendar' ? 'dayGridMonth' : 'listMonth');
+      toggleViewBtn.textContent = currentView === 'calendar' ? '리스트 보기' : '달력 보기';
+    });
+
+    async function fetchEvents(fetchInfo, successCallback, failureCallback) {
+      try {
+        const res = await fetch(`/api/festivals?city=${citySelect.value}&month=${monthSelect.value}`, {
+          headers: { 'X-CSRF-Token': token }
+        });
+        const json = await res.json();
+        if (json.success) {
+          const events = json.data.map(f => ({
+            title: f.title,
+            start: f.startDate,
+            end: f.endDate,
+            location: f.location,
+          }));
+          successCallback(events);
+        } else {
+          failureCallback('데이터 없음');
+        }
+      } catch (e) {
+        failureCallback(e);
+      }
+    }
+  </script>
+</body>
+</html>
