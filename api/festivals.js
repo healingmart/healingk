@@ -17,17 +17,26 @@ module.exports = async function handler(req, res) {
     // 쿼리 파라미터에서 지역 정보 가져오기 (없으면 'all'로 간주)
     const { region = 'all', status = 'all' } = req.query; // status: ongoing, upcoming, all
     
-    // Vercel 환경 변수에서 API 키 가져오기
-    const apiKey = process.env.KOREA_TOURISM_API_KEY; 
+    // ✅ 수정: Vercel 환경 변수에서 API 키 가져오기 (이름 수정)
+    const apiKey = process.env.TOURISM_API_KEY; 
+    
+    // 환경변수 디버깅 로그 추가
+    console.log('환경변수 체크:', {
+      apiKeyExists: !!apiKey,
+      apiKeyLength: apiKey ? apiKey.length : 0,
+      // 보안을 위해 앞 4글자만 표시
+      apiKeyStart: apiKey ? apiKey.substring(0, 4) + '...' : 'undefined'
+    });
     
     // API 키가 설정되지 않았을 경우 샘플 데이터 반환
     if (!apiKey) {
-      console.warn('KOREA_TOURISM_API_KEY 환경 변수가 설정되지 않았습니다. 샘플 데이터를 반환합니다.');
+      console.warn('⚠️ TOURISM_API_KEY 환경 변수가 설정되지 않았습니다. 샘플 데이터를 반환합니다.');
       return res.status(200).json({
         success: true,
         data: getSampleFestivalsWithStats('all', new Date().toISOString().slice(0,10).replace(/-/g, '')),
         message: '⚠️ API 키 설정 필요 - 샘플 데이터',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        debug: '환경변수 TOURISM_API_KEY가 설정되지 않음'
       });
     }
 
@@ -39,16 +48,24 @@ module.exports = async function handler(req, res) {
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     const nextMonthStr = formatDateRaw(nextMonth); // YYYYMMDD
 
+    console.log('날짜 범위:', { todayStr, nextMonthStr });
+
     // 요청된 지역 코드 설정 (없으면 주요 지역 순회)
-    // getAreaCode 함수는 아래 헬퍼 함수에 정의되어 있습니다.
     const areaCodesToFetch = region !== 'all' ? [getAreaCode(region)] : [1, 6, 39, 32, 37, 4, 5, 3]; // 서울, 부산, 제주, 강원, 전북, 대구, 광주, 대전
+
+    console.log('조회할 지역 코드:', areaCodesToFetch);
 
     // 각 지역별 축제 정보 병렬 조회
     const festivalPromises = areaCodesToFetch.map(async (code) => {
       try {
+        // ✅ 수정: API 키 인코딩 방식 개선
+        const encodedApiKey = encodeURIComponent(apiKey);
+        
+        console.log(`지역 ${code} 조회 시작...`);
+        
         const response = await axios.get('http://apis.data.go.kr/B551011/KorService1/searchFestival1', {
           params: {
-            serviceKey: decodeURIComponent(apiKey), // API 키 디코딩 필요
+            serviceKey: encodedApiKey, // ✅ 수정: 올바른 인코딩 적용
             numOfRows: 50, // 각 지역별 가져올 최대 개수
             pageNo: 1,
             MobileOS: 'ETC',
@@ -60,23 +77,36 @@ module.exports = async function handler(req, res) {
             eventEndDate: nextMonthStr,
             areaCode: code // 지역 코드
           },
-          timeout: 8000 // 8초 타임아웃
+          timeout: 10000 // ✅ 수정: 타임아웃 10초로 증가
+        });
+
+        console.log(`지역 ${code} API 응답:`, {
+          resultCode: response.data?.response?.header?.resultCode,
+          resultMsg: response.data?.response?.header?.resultMsg,
+          itemCount: response.data?.response?.body?.items?.item?.length || 0
         });
 
         if (response.data?.response?.header?.resultCode === '0000') {
-          return response.data.response.body?.items?.item || [];
+          const items = response.data.response.body?.items?.item || [];
+          return Array.isArray(items) ? items : [items]; // 단일 결과인 경우 배열로 변환
         } else {
           console.error(`지역 ${code} 축제 조회 오류:`, response.data?.response?.header?.resultMsg || '알 수 없는 오류');
           return [];
         }
       } catch (error) {
-        console.error(`axios 요청 중 오류 (지역 ${code}):`, error.message);
+        console.error(`axios 요청 중 오류 (지역 ${code}):`, {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status
+        });
         return []; // 오류 발생 시 빈 배열 반환하여 다음 처리 진행
       }
     });
 
     const allFestivalResults = await Promise.all(festivalPromises);
     const allFestivals = allFestivalResults.flat(); // 모든 지역의 축제 결과를 하나의 배열로 합침
+
+    console.log('총 조회된 축제 수:', allFestivals.length);
 
     // 축제 데이터 가공 및 상태 분류
     const processedFestivals = allFestivals.map(festival => {
@@ -157,7 +187,7 @@ module.exports = async function handler(req, res) {
         upcoming,
         thisWeekend,
         stats,
-        message: '🎪 실시간 축제 정보',
+        message: allFestivals.length > 0 ? '🎪 실시간 축제 정보' : '⚠️ 조회된 축제가 없습니다',
         time: new Date().toLocaleString('ko-KR'), // 현재 시간 (한국어 포맷)
         lastUpdate: new Date().toISOString() // ISO 형식의 마지막 업데이트 시간
       },
@@ -171,10 +201,14 @@ module.exports = async function handler(req, res) {
       success: false, // API 자체는 동작했지만, 데이터 가져오기에 실패했음을 나타냄
       data: getSampleFestivalsWithStats('all', new Date().toISOString().slice(0,10).replace(/-/g, '')),
       message: `⚠️ 데이터 조회 오류: ${error.message || '알 수 없는 오류'}`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: '서버 오류로 샘플 데이터 제공'
     });
   }
 };
+
+
+
 
 
 // --- 헬퍼 함수들 (api/festivals.js 파일 내부에 함께 포함) ---
