@@ -7,27 +7,16 @@ const AREA_CODES = {
 };
 
 const CONTENT_TYPES = {
-    festivals: 15,      // 축제공연행사
-    attractions: 12,    // 관광지
-    accommodation: 32,  // 숙박
-    restaurants: 39,    // 음식점
-    culture: 14,        // 문화시설
-    activities: 28,     // 레포츠
-    shopping: 38,       // 쇼핑
+    festivals: 15,
+    accommodation: 32,
+    restaurants: 39,
+    culture: 14,
+    attractions: 12,
     all: 'all'
 };
 
-const ACCOMMODATION_TYPES = {
-    '관광호텔': 'hotel', '펜션': 'pension', '모텔': 'motel',
-    '게스트하우스': 'guesthouse', '리조트': 'resort', '콘도': 'condo', '한옥': 'hanok'
-};
-
-const RESTAURANT_TYPES = {
-    '한식': 'korean', '중식': 'chinese', '일식': 'japanese', 
-    '양식': 'western', '카페': 'cafe', '베이커리': 'bakery'
-};
-
 export default async function handler(req, res) {
+    // CORS 설정
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -42,24 +31,18 @@ export default async function handler(req, res) {
             region = '서울', 
             type = 'festivals', 
             detail = 'basic',
-            ranking = 'true',
-            numOfRows = 100,
-            crossRecommend = 'false',
-            radius = '5000'
+            numOfRows = 50 
         } = req.query;
 
-        console.log('🚀 === 통합 관광 API 시작 ===');
+        console.log('🚀 통합 관광 API 시작');
         console.log(`📍 지역: ${region}`);
         console.log(`🏷️ 타입: ${type}`);
-        console.log(`📊 상세도: ${detail}`);
-        console.log(`🏆 랭킹: ${ranking}`);
-        console.log(`🔗 연관추천: ${crossRecommend}`);
 
         // API 키 확인
         const possibleKeys = [
-            process.env.JEONBUK_API_KEY,
             process.env.TOURISM_API_KEY,
             process.env.TOUR_API_KEY,
+            process.env.JEONBUK_API_KEY,
             process.env.WEATHER_API_KEY,
             process.env.REGIONAL_API_KEY
         ];
@@ -67,55 +50,31 @@ export default async function handler(req, res) {
         const apiKey = possibleKeys.find(key => key);
         
         if (!apiKey) {
-            console.log('❌ API 키 없음');
             return res.status(200).json({
                 success: false,
                 message: 'API 키가 설정되지 않았습니다',
-                data: {},
-                responseTime: `${Date.now() - startTime}ms`
+                data: {}
             });
         }
 
-        console.log('✅ API 키 확인:', `${apiKey.substring(0, 10)}...`);
+        console.log('✅ API 키 확인됨');
 
         let result = {};
 
-        // 전체 타입 요청
         if (type === 'all') {
-            console.log('🌐 전체 타입 데이터 수집...');
-            result = await collectAllTypesData(apiKey, region, detail, ranking, parseInt(numOfRows));
-        } else {
-            // 단일 타입 요청
-            console.log(`🎯 ${type} 단일 타입 데이터 수집...`);
-            const singleTypeData = await collectTourismData(apiKey, region, type, parseInt(numOfRows));
+            // 전체 타입 수집
+            console.log('🌐 전체 타입 데이터 수집 시작...');
+            const types = ['festivals', 'accommodation', 'restaurants', 'culture', 'attractions'];
             
-            if (!singleTypeData.success) {
-                throw new Error(singleTypeData.error || '데이터 수집 실패');
+            for (const t of types) {
+                console.log(`🔄 ${t} 수집 중...`);
+                result[t] = await fetchTourismData(apiKey, region, t, Math.floor(numOfRows / 5));
+                await sleep(300);
             }
-
-            let processedData = singleTypeData.data;
-
-            // 상세정보 수집
-            if (detail === 'full' && processedData.length > 0) {
-                console.log('📋 상세정보 수집 시작...');
-                processedData = await enrichWithDetailInfo(apiKey, processedData, type);
-            }
-
-            // 랭킹 계산
-            if (ranking === 'true' && processedData.length > 0) {
-                console.log('🏆 랭킹 계산 시작...');
-                processedData = calculateRankings(processedData, type);
-            }
-
-            result[type] = processedData;
-        }
-
-        // 연관 추천 시스템
-        if (crossRecommend === 'true' && type !== 'all') {
-            console.log('🔗 연관 추천 시스템 시작...');
-            result.recommendations = await getCrossRecommendations(
-                apiKey, region, type, result[type], parseInt(radius)
-            );
+        } else {
+            // 단일 타입 수집
+            console.log(`🎯 ${type} 데이터 수집 시작...`);
+            result[type] = await fetchTourismData(apiKey, region, type, numOfRows);
         }
 
         const responseTime = Date.now() - startTime;
@@ -127,13 +86,9 @@ export default async function handler(req, res) {
                 region: region,
                 type: type,
                 detailLevel: detail,
-                hasRanking: ranking === 'true',
-                hasCrossRecommend: crossRecommend === 'true',
                 totalCount: getTotalCount(result),
                 responseTime: `${responseTime}ms`,
-                timestamp: new Date().toISOString(),
-                apiVersion: '2.0',
-                features: ['multiType', 'detailInfo', 'ranking', 'crossRecommend']
+                timestamp: new Date().toISOString()
             },
             message: `✅ ${region} ${type} 통합 관광 정보 ${getTotalCount(result)}개 수집 완료`
         });
@@ -149,137 +104,30 @@ export default async function handler(req, res) {
     }
 }
 
-// === 전체 타입 데이터 수집 ===
-async function collectAllTypesData(apiKey, region, detail, ranking, numOfRows) {
-    const types = ['festivals', 'attractions', 'accommodation', 'restaurants', 'culture'];
-    const result = {};
-    const itemsPerType = Math.floor(numOfRows / types.length);
-    
-    for (const type of types) {
-        try {
-            console.log(`🔄 ${type} 데이터 수집 중...`);
-            
-            const typeData = await collectTourismData(apiKey, region, type, itemsPerType);
-            
-            if (typeData.success && typeData.data.length > 0) {
-                let processedData = typeData.data;
-                
-                // 상세정보 수집
-                if (detail === 'full') {
-                    console.log(`📋 ${type} 상세정보 수집...`);
-                    processedData = await enrichWithDetailInfo(apiKey, processedData, type);
-                }
-                
-                // 랭킹 계산
-                if (ranking === 'true') {
-                    console.log(`🏆 ${type} 랭킹 계산...`);
-                    processedData = calculateRankings(processedData, type);
-                }
-                
-                result[type] = processedData;
-                console.log(`✅ ${type}: ${processedData.length}개 수집 완료`);
-            } else {
-                result[type] = [];
-                console.log(`⚠️ ${type}: 데이터 없음`);
-            }
-            
-            // 타입 간 딜레이
-            await sleep(400);
-            
-        } catch (error) {
-            console.error(`❌ ${type} 수집 오류:`, error);
-            result[type] = [];
-        }
-    }
-    
-    return result;
-}
-
-// === 관광 데이터 수집 ===
-async function collectTourismData(apiKey, region, type, numOfRows) {
+// 관광 데이터 수집
+async function fetchTourismData(apiKey, region, type, numOfRows) {
     try {
         const areaCode = AREA_CODES[region] || 1;
-        const contentTypeId = CONTENT_TYPES[type];
+        const contentTypeId = CONTENT_TYPES[type] || 15;
 
-        if (!contentTypeId || contentTypeId === 'all') {
-            throw new Error('올바르지 않은 타입');
-        }
+        console.log(`🔍 ${region} (${areaCode}) ${type} (${contentTypeId}) 수집...`);
 
-        console.log(`🔍 ${region} (${areaCode}) ${type} (${contentTypeId}) 데이터 수집...`);
-
-        const allData = [];
-        const maxPages = Math.ceil(numOfRows / 100);
-
-        for (let page = 1; page <= Math.min(maxPages, 5); page++) {
-            console.log(`📄 ${type} 페이지 ${page} 수집 중...`);
-            
-            const pageData = await fetchTourismPage(apiKey, {
-                areaCode,
-                contentTypeId,
-                numOfRows: Math.min(100, numOfRows - allData.length),
-                pageNo: page
-            });
-
-            if (pageData.success && pageData.data.length > 0) {
-                allData.push(...pageData.data);
-                console.log(`✅ ${type} 페이지 ${page}: ${pageData.data.length}개 수집 (총 ${allData.length}개)`);
-                
-                if (pageData.data.length < 100 || allData.length >= numOfRows) {
-                    break;
-                }
-            } else {
-                console.log(`❌ ${type} 페이지 ${page} 수집 실패`);
-                break;
-            }
-
-            await sleep(300);
-        }
-
-        console.log(`🎯 ${type} 총 ${allData.length}개 데이터 수집 완료`);
-
-        return {
-            success: true,
-            data: allData.slice(0, numOfRows)
-        };
-
-    } catch (error) {
-        console.error(`❌ ${type} 데이터 수집 오류:`, error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// === 개별 페이지 데이터 수집 ===
-async function fetchTourismPage(apiKey, params) {
-    try {
         const url = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2';
-        const queryParams = new URLSearchParams({
+        const params = new URLSearchParams({
             serviceKey: apiKey,
-            numOfRows: params.numOfRows,
-            pageNo: params.pageNo,
+            numOfRows: Math.min(numOfRows, 100),
+            pageNo: 1,
             MobileOS: 'ETC',
             MobileApp: 'HealingK',
             _type: 'json',
-            contentTypeId: params.contentTypeId,
-            areaCode: params.areaCode,
+            contentTypeId: contentTypeId,
+            areaCode: areaCode,
             arrange: 'D'
         });
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-        const response = await fetch(`${url}?${queryParams.toString()}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'HealingK-Tourism/2.0'
-            },
-            signal: controller.signal
+        const response = await fetch(`${url}?${params.toString()}`, {
+            timeout: 10000
         });
-
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -291,24 +139,22 @@ async function fetchTourismPage(apiKey, params) {
             const items = data.response.body?.items?.item || [];
             const itemsArray = Array.isArray(items) ? items : [items];
             
-            return {
-                success: true,
-                data: itemsArray.map(item => transformTourismData(item, params.contentTypeId))
-            };
+            console.log(`✅ ${type}: ${itemsArray.length}개 수집 완료`);
+            
+            return itemsArray.map(item => transformData(item, type, contentTypeId));
         } else {
-            throw new Error(data.response?.header?.resultMsg || '데이터 없음');
+            console.log(`⚠️ ${type}: 데이터 없음 (${data.response?.header?.resultMsg})`);
+            return [];
         }
 
     } catch (error) {
-        return {
-            success: false,
-            error: error.message
-        };
+        console.error(`❌ ${type} 수집 오류:`, error);
+        return [];
     }
 }
 
-// === 관광 데이터 변환 (타입별 특화) ===
-function transformTourismData(item, contentTypeId) {
+// 데이터 변환
+function transformData(item, type, contentTypeId) {
     const baseData = {
         id: item.contentid,
         title: item.title || '제목 없음',
@@ -316,7 +162,7 @@ function transformTourismData(item, contentTypeId) {
         region: getRegionFromAddr(item.addr1),
         tel: item.tel || '',
         contentTypeId: contentTypeId,
-        contentType: getContentTypeName(contentTypeId),
+        contentType: type,
         mapx: item.mapx,
         mapy: item.mapy,
         image: item.firstimage || null,
@@ -324,18 +170,15 @@ function transformTourismData(item, contentTypeId) {
         createdtime: item.createdtime,
         modifiedtime: item.modifiedtime,
         mlevel: item.mlevel || '1',
-        areacode: item.areacode,
-        sigungucode: item.sigungucode,
         zipcode: item.zipcode || '',
         originalData: {
             source: 'korean_tourism_organization',
-            contentType: getContentTypeName(contentTypeId),
-            isRealData: true,
-            apiVersion: '2.0'
+            contentType: type,
+            isRealData: true
         }
     };
 
-    // 타입별 특화 데이터 추가
+    // 타입별 특화 데이터
     switch (contentTypeId) {
         case '15': // 축제
             return {
@@ -344,8 +187,7 @@ function transformTourismData(item, contentTypeId) {
                 eventStartDate: item.eventstartdate || '',
                 eventEndDate: item.eventenddate || '',
                 status: calculateEventStatus(item.eventstartdate, item.eventenddate),
-                daysLeft: calculateDaysLeft(item.eventstartdate, item.eventenddate),
-                isWeekend: checkIfWeekend(item.eventstartdate, item.eventenddate)
+                daysLeft: calculateDaysLeft(item.eventstartdate, item.eventenddate)
             };
 
         case '32': // 숙박
@@ -355,19 +197,17 @@ function transformTourismData(item, contentTypeId) {
                 accommodationType: getAccommodationType(item.title),
                 benikia: item.benikia || 'N',
                 goodstay: item.goodstay || 'N',
-                hanok: item.hanok || 'N',
-                businessHours: item.businessHours || ''
+                hanok: item.hanok || 'N'
             };
 
         case '39': // 음식점
             return {
                 ...baseData,
                 category: 'restaurants',
-                foodType: getFoodType(item.title, item.addr1),
+                foodType: getFoodType(item.title),
                 treatmenu: item.treatmenu || '',
                 smoking: item.smoking || '',
-                packing: item.packing || '',
-                price: item.price || ''
+                packing: item.packing || ''
             };
 
         case '14': // 문화시설
@@ -376,18 +216,7 @@ function transformTourismData(item, contentTypeId) {
                 category: 'culture',
                 facilityType: 'culture',
                 scale: item.scale || '',
-                accomcount: item.accomcount || '',
-                usetime: item.usetime || ''
-            };
-
-        case '28': // 레포츠
-            return {
-                ...baseData,
-                category: 'activities',
-                activityType: 'sports',
-                openperiod: item.openperiod || '',
-                usetimeleisure: item.usetimeleisure || '',
-                age: item.age || ''
+                accomcount: item.accomcount || ''
             };
 
         case '12': // 관광지
@@ -401,490 +230,26 @@ function transformTourismData(item, contentTypeId) {
             };
 
         default:
-            return {
-                ...baseData,
-                category: getContentTypeName(contentTypeId)
-            };
+            return baseData;
     }
 }
 
-// === 상세정보 수집 (타입별 특화) ===
-async function enrichWithDetailInfo(apiKey, dataArray, type) {
-    console.log(`📋 ${type} ${dataArray.length}개 항목의 상세정보 수집...`);
-    
-    const enrichedData = [];
-    
-    // 배치 처리 (3개씩 - 안전하게)
-    for (let i = 0; i < dataArray.length; i += 3) {
-        const batch = dataArray.slice(i, i + 3);
-        
-        const batchPromises = batch.map(item => 
-            getTypeSpecificDetailInfo(apiKey, item, type)
-                .then(detail => ({ ...item, ...detail }))
-                .catch(error => {
-                    console.log(`⚠️ ${item.id} 상세정보 실패:`, error.message);
-                    return item;
-                })
-        );
-        
-        const batchResults = await Promise.all(batchPromises);
-        enrichedData.push(...batchResults);
-        
-        console.log(`📊 ${type} 배치 ${Math.floor(i/3) + 1} 완료 (${enrichedData.length}/${dataArray.length})`);
-        
-        await sleep(600); // 안전한 딜레이
-    }
-    
-    return enrichedData;
-}
-
-// === 타입별 상세정보 수집 ===
-async function getTypeSpecificDetailInfo(apiKey, item, type) {
-    try {
-        // 기본 상세정보
-        const commonDetail = await getDetailCommon(apiKey, item.id, item.contentTypeId);
-        
-        // 타입별 추가 상세정보
-        let specificDetail = {};
-        
-        switch (type) {
-            case 'festivals':
-                specificDetail = await getFestivalDetailInfo(apiKey, item.id);
-                break;
-            case 'accommodation':
-                specificDetail = await getAccommodationDetailInfo(apiKey, item.id);
-                break;
-            case 'restaurants':
-                specificDetail = await getRestaurantDetailInfo(apiKey, item.id);
-                break;
-            case 'culture':
-                specificDetail = await getCultureDetailInfo(apiKey, item.id);
-                break;
-        }
-        
-        return {
-            ...commonDetail,
-            ...specificDetail,
-            hasDetailInfo: true
-        };
-        
-    } catch (error) {
-        return { hasDetailInfo: false };
-    }
-}
-
-// === 기본 상세정보 ===
-async function getDetailCommon(apiKey, contentId, contentTypeId) {
-    try {
-        const url = 'https://apis.data.go.kr/B551011/KorService2/detailCommon2';
-        const params = new URLSearchParams({
-            serviceKey: apiKey,
-            contentId: contentId,
-            contentTypeId: contentTypeId,
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json',
-            defaultYN: 'Y',
-            firstImageYN: 'Y',
-            areacodeYN: 'Y',
-            catcodeYN: 'Y',
-            addrinfoYN: 'Y',
-            mapinfoYN: 'Y',
-            overviewYN: 'Y'
-        });
-
-        const response = await fetch(`${url}?${params.toString()}`, {
-            timeout: 8000
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.response?.header?.resultCode === '0000') {
-                const item = data.response.body?.items?.item;
-                const itemData = Array.isArray(item) ? item[0] : item;
-                
-                if (itemData) {
-                    return {
-                        homepage: itemData.homepage || '',
-                        overview: itemData.overview || '',
-                        zipcode: itemData.zipcode || '',
-                        addr2: itemData.addr2 || '',
-                        booktour: itemData.booktour || '',
-                        cat1: itemData.cat1 || '',
-                        cat2: itemData.cat2 || '',
-                        cat3: itemData.cat3 || ''
-                    };
-                }
-            }
-        }
-        
-        return {};
-        
-    } catch (error) {
-        return {};
-    }
-}
-
-// === 축제 상세정보 ===
-async function getFestivalDetailInfo(apiKey, contentId) {
-    try {
-        const url = 'https://apis.data.go.kr/B551011/KorService2/detailIntro2';
-        const params = new URLSearchParams({
-            serviceKey: apiKey,
-            contentId: contentId,
-            contentTypeId: '15',
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json'
-        });
-
-        const response = await fetch(`${url}?${params.toString()}`);
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.response?.header?.resultCode === '0000') {
-                const item = data.response.body?.items?.item;
-                const itemData = Array.isArray(item) ? item[0] : item;
-                
-                if (itemData) {
-                    return {
-                        sponsor1: itemData.sponsor1 || '',
-                        sponsor1tel: itemData.sponsor1tel || '',
-                        sponsor2: itemData.sponsor2 || '',
-                        sponsor2tel: itemData.sponsor2tel || '',
-                        eventplace: itemData.eventplace || '',
-                        eventhomepage: itemData.eventhomepage || '',
-                        agelimit: itemData.agelimit || '',
-                        bookingplace: itemData.bookingplace || '',
-                        placeinfo: itemData.placeinfo || '',
-                        playtime: itemData.playtime || '',
-                        program: itemData.program || '',
-                        spendtimefestival: itemData.spendtimefestival || '',
-                        usetimefestival: itemData.usetimefestival || '',
-                        usefee: itemData.usefee || ''
-                    };
-                }
-            }
-        }
-        
-        return {};
-        
-    } catch (error) {
-        return {};
-    }
-}
-
-// === 숙박 상세정보 ===
-async function getAccommodationDetailInfo(apiKey, contentId) {
-    try {
-        const url = 'https://apis.data.go.kr/B551011/KorService2/detailIntro2';
-        const params = new URLSearchParams({
-            serviceKey: apiKey,
-            contentId: contentId,
-            contentTypeId: '32',
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json'
-        });
-
-        const response = await fetch(`${url}?${params.toString()}`);
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.response?.header?.resultCode === '0000') {
-                const item = data.response.body?.items?.item;
-                const itemData = Array.isArray(item) ? item[0] : item;
-                
-                if (itemData) {
-                    return {
-                        accomcount: itemData.accomcount || '',
-                        checkintime: itemData.checkintime || '',
-                        checkouttime: itemData.checkouttime || '',
-                        chkcooking: itemData.chkcooking || '',
-                        foodplace: itemData.foodplace || '',
-                        infocenterlodging: itemData.infocenterlodging || '',
-                        parkinglodging: itemData.parkinglodging || '',
-                        pickup: itemData.pickup || '',
-                        roomcount: itemData.roomcount || '',
-                        reservationurl: itemData.reservationurl || '',
-                        subfacility: itemData.subfacility || '',
-                        refundregulation: itemData.refundregulation || ''
-                    };
-                }
-            }
-        }
-        
-        return {};
-        
-    } catch (error) {
-        return {};
-    }
-}
-
-// === 음식점 상세정보 ===
-async function getRestaurantDetailInfo(apiKey, contentId) {
-    try {
-        const url = 'https://apis.data.go.kr/B551011/KorService2/detailIntro2';
-        const params = new URLSearchParams({
-            serviceKey: apiKey,
-            contentId: contentId,
-            contentTypeId: '39',
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json'
-        });
-
-        const response = await fetch(`${url}?${params.toString()}`);
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.response?.header?.resultCode === '0000') {
-                const item = data.response.body?.items?.item;
-                const itemData = Array.isArray(item) ? item[0] : item;
-                
-                if (itemData) {
-                    return {
-                        chkcreditcardfood: itemData.chkcreditcardfood || '',
-                        discountinfofood: itemData.discountinfofood || '',
-                        firstmenu: itemData.firstmenu || '',
-                        infocenterfood: itemData.infocenterfood || '',
-                        kidsfacility: itemData.kidsfacility || '',
-                        opendatefood: itemData.opendatefood || '',
-                        opentimefood: itemData.opentimefood || '',
-                        parkingfood: itemData.parkingfood || '',
-                        reservationfood: itemData.reservationfood || '',
-                        restdatefood: itemData.restdatefood || '',
-                        scalefood: itemData.scalefood || '',
-                        seat: itemData.seat || '',
-                        treatmenu: itemData.treatmenu || '',
-                        lcnsno: itemData.lcnsno || ''
-                    };
-                }
-            }
-        }
-        
-        return {};
-        
-    } catch (error) {
-        return {};
-    }
-}
-
-// === 문화시설 상세정보 ===
-async function getCultureDetailInfo(apiKey, contentId) {
-    try {
-        const url = 'https://apis.data.go.kr/B551011/KorService2/detailIntro2';
-        const params = new URLSearchParams({
-            serviceKey: apiKey,
-            contentId: contentId,
-            contentTypeId: '14',
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json'
-        });
-
-        const response = await fetch(`${url}?${params.toString()}`);
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.response?.header?.resultCode === '0000') {
-                const item = data.response.body?.items?.item;
-                const itemData = Array.isArray(item) ? item[0] : item;
-                
-                if (itemData) {
-                    return {
-                        accomcountculture: itemData.accomcountculture || '',
-                        chkbabycarriageculture: itemData.chkbabycarriageculture || '',
-                        chkcreditcardculture: itemData.chkcreditcardculture || '',
-                        chkpetculture: itemData.chkpetculture || '',
-                        discountinfo: itemData.discountinfo || '',
-                        infocenterculture: itemData.infocenterculture || '',
-                        parkingculture: itemData.parkingculture || '',
-                        parkingfee: itemData.parkingfee || '',
-                        restdateculture: itemData.restdateculture || '',
-                        usefee: itemData.usefee || '',
-                        usetimeculture: itemData.usetimeculture || '',
-                        scale: itemData.scale || '',
-                        spendtime: itemData.spendtime || ''
-                    };
-                }
-            }
-        }
-        
-        return {};
-        
-    } catch (error) {
-        return {};
-    }
-}
-
-// === 랭킹 계산 (타입별 특화) ===
-function calculateRankings(dataArray, type) {
-    return dataArray.map((item, index) => {
-        let score = 0;
-        
-        // 공통 점수
-        if (item.image) score += 15;
-        if (item.tel && item.tel !== '') score += 10;
-        if (item.homepage && item.homepage !== '') score += 10;
-        if (item.overview && item.overview !== '') score += 15;
-        
-        // 타입별 특화 점수
-        switch (type) {
-            case 'festivals':
-                if (item.eventStartDate && item.eventEndDate) score += 20;
-                if (item.status === 'ongoing') score += 15;
-                if (item.sponsor1tel) score += 10;
-                if (item.program) score += 10;
-                if (item.eventhomepage) score += 5;
-                break;
-                
-            case 'accommodation':
-                if (item.checkintime && item.checkouttime) score += 15;
-                if (item.reservationurl) score += 10;
-                if (item.roomcount) score += 5;
-                if (item.goodstay === 'Y' || item.benikia === 'Y' || item.hanok === 'Y') score += 20;
-                if (item.parkinglodging) score += 5;
-                break;
-                
-            case 'restaurants':
-                if (item.treatmenu) score += 15;
-                if (item.firstmenu) score += 10;
-                if (item.opentimefood) score += 10;
-                if (item.chkcreditcardfood === 'Y') score += 5;
-                if (item.parkingfood) score += 5;
-                break;
-                
-            case 'culture':
-                if (item.usefee) score += 10;
-                if (item.usetimeculture) score += 10;
-                if (item.scale) score += 5;
-                if (item.parkingculture) score += 5;
-                break;
-
-            case 'attractions':
-                if (item.heritage1 || item.heritage2 || item.heritage3) score += 20;
-                break;
-        }
-        
-        // 최근 수정일 기준
-        if (item.modifiedtime) {
-            const modifiedDate = new Date(item.modifiedtime);
-            const daysDiff = (Date.now() - modifiedDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (daysDiff < 30) score += 20;
-            else if (daysDiff < 90) score += 15;
-            else if (daysDiff < 365) score += 10;
-        }
-        
-        // 지도 정확도
-        const mlevel = parseInt(item.mlevel) || 5;
-        score += Math.max(0, 15 - mlevel * 3);
-        
-        return {
-            ...item,
-            ranking: {
-                score: score,
-                rank: 0,
-                hasImage: !!item.image,
-                hasContact: !!(item.tel && item.tel !== ''),
-                hasHomepage: !!(item.homepage && item.homepage !== ''),
-                hasDetail: !!item.hasDetailInfo,
-                dataQuality: score >= 60 ? 'high' : score >= 40 ? 'medium' : 'low',
-                typeSpecificScore: getTypeSpecificScore(item, type)
-            }
-        };
-    })
-    .sort((a, b) => b.ranking.score - a.ranking.score)
-    .map((item, index) => ({
-        ...item,
-        ranking: {
-            ...item.ranking,
-            rank: index + 1
-        }
-    }));
-}
-
-// === 연관 추천 시스템 ===
-async function getCrossRecommendations(apiKey, region, baseType, baseData, radius) {
-    try {
-        console.log(`🔗 ${baseType} 기반 연관 추천 시작...`);
-        
-        const recommendations = {
-            nearby: {},
-            popular: {}
-        };
-        
-        // 상위 랭킹 장소들 추출
-        const topLocations = baseData
-            .filter(item => item.mapx && item.mapy && item.ranking?.rank <= 5)
-            .slice(0, 3);
-        
-        if (topLocations.length === 0) {
-            return recommendations;
-        }
-        
-        // 타입별 추천 로직
-        const recommendTypes = getRecommendationTypes(baseType);
-        
-        for (const recommendType of recommendTypes) {
-            console.log(`🎯 ${recommendType} 추천 수집...`);
-            
-            const nearbyItems = await collectTourismData(apiKey, region, recommendType, 20);
-            
-            if (nearbyItems.success && nearbyItems.data.length > 0) {
-                const rankedItems = calculateRankings(nearbyItems.data, recommendType);
-                recommendations.nearby[recommendType] = rankedItems.slice(0, 10);
-                recommendations.popular[recommendType] = rankedItems
-                    .filter(item => item.ranking.dataQuality === 'high')
-                    .slice(0, 5);
-            }
-            
-            await sleep(400);
-        }
-        
-        return recommendations;
-        
-    } catch (error) {
-        console.error('❌ 연관 추천 오류:', error);
-        return { nearby: {}, popular: {} };
-    }
-}
-
-// === 유틸리티 함수들 ===
-
-function getContentTypeName(contentTypeId) {
-    const typeMap = {
-        '15': 'festivals',
-        '12': 'attractions', 
-        '32': 'accommodation',
-        '39': 'restaurants',
-        '14': 'culture',
-        '28': 'activities',
-        '38': 'shopping'
-    };
-    return typeMap[contentTypeId] || 'unknown';
-}
-
+// 유틸리티 함수들
 function getAccommodationType(title) {
-    for (const [key, value] of Object.entries(ACCOMMODATION_TYPES)) {
-        if (title.includes(key)) {
-            return value;
-        }
-    }
+    if (title.includes('호텔')) return 'hotel';
+    if (title.includes('펜션')) return 'pension';
+    if (title.includes('모텔')) return 'motel';
+    if (title.includes('리조트')) return 'resort';
+    if (title.includes('한옥')) return 'hanok';
     return 'etc';
 }
 
-function getFoodType(title, addr) {
-    for (const [key, value] of Object.entries(RESTAURANT_TYPES)) {
-        if (title.includes(key) || (addr && addr.includes(key))) {
-            return value;
-        }
-    }
+function getFoodType(title) {
+    if (title.includes('한식')) return 'korean';
+    if (title.includes('중식')) return 'chinese';
+    if (title.includes('일식')) return 'japanese';
+    if (title.includes('양식')) return 'western';
+    if (title.includes('카페')) return 'cafe';
     return 'etc';
 }
 
@@ -926,84 +291,11 @@ function calculateDaysLeft(startDate, endDate) {
     }
 }
 
-function checkIfWeekend(startDate, endDate) {
-    if (!startDate || !endDate) return false;
-    
-    try {
-        const start = new Date(startDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
-        const end = new Date(endDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
-        
-        // 토요일(6) 또는 일요일(0)에 겹치는지 확인
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            if (d.getDay() === 0 || d.getDay() === 6) {
-                return true;
-            }
-        }
-        return false;
-    } catch (error) {
-        return false;
-    }
-}
-
-function getRecommendationTypes(baseType) {
-    const typeMap = {
-        'festivals': ['accommodation', 'restaurants', 'culture'],
-        'accommodation': ['attractions', 'restaurants', 'festivals'],
-        'restaurants': ['attractions', 'accommodation', 'culture'],
-        'attractions': ['accommodation', 'restaurants', 'festivals'],
-        'culture': ['accommodation', 'restaurants', 'festivals'],
-        'activities': ['accommodation', 'restaurants']
-    };
-    return typeMap[baseType] || ['accommodation', 'restaurants'];
-}
-
-function getTypeSpecificScore(item, type) {
-    switch (type) {
-        case 'festivals':
-            return {
-                hasSchedule: !!(item.eventStartDate && item.eventEndDate),
-                hasProgram: !!item.program,
-                hasContact: !!item.sponsor1tel,
-                hasHomepage: !!item.eventhomepage
-            };
-        case 'accommodation':
-            return {
-                hasCertification: item.goodstay === 'Y' || item.benikia === 'Y' || item.hanok === 'Y',
-                hasReservation: !!item.reservationurl,
-                hasRoomInfo: !!item.roomcount,
-                hasCheckinInfo: !!(item.checkintime && item.checkouttime)
-            };
-        case 'restaurants':
-            return {
-                hasMenu: !!item.treatmenu,
-                hasOperatingHours: !!item.opentimefood,
-                acceptsCard: item.chkcreditcardfood === 'Y',
-                hasParking: !!item.parkingfood
-            };
-        case 'culture':
-            return {
-                hasFeeInfo: !!item.usefee,
-                hasOperatingHours: !!item.usetimeculture,
-                hasScale: !!item.scale,
-                hasParking: !!item.parkingculture
-            };
-        default:
-            return {};
-    }
-}
-
 function getTotalCount(result) {
     let total = 0;
     for (const key in result) {
         if (Array.isArray(result[key])) {
             total += result[key].length;
-        } else if (typeof result[key] === 'object' && result[key] !== null) {
-            // 중첩된 객체의 경우 (recommendations 등)
-            for (const subKey in result[key]) {
-                if (Array.isArray(result[key][subKey])) {
-                    total += result[key][subKey].length;
-                }
-            }
         }
     }
     return total;
