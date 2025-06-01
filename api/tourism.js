@@ -22,8 +22,9 @@ module.exports = async function handler(req, res) {
         console.log('📅 현재 시간:', new Date().toLocaleString('ko-KR'));
         console.log('🗺️ 요청 지역:', region);
 
-        // 가능한 환경변수들 체크 (전북 방식)
+        // 가능한 환경변수들 체크 (TOUR_API_KEY 우선)
         const possibleKeys = [
+            process.env.TOUR_API_KEY,
             process.env.TOURISM_API_KEY,
             process.env.JEONBUK_API_KEY,
             process.env.WEATHER_API_KEY,
@@ -31,6 +32,7 @@ module.exports = async function handler(req, res) {
         ];
 
         console.log('🔑 환경변수 체크:', {
+            TOUR_API_KEY: !!process.env.TOUR_API_KEY,
             TOURISM_API_KEY: !!process.env.TOURISM_API_KEY,
             JEONBUK_API_KEY: !!process.env.JEONBUK_API_KEY,
             WEATHER_API_KEY: !!process.env.WEATHER_API_KEY,
@@ -44,7 +46,7 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({
                 success: true,
                 data: getTourismSampleData(region),
-                message: '⚠️ 관광 API 키 설정 필요',
+                message: '⚠️ TOUR_API_KEY 설정 필요',
                 timestamp: new Date().toISOString()
             });
         }
@@ -153,6 +155,9 @@ async function testTourismAPI(apiKey, region) {
                                 data: convertToTourismFormat(items, region)
                             };
                         }
+                    } else {
+                        console.log('❌ API 응답 오류 코드:', resultCode);
+                        console.log('📄 응답 메시지:', response.data.response?.header?.resultMsg);
                     }
                 }
 
@@ -161,6 +166,7 @@ async function testTourismAPI(apiKey, region) {
 
             } catch (urlError) {
                 console.log(`❌ ${url} 실패:`, urlError.message);
+                console.log('🔍 상세 오류:', urlError.response?.status, urlError.response?.statusText);
                 continue;
             }
         }
@@ -168,6 +174,7 @@ async function testTourismAPI(apiKey, region) {
         return { success: false, method: 'tourism_api' };
 
     } catch (error) {
+        console.log('❌ 전체 테스트 실패:', error.message);
         return { success: false, method: 'tourism_api', error: error.message };
     }
 }
@@ -221,6 +228,6 @@ function getTourismSampleData(region) {
         events,
         attractionCount: attractions.length,
         eventCount: events.length,
-        message: `API 키 설정 필요 - ${region} 샘플 데이터`
+        message: `TOUR_API_KEY 설정 필요 - ${region} 샘플 데이터`
     };
 }
