@@ -89,32 +89,32 @@ async function testDirectUrlMethod(apiKey, region) {
             // 방법 1: 원본 키 그대로
             {
                 name: 'direct_original',
-                url: `https://apis.data.go.kr/B551011/KorService1/areaBasedList1?serviceKey=${apiKey}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
+                url: `https://apis.data.go.kr/B551011/KorService2/areaBasedList1?serviceKey=${apiKey}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
             },
             // 방법 2: encodeURIComponent 적용
             {
                 name: 'direct_encoded',
-                url: `https://apis.data.go.kr/B551011/KorService1/areaBasedList1?serviceKey=${encodeURIComponent(apiKey)}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
+                url: `https://apis.data.go.kr/B551011/KorService2/areaBasedList1?serviceKey=${encodeURIComponent(apiKey)}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
             },
             // 방법 3: decodeURIComponent 후 다시 encode
             {
                 name: 'direct_decode_encode',
-                url: `https://apis.data.go.kr/B551011/KorService1/areaBasedList1?serviceKey=${encodeURIComponent(decodeURIComponent(apiKey))}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
+                url: `https://apis.data.go.kr/B551011/KorService2/areaBasedList1?serviceKey=${encodeURIComponent(decodeURIComponent(apiKey))}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
             },
             // 방법 4: HTTP 버전
             {
                 name: 'direct_http',
-                url: `http://apis.data.go.kr/B551011/KorService1/areaBasedList1?serviceKey=${apiKey}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
+                url: `http://apis.data.go.kr/B551011/KorService2/areaBasedList1?serviceKey=${apiKey}&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=HealingK&_type=json&listYN=Y&arrange=A&contentTypeId=12&areaCode=${areaCode}`
             },
             // 방법 5: 다른 파라미터 순서
             {
                 name: 'direct_reorder',
-                url: `https://apis.data.go.kr/B551011/KorService1/areaBasedList1?MobileOS=ETC&MobileApp=HealingK&_type=json&serviceKey=${apiKey}&areaCode=${areaCode}&contentTypeId=12&numOfRows=10&pageNo=1&listYN=Y&arrange=A`
+                url: `https://apis.data.go.kr/B551011/KorService2/areaBasedList1?MobileOS=ETC&MobileApp=HealingK&_type=json&serviceKey=${apiKey}&areaCode=${areaCode}&contentTypeId=12&numOfRows=10&pageNo=1&listYN=Y&arrange=A`
             },
             // 방법 6: 최소 파라미터만
             {
                 name: 'direct_minimal',
-                url: `https://apis.data.go.kr/B551011/KorService1/areaBasedList1?serviceKey=${apiKey}&areaCode=${areaCode}&numOfRows=10&_type=json`
+                url: `https://apis.data.go.kr/B551011/KorService2/areaBasedList1?serviceKey=${apiKey}&areaCode=${areaCode}&numOfRows=10&_type=json`
             }
         ];
 
