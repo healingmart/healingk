@@ -30,7 +30,6 @@
             border: 1px solid #e2e8f0;
         }
 
-        /* 헤더 */
         .widget-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -49,7 +48,6 @@
             opacity: 0.9;
         }
 
-        /* 컨트롤 바 */
         .control-bar {
             padding: 15px 20px;
             background: #f8fafc;
@@ -93,7 +91,6 @@
             background: #5a67d8;
         }
 
-        /* 탭 네비게이션 */
         .tab-nav {
             display: flex;
             background: white;
@@ -119,10 +116,6 @@
             background: #f8fafc;
         }
 
-        .tab-btn:hover {
-            background: #f8fafc;
-        }
-
         .tab-count {
             background: #e5e7eb;
             color: #374151;
@@ -137,9 +130,8 @@
             color: white;
         }
 
-        /* 콘텐츠 영역 */
         .tab-content {
-            min-height: 400px;
+            min-height: 300px;
             max-height: 500px;
             overflow-y: auto;
         }
@@ -153,7 +145,6 @@
             display: block;
         }
 
-        /* 축제 그리드 */
         .festival-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -166,7 +157,6 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
 
         .festival-card:hover {
@@ -275,7 +265,12 @@
             background: #5a67d8;
         }
 
-        /* 로딩 및 에러 상태 */
+        .action-btn:disabled {
+            background: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .loading {
             text-align: center;
             padding: 60px 20px;
@@ -312,7 +307,6 @@
             border-left: 4px solid #dc2626;
         }
 
-        /* 통계 */
         .stats-bar {
             display: flex;
             padding: 15px 20px;
@@ -331,7 +325,15 @@
             color: #667eea;
         }
 
-        /* 반응형 */
+        .api-info {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            border-left: 3px solid #f59e0b;
+            margin-bottom: 15px;
+        }
+
         @media (max-width: 768px) {
             .festival-widget {
                 margin: 10px;
@@ -344,15 +346,6 @@
                 align-items: stretch;
             }
 
-            .control-group {
-                justify-content: space-between;
-            }
-
-            .refresh-btn {
-                margin-left: 0;
-                justify-content: center;
-            }
-
             .festival-grid {
                 grid-template-columns: 1fr;
             }
@@ -361,41 +354,16 @@
                 font-size: 0.8rem;
                 padding: 12px 8px;
             }
-
-            .stats-bar {
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .widget-header {
-                padding: 15px;
-            }
-
-            .widget-title {
-                font-size: 1.3rem;
-            }
-
-            .tab-content {
-                max-height: 400px;
-            }
-
-            .festival-info {
-                padding: 12px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="festival-widget">
-        <!-- 헤더 -->
         <div class="widget-header">
             <h1 class="widget-title">🎪 힐링K 축제 정보</h1>
-            <p class="widget-subtitle">대한민국 전국 축제를 한눈에!</p>
+            <p class="widget-subtitle">전국 축제 정보 (관광지 기반 데이터)</p>
         </div>
 
-        <!-- 컨트롤 바 -->
         <div class="control-bar">
             <div class="control-group">
                 <label>지역:</label>
@@ -415,42 +383,24 @@
                 </select>
             </div>
 
-            <div class="control-group">
-                <label>분류:</label>
-                <select id="category">
-                    <option value="all">전체</option>
-                    <option value="문화예술축제">문화예술</option>
-                    <option value="음식축제">음식</option>
-                    <option value="전통축제">전통</option>
-                    <option value="꽃축제">꽃</option>
-                    <option value="음악축제">음악</option>
-                    <option value="바다축제">바다</option>
-                </select>
-            </div>
-
             <button class="refresh-btn" onclick="loadFestivals()">
                 <i class="fas fa-sync-alt"></i>
                 새로고침
             </button>
         </div>
 
-        <!-- 통계 바 -->
         <div class="stats-bar" id="stats-bar">
             <div class="stat-item">
-                전체: <span class="stat-number" id="total-count">0</span>개
+                API 응답시간: <span class="stat-number" id="response-time">-</span>
             </div>
             <div class="stat-item">
-                진행중: <span class="stat-number" id="ongoing-stat">0</span>개
-            </div>
-            <div class="stat-item">
-                예정: <span class="stat-number" id="upcoming-stat">0</span>개
+                데이터 소스: <span class="stat-number" id="data-source">-</span>
             </div>
         </div>
 
-        <!-- 탭 네비게이션 -->
         <div class="tab-nav">
             <button class="tab-btn active" data-tab="all">
-                전체보기 <span class="tab-count" id="all-count">0</span>
+                전체 <span class="tab-count" id="all-count">0</span>
             </button>
             <button class="tab-btn" data-tab="ongoing">
                 진행중 <span class="tab-count" id="ongoing-count">0</span>
@@ -463,29 +413,25 @@
             </button>
         </div>
 
-        <!-- 콘텐츠 -->
         <div class="tab-content">
-            <!-- 로딩 상태 -->
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
                 <p>축제 정보 로딩중...</p>
             </div>
 
-            <!-- 에러 상태 -->
             <div class="error" id="error" style="display: none;">
                 <span id="error-message"></span>
             </div>
 
-            <!-- 전체 탭 -->
             <div class="tab-panel active" id="all-panel">
+                <div class="api-info" id="api-info" style="display: none;"></div>
                 <div class="festival-grid" id="all-festivals"></div>
                 <div class="empty-state" id="all-empty" style="display: none;">
                     <i class="fas fa-calendar-times" style="font-size: 2rem; margin-bottom: 10px; color: #d1d5db;"></i>
-                    <p>선택한 조건의 축제가 없습니다.</p>
+                    <p>축제 정보가 없습니다.</p>
                 </div>
             </div>
 
-            <!-- 진행중 탭 -->
             <div class="tab-panel" id="ongoing-panel">
                 <div class="festival-grid" id="ongoing-festivals"></div>
                 <div class="empty-state" id="ongoing-empty" style="display: none;">
@@ -493,7 +439,6 @@
                 </div>
             </div>
 
-            <!-- 예정 탭 -->
             <div class="tab-panel" id="upcoming-panel">
                 <div class="festival-grid" id="upcoming-festivals"></div>
                 <div class="empty-state" id="upcoming-empty" style="display: none;">
@@ -501,7 +446,6 @@
                 </div>
             </div>
 
-            <!-- 주말 탭 -->
             <div class="tab-panel" id="weekend-panel">
                 <div class="festival-grid" id="weekend-festivals"></div>
                 <div class="empty-state" id="weekend-empty" style="display: none;">
@@ -515,30 +459,24 @@
         let currentData = null;
         let isLoading = false;
 
-        // 초기화
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             loadFestivals();
         });
 
         function setupEventListeners() {
-            // 탭 버튼 이벤트
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => switchTab(btn.dataset.tab));
             });
 
-            // 필터 이벤트
             document.getElementById('region').addEventListener('change', loadFestivals);
-            document.getElementById('category').addEventListener('change', filterData);
         }
 
         function switchTab(tabName) {
-            // 탭 버튼 활성화
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tab === tabName);
             });
 
-            // 패널 표시
             document.querySelectorAll('.tab-panel').forEach(panel => {
                 panel.classList.toggle('active', panel.id === `${tabName}-panel`);
             });
@@ -553,35 +491,34 @@
 
             try {
                 const region = document.getElementById('region').value;
+                const startTime = Date.now();
                 
-                // 더 많은 데이터 요청
-                const response = await fetch(`https://healingk.vercel.app/api/festivals?region=${encodeURIComponent(region)}&numOfRows=50`);
+                console.log(`🎪 ${region} 축제 정보 요청 시작`);
+                
+                const response = await fetch(`https://healingk.vercel.app/api/festivals?region=${encodeURIComponent(region)}&numOfRows=30`);
+                
+                const responseTime = Date.now() - startTime;
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
+                console.log('🎪 API 응답:', data);
                 
-                if (data.success) {
+                if (data.success && data.data) {
                     currentData = data.data;
-                    
-                    // 더 많은 가짜 데이터 추가 (실제 축제 느낌으로)
-                    enhanceData(currentData, region);
-                    
                     renderAllData();
                     updateCounts();
+                    updateApiInfo(data, responseTime);
                 } else {
-                    throw new Error(data.message || '데이터 로드 실패');
+                    throw new Error(data.message || '데이터를 불러올 수 없습니다');
                 }
                 
             } catch (error) {
-                console.error('로드 오류:', error);
-                showError(`축제 정보를 불러올 수 없습니다: ${error.message}`);
-                
-                // 백업 데이터 사용
-                currentData = getBackupData(document.getElementById('region').value);
-                renderAllData();
+                console.error('❌ 로드 오류:', error);
+                showError(`축제 정보 로드 실패: ${error.message}`);
+                currentData = null;
                 updateCounts();
             } finally {
                 isLoading = false;
@@ -589,80 +526,22 @@
             }
         }
 
-        function enhanceData(data, region) {
-            // 실제 축제 정보로 변환 및 추가
-            const additionalFestivals = [
-                {
-                    id: `${region}_extra_1`,
-                    title: `🎪 ${region} 문화축제 2025`,
-                    location: `${region} 문화센터`,
-                    region: region,
-                    startDate: '2025.06.01',
-                    endDate: '2025.06.30',
-                    status: 'ongoing',
-                    category: '문화예술축제',
-                    tel: getRegionPhone(region),
-                    daysLeft: '진행중',
-                    description: `${region}의 대표 문화축제입니다.`
-                },
-                {
-                    id: `${region}_extra_2`,
-                    title: `🍜 ${region} 맛축제`,
-                    location: `${region} 중앙광장`,
-                    region: region,
-                    startDate: '2025.06.15',
-                    endDate: '2025.06.25',
-                    status: 'upcoming',
-                    category: '음식축제',
-                    tel: getRegionPhone(region),
-                    daysLeft: '14일 후',
-                    description: `${region} 지역 대표 음식을 만나보세요.`
-                },
-                {
-                    id: `${region}_extra_3`,
-                    title: `🎵 ${region} 음악축제`,
-                    location: `${region} 공원`,
-                    region: region,
-                    startDate: '2025.06.08',
-                    endDate: '2025.06.09',
-                    status: 'ongoing',
-                    category: '음악축제',
-                    tel: getRegionPhone(region),
-                    daysLeft: '진행중',
-                    isThisWeekend: true,
-                    description: `주말을 더욱 즐겁게 만들어줄 음악축제입니다.`
-                }
-            ];
-
-            // 기존 데이터에 추가
-            data.ongoing = [...(data.ongoing || []), ...additionalFestivals.filter(f => f.status === 'ongoing')];
-            data.upcoming = [...(data.upcoming || []), ...additionalFestivals.filter(f => f.status === 'upcoming')];
-            data.thisWeekend = [...(data.thisWeekend || []), ...additionalFestivals.filter(f => f.isThisWeekend)];
-        }
-
-        function getRegionPhone(region) {
-            const phones = {
-                '서울': '02-120', '부산': '051-120', '대구': '053-120',
-                '인천': '032-120', '광주': '062-120', '대전': '042-120',
-                '울산': '052-120', '제주': '064-120', '강릉': '033-640-5114',
-                '전주': '063-281-2114', '경주': '054-779-6394', '춘천': '033-250-3000'
-            };
-            return phones[region] || '1330';
-        }
-
         function renderAllData() {
             if (!currentData) return;
 
-            const allFestivals = [
-                ...(currentData.ongoing || []),
-                ...(currentData.upcoming || []),
-                ...(currentData.thisWeekend || [])
-            ];
+            // 실제 API에서 반환된 데이터 구조 사용
+            const allFestivals = [];
+            
+            if (currentData.ongoing) allFestivals.push(...currentData.ongoing);
+            if (currentData.upcoming) allFestivals.push(...currentData.upcoming);
+            if (currentData.thisWeekend) allFestivals.push(...currentData.thisWeekend);
 
-            // 중복 제거
+            // 중복 제거 (id 기준)
             const uniqueFestivals = allFestivals.filter((festival, index, self) => 
                 index === self.findIndex(f => f.id === festival.id)
             );
+
+            console.log(`🎪 렌더링할 축제: ${uniqueFestivals.length}개`);
 
             renderTab('all', uniqueFestivals);
             renderTab('ongoing', currentData.ongoing || []);
@@ -674,7 +553,7 @@
             const container = document.getElementById(`${tabName}-festivals`);
             const emptyState = document.getElementById(`${tabName}-empty`);
 
-            if (festivals.length === 0) {
+            if (!festivals || festivals.length === 0) {
                 container.innerHTML = '';
                 emptyState.style.display = 'block';
                 return;
@@ -688,35 +567,52 @@
             const statusClass = festival.status === 'ongoing' ? 'status-ongoing' : 'status-upcoming';
             const statusText = festival.status === 'ongoing' ? '진행중' : '예정';
             
+            // 실제 데이터 체크
+            const hasPhone = festival.tel && festival.tel !== '' && festival.tel !== '1330';
+            const hasCoords = festival.mapx && festival.mapy;
+            const location = festival.location || festival.addr1 || '위치 정보 없음';
+            
             return `
-                <div class="festival-card" onclick="openFestivalDetail('${festival.id}')">
+                <div class="festival-card">
                     <div class="festival-image">
                         🎪
                         <span class="festival-status ${statusClass}">${statusText}</span>
                     </div>
                     <div class="festival-info">
-                        <h3 class="festival-title">${festival.title}</h3>
+                        <h3 class="festival-title">${festival.title || '제목 없음'}</h3>
                         <div class="festival-meta">
                             <div class="meta-item">
                                 <i class="fas fa-map-marker-alt meta-icon"></i>
-                                <span>${festival.location}</span>
+                                <span>${location}</span>
                             </div>
                             <div class="meta-item">
                                 <i class="fas fa-calendar meta-icon"></i>
-                                <span>${festival.startDate} ~ ${festival.endDate}</span>
+                                <span>${festival.startDate || '날짜미정'} ~ ${festival.endDate || '날짜미정'}</span>
                             </div>
+                            ${hasPhone ? `
                             <div class="meta-item">
                                 <i class="fas fa-phone meta-icon"></i>
                                 <span>${festival.tel}</span>
                             </div>
+                            ` : ''}
+                            <div class="meta-item">
+                                <i class="fas fa-tag meta-icon"></i>
+                                <span>${festival.category || '일반축제'}</span>
+                            </div>
                         </div>
                         <div class="festival-actions">
-                            <a href="#" class="action-btn primary" onclick="event.stopPropagation(); openKakaoMap('${festival.location}', '${festival.title}')">
-                                <i class="fas fa-map"></i> 지도
-                            </a>
-                            <a href="tel:${festival.tel}" class="action-btn" onclick="event.stopPropagation()">
+                            <button class="action-btn primary" onclick="searchOnKakaoMap('${location}', '${festival.title}')">
+                                <i class="fas fa-search"></i> 지도검색
+                            </button>
+                            ${hasPhone ? `
+                            <a href="tel:${festival.tel}" class="action-btn">
                                 <i class="fas fa-phone"></i> 전화
                             </a>
+                            ` : `
+                            <button class="action-btn" disabled>
+                                <i class="fas fa-phone"></i> 전화번호 없음
+                            </button>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -724,80 +620,57 @@
         }
 
         function updateCounts() {
-            if (!currentData) return;
+            if (!currentData) {
+                // 데이터가 없을 때
+                document.getElementById('all-count').textContent = '0';
+                document.getElementById('ongoing-count').textContent = '0';
+                document.getElementById('upcoming-count').textContent = '0';
+                document.getElementById('weekend-count').textContent = '0';
+                return;
+            }
 
-            const allCount = (currentData.ongoing?.length || 0) + 
-                           (currentData.upcoming?.length || 0) + 
-                           (currentData.thisWeekend?.length || 0);
+            const ongoingCount = currentData.ongoing?.length || 0;
+            const upcomingCount = currentData.upcoming?.length || 0;
+            const weekendCount = currentData.thisWeekend?.length || 0;
+            
+            // 중복 제거된 전체 카운트
+            const allFestivals = [];
+            if (currentData.ongoing) allFestivals.push(...currentData.ongoing);
+            if (currentData.upcoming) allFestivals.push(...currentData.upcoming);
+            if (currentData.thisWeekend) allFestivals.push(...currentData.thisWeekend);
+            
+            const uniqueCount = allFestivals.filter((festival, index, self) => 
+                index === self.findIndex(f => f.id === festival.id)
+            ).length;
 
-            document.getElementById('all-count').textContent = allCount;
-            document.getElementById('ongoing-count').textContent = currentData.ongoing?.length || 0;
-            document.getElementById('upcoming-count').textContent = currentData.upcoming?.length || 0;
-            document.getElementById('weekend-count').textContent = currentData.thisWeekend?.length || 0;
-
-            document.getElementById('total-count').textContent = allCount;
-            document.getElementById('ongoing-stat').textContent = currentData.ongoing?.length || 0;
-            document.getElementById('upcoming-stat').textContent = currentData.upcoming?.length || 0;
+            document.getElementById('all-count').textContent = uniqueCount;
+            document.getElementById('ongoing-count').textContent = ongoingCount;
+            document.getElementById('upcoming-count').textContent = upcomingCount;
+            document.getElementById('weekend-count').textContent = weekendCount;
         }
 
-        function openKakaoMap(location, title) {
-            const query = encodeURIComponent(`${location} ${title}`);
+        function updateApiInfo(data, responseTime) {
+            document.getElementById('response-time').textContent = responseTime + 'ms';
+            document.getElementById('data-source').textContent = data.method || 'unknown';
+            
+            const apiInfoEl = document.getElementById('api-info');
+            if (data.message) {
+                apiInfoEl.textContent = `ℹ️ ${data.message}`;
+                apiInfoEl.style.display = 'block';
+            } else {
+                apiInfoEl.style.display = 'none';
+            }
+        }
+
+        function searchOnKakaoMap(location, title) {
+            const query = encodeURIComponent(`${location} ${title}`.trim());
             const kakaoUrl = `https://map.kakao.com/link/search/${query}`;
             window.open(kakaoUrl, '_blank');
-        }
-
-        function openFestivalDetail(festivalId) {
-            // 축제 상세 정보 모달이나 페이지로 이동
-            console.log('축제 상세:', festivalId);
-        }
-
-        function filterData() {
-            // 카테고리 필터링 로직
-            if (!currentData) return;
-            
-            const category = document.getElementById('category').value;
-            // 필터링 후 재렌더링
-            renderAllData();
-        }
-
-        function getBackupData(region) {
-            return {
-                ongoing: [
-                    {
-                        id: 'backup_1',
-                        title: `🎪 ${region} 여름축제`,
-                        location: `${region} 시민광장`,
-                        region: region,
-                        startDate: '2025.06.01',
-                        endDate: '2025.08.31',
-                        status: 'ongoing',
-                        tel: getRegionPhone(region),
-                        category: '지역축제',
-                        daysLeft: '진행중'
-                    }
-                ],
-                upcoming: [
-                    {
-                        id: 'backup_2',
-                        title: `🎵 ${region} 음악축제`,
-                        location: `${region} 공원`,
-                        region: region,
-                        startDate: '2025.07.01',
-                        endDate: '2025.07.15',
-                        status: 'upcoming',
-                        tel: getRegionPhone(region),
-                        category: '음악축제',
-                        daysLeft: '30일 후'
-                    }
-                ],
-                thisWeekend: []
-            };
         }
 
         function showLoading() {
             document.getElementById('loading').style.display = 'block';
             document.querySelectorAll('.tab-panel').forEach(panel => {
-                if (!panel.classList.contains('active')) return;
                 panel.style.display = 'none';
             });
         }
@@ -805,7 +678,9 @@
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
             document.querySelectorAll('.tab-panel').forEach(panel => {
-                panel.style.display = 'block';
+                if (panel.classList.contains('active')) {
+                    panel.style.display = 'block';
+                }
             });
         }
 
