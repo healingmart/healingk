@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
     try {
         const { region = '서울' } = req.query;
         
-        console.log('🔍 === Service2 응답 데이터 직접 출력 ===');
+        console.log('🚀 === Service2 파라미터 수정 버전 ===');
         console.log('📅 현재 시간:', new Date().toLocaleString('ko-KR'));
         console.log('🗺️ 요청 지역:', region);
 
@@ -35,8 +35,8 @@ module.exports = async function handler(req, res) {
 
         console.log('✅ API 키 존재:', `${apiKey.substring(0, 10)}...`);
 
-        // === 실제 응답 데이터 출력 ===
-        const tourismResult = await directResponseOutput(apiKey, region);
+        // === Service2 올바른 파라미터로 테스트 ===
+        const tourismResult = await testService2WithCorrectParams(apiKey, region);
 
         if (tourismResult.success) {
             return res.status(200).json({
@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
             success: true,
             data: getTourismSampleData(region),
-            message: `🏛️ ${region} 관광 정보 (Service2 응답 구조 확인 중)`,
+            message: `🏛️ ${region} 관광 정보 (Service2 파라미터 조정 중)`,
             debug: tourismResult.debug || 'no debug info',
             timestamp: new Date().toISOString()
         });
@@ -68,149 +68,171 @@ module.exports = async function handler(req, res) {
     }
 };
 
-// === 응답 데이터 직접 출력 함수 ===
-async function directResponseOutput(apiKey, region) {
+// === Service2 올바른 파라미터 테스트 ===
+async function testService2WithCorrectParams(apiKey, region) {
     try {
         const areaCode = AREA_CODES[region] || 1;
-        const testUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2';
         
-        console.log('🎯 테스트 URL:', testUrl);
-        console.log('🎯 지역 코드:', areaCode);
+        // Service2 가능한 파라미터 조합들
+        const parameterSets = [
+            // 파라미터 세트 1: listYN 제거
+            {
+                name: 'no_listYN',
+                params: {
+                    serviceKey: apiKey,
+                    numOfRows: 5,
+                    pageNo: 1,
+                    MobileOS: 'ETC',
+                    MobileApp: 'HealingK',
+                    _type: 'json',
+                    arrange: 'A',
+                    contentTypeId: 12,
+                    areaCode: areaCode
+                }
+            },
+            // 파라미터 세트 2: 최소 파라미터만
+            {
+                name: 'minimal',
+                params: {
+                    serviceKey: apiKey,
+                    numOfRows: 5,
+                    pageNo: 1,
+                    MobileOS: 'ETC',
+                    MobileApp: 'HealingK',
+                    _type: 'json',
+                    areaCode: areaCode
+                }
+            },
+            // 파라미터 세트 3: arrange 제거
+            {
+                name: 'no_arrange',
+                params: {
+                    serviceKey: apiKey,
+                    numOfRows: 5,
+                    pageNo: 1,
+                    MobileOS: 'ETC',
+                    MobileApp: 'HealingK',
+                    _type: 'json',
+                    contentTypeId: 12,
+                    areaCode: areaCode
+                }
+            },
+            // 파라미터 세트 4: contentTypeId 제거
+            {
+                name: 'no_contentTypeId',
+                params: {
+                    serviceKey: apiKey,
+                    numOfRows: 5,
+                    pageNo: 1,
+                    MobileOS: 'ETC',
+                    MobileApp: 'HealingK',
+                    _type: 'json',
+                    areaCode: areaCode
+                }
+            }
+        ];
 
-        const params = {
-            serviceKey: apiKey,
-            numOfRows: 3,
-            pageNo: 1,
-            MobileOS: 'ETC',
-            MobileApp: 'HealingK',
-            _type: 'json',
-            listYN: 'Y',
-            arrange: 'A',
-            contentTypeId: 12,
-            areaCode: areaCode
+        const testUrls = [
+            'https://apis.data.go.kr/B551011/KorService2/areaBasedList2',
+            'https://apis.data.go.kr/B551011/KorService2/searchKeyword2'
+        ];
+
+        for (const url of testUrls) {
+            for (const paramSet of parameterSets) {
+                try {
+                    console.log(`🔍 URL: ${url.split('/').pop()}`);
+                    console.log(`📋 파라미터 세트: ${paramSet.name}`);
+                    console.log(`📋 파라미터:`, JSON.stringify(paramSet.params, null, 2));
+
+                    // searchKeyword2인 경우 keyword 추가
+                    let finalParams = { ...paramSet.params };
+                    if (url.includes('searchKeyword2')) {
+                        finalParams.keyword = region;
+                        delete finalParams.areaCode;
+                    }
+
+                    const response = await axios.get(url, {
+                        params: finalParams,
+                        timeout: 15000
+                    });
+
+                    console.log(`📡 응답:`, {
+                        status: response.status,
+                        contentType: response.headers['content-type'],
+                        dataType: typeof response.data
+                    });
+
+                    console.log(`📦 Service2 응답:`, JSON.stringify(response.data, null, 2));
+
+                    // Service2 응답 구조 처리
+                    if (response.data && typeof response.data === 'object') {
+                        const resultCode = response.data.resultCode;
+                        console.log('📊 Service2 결과 코드:', resultCode);
+
+                        // Service2 성공 코드 확인 (0000 또는 00일 가능성)
+                        if (resultCode === '0000' || resultCode === '00' || resultCode === '0') {
+                            // Service2 데이터 구조 찾기
+                            const possibleData = [
+                                response.data.items,
+                                response.data.data,
+                                response.data.result,
+                                response.data.content,
+                                response.data.list
+                            ];
+
+                            for (const dataPath of possibleData) {
+                                if (dataPath && (Array.isArray(dataPath) ? dataPath.length > 0 : true)) {
+                                    console.log('🎉 Service2 데이터 발견!');
+                                    console.log('📦 데이터:', JSON.stringify(dataPath, null, 2));
+                                    
+                                    return {
+                                        success: true,
+                                        method: `service2_${paramSet.name}`,
+                                        data: convertToTourismFormat(dataPath, region)
+                                    };
+                                }
+                            }
+
+                            // 데이터는 없지만 성공 코드
+                            console.log('✅ Service2 성공 (데이터 없음)');
+                            return {
+                                success: true,
+                                method: `service2_${paramSet.name}_empty`,
+                                data: {
+                                    region,
+                                    attractions: [],
+                                    events: [
+                                        { title: `${region} 문화축제`, location: region, date: '2025-06-01' },
+                                        { title: `${region} 음식축제`, location: region, date: '2025-06-15' }
+                                    ],
+                                    attractionCount: 0,
+                                    eventCount: 2,
+                                    message: `🏛️ ${region} 지역 데이터 없음 (Service2 연결 성공)`
+                                }
+                            };
+                        } else {
+                            console.log('❌ Service2 오류:', response.data.resultMsg);
+                        }
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                } catch (paramError) {
+                    console.log(`❌ 파라미터 세트 ${paramSet.name} 실패:`, paramError.message);
+                    continue;
+                }
+            }
+        }
+
+        return { 
+            success: false, 
+            method: 'service2_all_params_failed',
+            debug: 'All parameter combinations failed'
         };
 
-        console.log('📋 요청 파라미터:', JSON.stringify(params, null, 2));
-
-        const response = await axios.get(testUrl, {
-            params: params,
-            timeout: 15000
-        });
-
-        console.log('📡 === 응답 상태 ===');
-        console.log('상태 코드:', response.status);
-        console.log('Content-Type:', response.headers['content-type']);
-        console.log('데이터 타입:', typeof response.data);
-
-        console.log('📦 === 실제 응답 데이터 ===');
-        console.log('전체 응답:', JSON.stringify(response.data, null, 2));
-
-        // 응답이 객체인 경우
-        if (response.data && typeof response.data === 'object') {
-            console.log('🔑 === 최상위 키들 ===');
-            const topKeys = Object.keys(response.data);
-            console.log('키 목록:', topKeys);
-
-            // 각 키의 값 타입 확인
-            topKeys.forEach(key => {
-                const value = response.data[key];
-                console.log(`${key}: ${typeof value} ${Array.isArray(value) ? `(배열, 길이: ${value.length})` : ''}`);
-                
-                // 객체인 경우 하위 키들도 확인
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    console.log(`  └ ${key} 하위 키들:`, Object.keys(value));
-                }
-            });
-
-            // 데이터 찾기 시도
-            console.log('🔍 === 데이터 찾기 시도 ===');
-            
-            // 가능한 모든 경로 시도
-            const dataPaths = [
-                ['response', 'body', 'items', 'item'],
-                ['items'],
-                ['data'],
-                ['result'],
-                ['body', 'items'],
-                ['content'],
-                ['list']
-            ];
-
-            let foundData = null;
-            let foundPath = null;
-
-            for (const path of dataPaths) {
-                let current = response.data;
-                let pathStr = 'response.data';
-                
-                for (const key of path) {
-                    if (current && typeof current === 'object' && key in current) {
-                        current = current[key];
-                        pathStr += `.${key}`;
-                    } else {
-                        current = null;
-                        break;
-                    }
-                }
-                
-                if (current) {
-                    console.log(`✅ 데이터 발견: ${pathStr}`);
-                    console.log(`   타입: ${typeof current}, 배열: ${Array.isArray(current)}, 길이: ${Array.isArray(current) ? current.length : 'N/A'}`);
-                    
-                    if (Array.isArray(current) && current.length > 0) {
-                        console.log(`   첫 번째 항목:`, JSON.stringify(current[0], null, 2));
-                        foundData = current;
-                        foundPath = pathStr;
-                        break;
-                    } else if (!Array.isArray(current) && typeof current === 'object') {
-                        console.log(`   객체 내용:`, JSON.stringify(current, null, 2));
-                        foundData = [current]; // 단일 객체를 배열로 변환
-                        foundPath = pathStr;
-                        break;
-                    }
-                }
-            }
-
-            if (foundData) {
-                console.log('🎉 성공! 데이터 변환 시도...');
-                return {
-                    success: true,
-                    method: 'service2_direct_found',
-                    data: convertToTourismFormat(foundData, region),
-                    debug: `데이터 경로: ${foundPath}`
-                };
-            }
-
-            // 성공 코드라도 확인
-            const possibleCodes = [
-                response.data.response?.header?.resultCode,
-                response.data.resultCode,
-                response.data.code,
-                response.data.status
-            ];
-
-            console.log('📊 결과 코드들:', possibleCodes);
-
-            return {
-                success: false,
-                method: 'service2_no_data_found',
-                debug: {
-                    topKeys: topKeys,
-                    resultCodes: possibleCodes,
-                    fullResponse: JSON.stringify(response.data).substring(0, 500)
-                }
-            };
-        }
-
-        return { success: false, method: 'service2_not_object' };
-
     } catch (error) {
-        console.log('❌ 직접 출력 중 오류:', error.message);
-        if (error.response) {
-            console.log('📄 오류 응답 상태:', error.response.status);
-            console.log('📄 오류 응답 데이터:', JSON.stringify(error.response.data, null, 2));
-        }
-        return { success: false, method: 'service2_error', error: error.message };
+        console.log('❌ Service2 파라미터 테스트 오류:', error.message);
+        return { success: false, method: 'service2_param_error', error: error.message };
     }
 }
 
@@ -263,6 +285,6 @@ function getTourismSampleData(region) {
         events,
         attractionCount: attractions.length,
         eventCount: events.length,
-        message: `Service2 응답 분석 중 - ${region} 샘플 데이터`
+        message: `Service2 파라미터 조정 중 - ${region} 샘플 데이터`
     };
 }
