@@ -108,7 +108,7 @@ async function testTourismAPI(apiKey, region) {
 
                 // 전북 API와 동일한 파라미터 방식
                 const params = {
-                    serviceKey: apiKey,
+                    ServiceKey: apiKey,
                     numOfRows: 10,
                     pageNo: 1,
                     MobileOS: 'ETC',
@@ -123,7 +123,7 @@ async function testTourismAPI(apiKey, region) {
                 console.log('📋 요청 파라미터:', {
                     areaCode,
                     region,
-                    serviceKey: 'exists'
+                    ServiceKey: 'exists'
                 });
 
                 const response = await axios.get(url, {
