@@ -20,4 +20,4 @@ All Rights Reserved.
 
 📬 문의 (Contact) 이 데이터 사용에 대한 허가가 필요한 경우, 아래 연락처로 문의해 주세요. 📧 Email: eternityland34@gmail.com
 
-🔒 본 README 파일의 내용을 삭제하거나 변경해도 저작권 보호는 계속 유지됩니다.
+🔒 본 README 파일의 내용을 삭제하거나 변경해도 저작권 보호는 계속 유지됩니다..
