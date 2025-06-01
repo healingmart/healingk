@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>간단 날씨 API 테스트</title>
     <style>
+        /* 기본 바디 스타일: 폰트, 마진, 패딩, 배경색 설정 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
@@ -15,6 +16,7 @@
             align-items: center;
             min-height: 100vh;
         }
+        /* 컨테이너 스타일: 배경, 패딩, 테두리, 그림자, 너비, 텍스트 정렬 설정 */
         .container {
             background-color: #fff;
             padding: 25px;
@@ -24,16 +26,19 @@
             max-width: 400px;
             text-align: center;
         }
+        /* 제목 스타일: 색상, 하단 마진, 폰트 크기 설정 */
         h1 {
             color: #333;
             margin-bottom: 20px;
             font-size: 1.8rem;
         }
+        /* 입력 그룹 스타일: 하단 마진, 플렉스 박스, 요소 간 간격 설정 */
         .input-group {
             margin-bottom: 20px;
             display: flex;
             gap: 10px;
         }
+        /* 지역 입력 필드 스타일: 확장, 패딩, 테두리, 테두리 반경, 폰트 크기 설정 */
         #regionInput {
             flex-grow: 1;
             padding: 12px;
@@ -41,6 +46,7 @@
             border-radius: 6px;
             font-size: 1rem;
         }
+        /* 날씨 확인 버튼 스타일: 패딩, 배경색, 글자색, 테두리 없음, 테두리 반경, 커서, 폰트 크기, 폰트 두께, 전환 효과 설정 */
         #fetchWeatherBtn {
             padding: 12px 20px;
             background-color: #5D69F3;
@@ -52,9 +58,11 @@
             font-weight: 500;
             transition: background-color 0.2s;
         }
+        /* 날씨 확인 버튼 호버 효과: 배경색 변경 */
         #fetchWeatherBtn:hover {
             background-color: #4a56e0;
         }
+        /* 날씨 결과 영역 스타일: 상단 마진, 패딩, 테두리, 테두리 반경, 배경색, 최소 높이, 텍스트 정렬 설정 */
         #weatherResult {
             margin-top: 25px;
             padding: 20px;
@@ -64,21 +72,25 @@
             min-height: 100px;
             text-align: left;
         }
+        /* 날씨 결과 제목 스타일: 상단/하단 마진, 색상, 폰트 크기 설정 */
         #weatherResult h2 {
             margin-top: 0;
             margin-bottom: 10px;
             color: #5D69F3;
             font-size: 1.3rem;
         }
+        /* 날씨 결과 문단 스타일: 마진, 폰트 크기, 글자색 설정 */
         #weatherResult p {
             margin: 8px 0;
             font-size: 1rem;
             color: #333;
         }
+        /* 오류 메시지 스타일: 글자색, 폰트 두께 설정 */
         #weatherResult .error {
             color: #FF6B6B;
             font-weight: 500;
         }
+        /* 로딩 텍스트 스타일: 글자색, 이탤릭체 설정 */
         .loading-text {
             color: #777;
             font-style: italic;
@@ -98,6 +110,7 @@
     </div>
 
     <script>
+        // DOM 요소 가져오기
         const regionInput = document.getElementById('regionInput');
         const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
         const weatherResultDiv = document.getElementById('weatherResult');
@@ -106,36 +119,46 @@
         // 예: const WEATHER_API_URL_BASE = 'https://healingk.vercel.app/api/weather';
         const WEATHER_API_URL_BASE = 'https://healingk.vercel.app/api/weather'; 
 
+        // 날씨 확인 버튼 클릭 이벤트 리스너
         fetchWeatherBtn.addEventListener('click', async () => {
-            const region = regionInput.value.trim();
+            const region = regionInput.value.trim(); // 입력된 지역 이름 가져오기 및 공백 제거
             if (!region) {
+                // 지역 이름이 없으면 오류 메시지 표시
                 weatherResultDiv.innerHTML = '<p class="error">지역 이름을 입력해주세요.</p>';
                 return;
             }
 
+            // 날씨 정보 로딩 메시지 표시
             weatherResultDiv.innerHTML = '<p class="loading-text">날씨 정보를 가져오는 중...</p>';
 
             try {
+                // API URL 생성 (지역 이름을 URL 인코딩하여 추가)
                 const apiUrl = `${WEATHER_API_URL_BASE}?region=${encodeURIComponent(region)}`;
-                console.log(`Requesting weather for ${region} from ${apiUrl}`);
+                console.log(`Requesting weather for ${region} from ${apiUrl}`); // 콘솔에 요청 URL 로깅
 
+                // API 호출
                 const response = await fetch(apiUrl);
-                console.log('API Response Status:', response.status);
+                console.log('API Response Status:', response.status); // 콘솔에 응답 상태 로깅
 
+                // 응답이 성공적이지 않으면 오류 발생
                 if (!response.ok) {
                     throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`);
                 }
 
+                // 응답 데이터를 JSON 형태로 파싱
                 const data = await response.json();
-                console.log('API Response Data:', data);
+                console.log('API Response Data:', data); // 콘솔에 응답 데이터 로깅
 
+                // 데이터가 성공적으로 수신되고 유효한 경우
                 if (data.success && data.data) {
                     const weather = data.data;
-                    let skyIcon = '❓';
+                    let skyIcon = '❓'; // 기본 아이콘
+                    // 하늘 상태에 따라 아이콘 설정
                     if (weather.sky === '맑음') skyIcon = '☀️';
                     else if (weather.sky === '구름많음') skyIcon = '🌥️';
                     else if (weather.sky === '흐림') skyIcon = '☁️';
                     
+                    // 날씨 결과 HTML 생성 및 표시
                     weatherResultDiv.innerHTML = `
                         <h2><i class="fas fa-map-marker-alt" style="margin-right: 5px; color: #5D69F3;"></i>${weather.region || region} 날씨</h2>
                         <p><strong>온도:</strong> ${weather.temperature !== undefined ? weather.temperature + '°C' : '정보 없음'}</p>
@@ -145,10 +168,12 @@
                         ${weather.time ? `<p style="font-size:0.8em; color:#777; text-align:right;">조회시간: ${weather.time}</p>` : ''}
                     `;
                 } else {
+                    // 유효한 데이터를 받지 못한 경우 오류 발생
                     throw new Error(data.message || data.data?.message || 'API로부터 유효한 데이터를 받지 못했습니다.');
                 }
 
             } catch (error) {
+                // 오류 발생 시 콘솔에 오류 로깅 및 오류 메시지 표시
                 console.error('날씨 정보 조회 실패:', error);
                 weatherResultDiv.innerHTML = `<p class="error">오류: ${error.message}</p><p class="error" style="font-size:0.8em;">브라우저 개발자 도구(F12)의 Console 및 Network 탭에서 자세한 오류를 확인해주세요.</p>`;
             }
