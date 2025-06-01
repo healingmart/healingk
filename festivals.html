@@ -3,1715 +3,749 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>힐링K 한국 실시간 축제 정보서비스</title>
+    <title>힐링K - 실시간 축제 및 관광 정보</title>
     <style>
-        /* 폰트 임포트 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        @import url('https://cdn.jsdelivr.net/gh/webfontworld/gmarket/GmarketSans.css');
 
-        /* 리셋 및 기본 스타일 */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* 변수 정의 */
         :root {
-            /* 기본 색상 */
+            --primary-color: #6D9FFF; /* 파스텔 블루 */
+            --secondary-color: #FFD6A5; /* 파스텔 오렌지 */
+            --accent-color: #C8E6C9; /* 파스텔 그린 */
+            --text-color: #333;
             --bg-color: #FFFFFF;
-            --text-color: #333333;
-            --text-dark: #1A1A1A;
-            
-            /* 파스텔 메인 색상 */
-            --pastel-blue: #A5D8FF;
-            --pastel-pink: #FFD6E0;
-            --pastel-green: #C3E5AE;
-            --pastel-yellow: #FFF3B0;
-            --pastel-purple: #E2D1F9;
-            --pastel-orange: #FFDAC1;
-            --pastel-mint: #B5EAD7;
-            
-            /* 상태 표시 색상 */
-            --status-good: #86E3CE;
-            --status-medium: #FFDD94;
-            --status-bad: #FFA8A8;
-            --status-loading: #E0E0E0;
-            
-            /* 그림자 */
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
-            --shadow-lg: 0 6px 16px rgba(0,0,0,0.08);
-            
-            /* 애니메이션 */
-            --transition-normal: 300ms ease-in-out;
-            
-            /* 간격 */
-            --spacing-xs: 4px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --spacing-xl: 32px;
-            
-            /* 테두리 반경 */
-            --radius-sm: 4px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
+            --container-bg-color: #F8F9FA;
+            --border-color: #E0E0E0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --font-family: 'Noto Sans KR', sans-serif;
         }
 
-        /* 기본 스타일 */
         body {
-            font-family: 'Noto Sans KR', sans-serif;
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Pretendard', sans-serif;
-            color: var(--text-dark);
-            line-height: 1.3;
-        }
-
-        /* 컨테이너 */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: var(--spacing-md);
-            background-color: var(--bg-color);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* 헤더 */
-        .header {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            padding: var(--spacing-md) 0;
-            margin-bottom: var(--spacing-lg);
-            background: linear-gradient(135deg, var(--pastel-blue) 0%, var(--pastel-pink) 100%);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
         }
 
-        .header h1 {
-            font-size: 28px;
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: var(--container-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px var(--shadow-color);
+            padding: 25px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
             font-weight: 700;
-            color: var(--text-dark);
-            margin: 0;
         }
 
-        .header .subtitle {
-            font-size: 14px;
-            font-weight: 400;
-            margin-top: var(--spacing-xs);
-            opacity: 0.8;
-        }
-
-        /* 지역 선택 */
         .region-selector {
-            position: relative;
-            min-width: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .region-selector label {
+            font-size: 1.1em;
+            font-weight: 500;
         }
 
         .region-selector select {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: none;
-            border-radius: var(--radius-md);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 1em;
             background-color: var(--bg-color);
-            font-family: 'GmarketSans', sans-serif;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            appearance: none;
-            padding-right: 30px;
-            box-shadow: var(--shadow-sm);
-            transition: var(--transition-normal);
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .region-selector select:hover, .region-selector select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 8px rgba(109, 159, 255, 0.2);
         }
 
-        .region-selector::after {
-            content: '▼';
-            font-size: 12px;
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-        }
 
-        .region-selector select:hover {
-            box-shadow: var(--shadow-md);
-        }
-
-        /* 그리드 레이아웃 */
-        .grid {
+        .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-lg);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
         }
 
-        /* 카드 공통 스타일 */
-        .card {
+        .info-card {
             background-color: var(--bg-color);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-md);
-            box-shadow: var(--shadow-md);
-            transition: var(--transition-normal);
-            overflow: hidden;
-            height: 100%;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .info-card h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.6em;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+        }
+        
+        .info-card h3 {
+            color: var(--secondary-color);
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .info-card p, .info-card li {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .info-card strong {
+            font-weight: 500;
+        }
+
+        .festival-tabs {
             display: flex;
-            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
         }
 
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
+        .festival-tabs button {
+            padding: 10px 18px;
+            border: none;
+            background-color: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-md);
-        }
-
-        .card-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .card-content {
-            flex: 1;
-        }
-
-        .card-footer {
-            margin-top: var(--spacing-md);
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        /* 날씨 카드 */
-        .weather-card {
-            background-color: rgba(165, 216, 255, 0.1); /* 파스텔 블루 10% */
-            border-top: 4px solid var(--pastel-blue);
-        }
-
-        .weather-info {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            margin: var(--spacing-md) 0;
-        }
-
-        .weather-temp {
-            font-size: 48px;
-            font-weight: 700;
-            font-family: 'GmarketSans', sans-serif;
-        }
-
-        .weather-icon {
-            font-size: 48px;
-            margin-left: var(--spacing-md);
-        }
-
-        .weather-details {
-            margin-top: var(--spacing-md);
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-xs);
-        }
-
-        .weather-detail-item {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-        }
-
-        .weather-detail-item i {
-            margin-right: var(--spacing-xs);
-            width: 20px;
-            text-align: center;
-        }
-
-        /* 대기질 카드 */
-        .air-card {
-            background-color: rgba(195, 229, 174, 0.1); /* 파스텔 그린 10% */
-            border-top: 4px solid var(--pastel-green);
-        }
-
-        .air-quality-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: var(--spacing-md) 0;
-        }
-
-        .air-quality-status {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: var(--spacing-sm);
-            padding: var(--spacing-xs) var(--spacing-md);
-            border-radius: var(--radius-md);
-        }
-
-        .status-good {
-            background-color: var(--status-good);
-        }
-
-        .status-medium {
-            background-color: var(--status-medium);
-        }
-
-        .status-bad {
-            background-color: var(--status-bad);
-        }
-
-        .air-quality-details {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-top: var(--spacing-md);
-        }
-
-        .air-quality-detail {
-            text-align: center;
-        }
-
-        .air-quality-detail-value {
-            font-size: 24px;
-            font-weight: 700;
-            font-family: 'GmarketSans', sans-serif;
-        }
-
-        .air-quality-detail-label {
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.6);
-        }
-
-        /* 축제 카드 공통 */
-        .festival-card {
-            overflow: hidden;
+        .festival-tabs button.active, .festival-tabs button:hover {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
         }
 
         .festival-list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
         }
 
         .festival-item {
-            display: flex;
-            margin-bottom: var(--spacing-md);
-            padding-bottom: var(--spacing-md);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            transition: var(--transition-normal);
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 6px var(--shadow-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
-        .festival-item:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
-        }
-
         .festival-item:hover {
-            transform: translateX(3px);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
         }
 
-        .festival-image {
+        .festival-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background-color: #eee; /* Placeholder bg */
+        }
+        .festival-item h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary-color);
+            font-size: 1.1em;
+        }
+        .festival-item p {
+            font-size: 0.85em;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .festival-item .days-left {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+         .festival-item .status-ongoing { color: #4CAF50; font-weight: bold; }
+        .festival-item .status-upcoming { color: #FF9800; font-weight: bold; }
+
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .ranking-table th, .ranking-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .ranking-table th {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        .ranking-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .ranking-table .rank { font-weight: bold; color: var(--primary-color); }
+        .ranking-table .score { font-weight: bold; }
+
+        .loader {
+            display: none; /* Hidden by default */
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 8px solid #f3f3f3; /* Light grey */
+            border-top: 8px solid var(--primary-color); /* Blue */
+            border-radius: 50%;
             width: 60px;
             height: 60px;
-            border-radius: var(--radius-md);
-            object-fit: cover;
-            margin-right: var(--spacing-md);
-            background-color: var(--status-loading);
-        }
-
-        .festival-info {
-            flex: 1;
-        }
-
-        .festival-title {
-            font-weight: 500;
-            margin-bottom: var(--spacing-xs);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .festival-location {
-            font-size: 14px;
-            color: rgba(0, 0, 0, 0.6);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .festival-date {
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-        }
-
-        .festival-date i {
-            margin-right: var(--spacing-xs);
-        }
-
-        .festival-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            font-size: 10px;
-            font-weight: 700;
-            margin-left: var(--spacing-xs);
-            text-transform: uppercase;
-        }
-
-        .badge-ongoing {
-            background-color: var(--status-good);
-        }
-
-        .badge-upcoming {
-            background-color: var(--status-medium);
-        }
-
-        .badge-weekend {
-            background-color: var(--pastel-purple);
-        }
-
-        /* 진행 중 축제 카드 */
-        .ongoing-festival-card {
-            background-color: rgba(255, 214, 224, 0.1); /* 파스텔 핑크 10% */
-            border-top: 4px solid var(--pastel-pink);
-        }
-
-        /* 예정 축제 카드 */
-        .upcoming-festival-card {
-            background-color: rgba(255, 243, 176, 0.1); /* 파스텔 옐로우 10% */
-            border-top: 4px solid var(--pastel-yellow);
-        }
-
-        /* 주말 축제 카드 */
-        .weekend-festival-card {
-            background-color: rgba(226, 209, 249, 0.1); /* 파스텔 퍼플 10% */
-            border-top: 4px solid var(--pastel-purple);
-        }
-
-        /* 인기 여행지 카드 */
-        .toptour-card {
-            background-color: rgba(255, 218, 193, 0.1); /* 파스텔 오렌지 10% */
-            border-top: 4px solid var(--pastel-orange);
-        }
-
-        .toptour-carousel {
-            position: relative;
-            overflow: hidden;
-            margin: var(--spacing-md) 0;
-            border-radius: var(--radius-md);
-        }
-
-        .toptour-slides {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
-
-        .toptour-slide {
-            min-width: 100%;
-            padding: var(--spacing-md);
-            box-sizing: border-box;
-        }
-
-        .toptour-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: var(--radius-md);
-            margin-bottom: var(--spacing-md);
-        }
-
-        .toptour-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .toptour-description {
-            font-size: 14px;
-            color: rgba(0, 0, 0, 0.7);
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .toptour-nav {
-            display: flex;
-            justify-content: center;
-            margin-top: var(--spacing-md);
-        }
-
-        .toptour-nav-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.2);
-            margin: 0 4px;
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-
-        .toptour-nav-dot.active {
-            background-color: var(--pastel-orange);
-            transform: scale(1.3);
-        }
-
-        /* 랭킹 카드 */
-        .ranking-card {
-            background-color: rgba(181, 234, 215, 0.1); /* 파스텔 민트 10% */
-            border-top: 4px solid var(--pastel-mint);
-        }
-
-        .ranking-list {
-            list-style: none;
-            margin: var(--spacing-md) 0;
-            padding: 0;
-        }
-
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            padding: var(--spacing-sm) 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            transition: var(--transition-normal);
-        }
-
-        .ranking-item:last-child {
-            border-bottom: none;
-        }
-
-        .ranking-item:hover {
-            transform: translateX(3px);
-        }
-
-        .ranking-rank {
-            font-size: 20px;
-            font-weight: 700;
-            font-family: 'GmarketSans', sans-serif;
-            width: 30px;
-            text-align: center;
-        }
-
-        .ranking-info {
-            flex: 1;
-            margin: 0 var(--spacing-md);
-        }
-
-        .ranking-region {
-            font-weight: 500;
-            margin-bottom: 2px;
-        }
-
-        .ranking-factors {
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.6);
-        }
-
-        .ranking-score {
-            font-size: 18px;
-            font-weight: 700;
-            font-family: 'GmarketSans', sans-serif;
-            color: var(--text-dark);
-        }
-
-        .ranking-grade {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            margin-top: 2px;
-            text-align: center;
-        }
-
-        .grade-s {
-            background-color: var(--status-good);
-        }
-
-        .grade-a, .grade-b {
-            background-color: var(--status-medium);
-        }
-
-        .grade-c, .grade-d, .grade-f {
-            background-color: var(--status-bad);
-        }
-
-        /* 푸터 */
-        .footer {
-            text-align: center;
-            margin-top: var(--spacing-lg);
-            padding-top: var(--spacing-md);
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.5);
-        }
-
-        /* 로딩 애니메이션 */
-        .skeleton {
-            background: linear-gradient(90deg, var(--status-loading) 25%, rgba(255, 255, 255, 0.5) 50%, var(--status-loading) 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-            border-radius: var(--radius-sm);
-        }
-
-        @keyframes skeleton-loading {
-            0% {
-                background-position: 200% 0;
-            }
-            100% {
-                background-position: -200% 0;
-            }
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(0, 0, 0, 0.1);
-            border-top-color: var(--pastel-blue);
-            border-radius: 50%;
-            animation: spinner 0.8s linear infinite;
-        }
-
-        @keyframes spinner {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* 에러 메시지 */
-        .error-message {
-            padding: var(--spacing-md);
-            background-color: rgba(255, 168, 168, 0.1);
-            border-left: 4px solid var(--status-bad);
-            border-radius: var(--radius-sm);
-            margin: var(--spacing-md) 0;
-        }
-
-        /* 모달 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            animation: spin 1s linear infinite;
             z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity var(--transition-normal);
+        }
+        
+        .error-message {
+            color: red;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            background-color: #ffebee;
+            border: 1px solid red;
+            border-radius: 6px;
+            margin-top: 15px;
         }
 
-        .modal.show {
-            display: flex;
-            opacity: 1;
+        .api-message {
+            font-size: 0.85em;
+            color: #757575;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .data-time {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 3px;
         }
 
-        .modal-content {
-            background-color: var(--bg-color);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            transform: translateY(20px);
-            transition: transform var(--transition-normal);
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9em;
+            color: #777;
         }
 
-        .modal.show .modal-content {
-            transform: translateY(0);
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
-        .modal-header {
-            padding: var(--spacing-md);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .app-container { padding: 15px; }
+            header h1 { font-size: 2em; }
+            .info-card h2 { font-size: 1.4em; }
+            .festival-tabs button { padding: 8px 12px; font-size: 0.9em; }
         }
 
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: rgba(0, 0, 0, 0.5);
-            transition: var(--transition-normal);
-        }
-
-        .modal-close:hover {
-            color: var(--text-dark);
-        }
-
-        .modal-body {
-            padding: var(--spacing-md);
-        }
-
-        .modal-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: var(--radius-md);
-            margin-bottom: var(--spacing-md);
-        }
-
-        .modal-section {
-            margin-bottom: var(--spacing-md);
-        }
-
-        .modal-section-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .modal-list {
-            list-style: none;
-            padding-left: var(--spacing-md);
-        }
-
-        .modal-list li {
-            position: relative;
-            padding-left: var(--spacing-md);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .modal-list li::before {
-            content: '•';
-            position: absolute;
-            left: 0;
-            color: var(--pastel-orange);
-        }
-
-        /* 반응형 디자인 */
-        @media (max-width: 1023px) {
-            .grid {
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            }
-
-            .header h1 {
-                font-size: 24px;
-            }
-
-            .card-title {
-                font-size: 18px;
-            }
-        }
-
-        @media (max-width: 767px) {
-            .container {
-                padding: var(--spacing-sm);
-            }
-
-            .grid {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-sm);
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: var(--spacing-md);
-            }
-
-            .region-selector {
-                width: 100%;
-                margin-top: var(--spacing-md);
-            }
-
-            .weather-info {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .weather-icon {
-                margin-left: 0;
-                margin-top: var(--spacing-sm);
-            }
-
-            .card-title {
-                font-size: 16px;
-            }
-
-            .festival-image {
-                width: 50px;
-                height: 50px;
-            }
-
-            .toptour-image {
-                height: 150px;
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <div>
-                <h1>힐링K 한국 실시간 축제 정보</h1>
-                <div class="subtitle">지금 가장 좋은 여행지와 축제를 확인하세요</div>
-            </div>
-            <div class="region-selector">
-                <select id="region-select">
-                    <option value="서울">서울</option>
-                    <option value="부산">부산</option>
-                    <option value="제주">제주</option>
-                    <option value="강릉">강릉</option>
-                    <option value="전주">전주</option>
-                    <option value="대구">대구</option>
-                    <option value="광주">광주</option>
-                    <option value="대전">대전</option>
-                </select>
-            </div>
+    <div class="loader" id="loader"></div>
+
+    <div class="app-container">
+        <header>
+            <h1>힐링K 정보 서비스</h1>
+            <p>대한민국의 실시간 날씨, 대기질, 축제, 관광 정보를 한눈에!</p>
         </header>
 
-        <!-- 날씨 및 대기질 정보 -->
-        <div class="grid">
-            <div class="card weather-card">
-                <div class="card-header">
-                    <h2 class="card-title">날씨 정보</h2>
-                    <button class="refresh-btn" data-type="weather">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
-                </div>
-                <div class="card-content" id="weather-content">
-                    <!-- 날씨 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 100px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span id="weather-update-time">업데이트: --:--</span>
-                    <span>기상청 제공</span>
-                </div>
-            </div>
-
-            <div class="card air-card">
-                <div class="card-header">
-                    <h2 class="card-title">대기질 정보</h2>
-                    <button class="refresh-btn" data-type="air">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
-                </div>
-                <div class="card-content" id="air-content">
-                    <!-- 대기질 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 100px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span id="air-update-time">업데이트: --:--</span>
-                    <span>한국환경공단 제공</span>
-                </div>
-            </div>
+        <div class="region-selector">
+            <label for="region">지역 선택:</label>
+            <select id="region">
+                <option value="서울">서울</option>
+                <option value="부산">부산</option>
+                <option value="제주">제주</option>
+                <option value="강릉">강릉</option>
+                <option value="전주">전주</option>
+                <option value="대구">대구</option>
+                <option value="광주">광주</option>
+                <option value="대전">대전</option>
+            </select>
         </div>
 
-        <!-- 축제 정보 -->
-        <div class="grid">
-            <div class="card festival-card ongoing-festival-card">
-                <div class="card-header">
-                    <h2 class="card-title">지금 진행 중인 축제</h2>
-                    <button class="refresh-btn" data-type="ongoing-festival">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
-                </div>
-                <div class="card-content" id="ongoing-festival-content">
-                    <!-- 진행 중인 축제 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 200px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span id="ongoing-festival-count">0개 진행 중</span>
-                    <span id="ongoing-festival-update-time">업데이트: --:--</span>
-                </div>
+        <div id="error-display" class="error-message" style="display: none;"></div>
+        
+        <section id="combined-info-section" class="info-card">
+            <h2><span id="current-region-title">서울</span> 종합 정보 🌟</h2>
+            <div id="combined-content">
+                <p>데이터를 불러오는 중입니다...</p>
             </div>
+            <p class="api-message" id="combined-message"></p>
+            <p class="data-time" id="combined-time"></p>
+        </section>
 
-            <div class="card festival-card upcoming-festival-card">
-                <div class="card-header">
-                    <h2 class="card-title">곧 시작하는 축제</h2>
-                    <button class="refresh-btn" data-type="upcoming-festival">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
+        <div class="info-grid">
+            <section id="weather-section" class="info-card">
+                <h2>날씨 🌤️</h2>
+                <div id="weather-content">
+                    <p>데이터를 불러오는 중입니다...</p>
                 </div>
-                <div class="card-content" id="upcoming-festival-content">
-                    <!-- 예정된 축제 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 200px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span id="upcoming-festival-count">0개 예정</span>
-                    <span id="upcoming-festival-update-time">업데이트: --:--</span>
-                </div>
-            </div>
+                <p class="api-message" id="weather-message"></p>
+                <p class="data-time" id="weather-time"></p>
+            </section>
 
-            <div class="card festival-card weekend-festival-card">
-                <div class="card-header">
-                    <h2 class="card-title">이번 주말 즐길 수 있는 축제</h2>
-                    <button class="refresh-btn" data-type="weekend-festival">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
+            <section id="air-quality-section" class="info-card">
+                <h2>대기질 🌬️</h2>
+                <div id="air-quality-content">
+                    <p>데이터를 불러오는 중입니다...</p>
                 </div>
-                <div class="card-content" id="weekend-festival-content">
-                    <!-- 주말 축제 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 200px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span id="weekend-festival-count">0개 주말 축제</span>
-                    <span id="weekend-festival-update-time">업데이트: --:--</span>
-                </div>
-            </div>
+                <p class="api-message" id="air-quality-message"></p>
+                <p class="data-time" id="air-quality-time"></p>
+            </section>
         </div>
-
-        <!-- 인기 여행지 및 랭킹 -->
-        <div class="grid">
-            <div class="card toptour-card">
-                <div class="card-header">
-                    <h2 class="card-title">인기 여행지 추천</h2>
-                    <button class="refresh-btn" data-type="toptour">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
-                </div>
-                <div class="card-content" id="toptour-content">
-                    <!-- 인기 여행지 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 250px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span>한국관광공사 제공</span>
-                    <span id="toptour-update-time">업데이트: --:--</span>
-                </div>
+        
+        <section id="festivals-section" class="info-card">
+            <h2>축제 정보 🎪 (<span id="festival-region-title">서울</span>)</h2>
+            <div class="festival-tabs">
+                <button class="active" data-tab="ongoing">진행 중</button>
+                <button data-tab="upcoming">예정</button>
+                <button data-tab="thisWeekend">이번 주말</button>
             </div>
-
-            <div class="card ranking-card">
-                <div class="card-header">
-                    <h2 class="card-title">오늘의 여행지 랭킹</h2>
-                    <button class="refresh-btn" data-type="ranking">
-                        <span class="loading-spinner" style="display: none;"></span>
-                        <span class="refresh-icon">🔄</span>
-                    </button>
-                </div>
-                <div class="card-content" id="ranking-content">
-                    <!-- 랭킹 정보가 여기에 로드됩니다 -->
-                    <div class="skeleton" style="height: 250px;"></div>
-                </div>
-                <div class="card-footer">
-                    <span>날씨, 대기질, 축제 정보 기반</span>
-                    <span id="ranking-update-time">업데이트: --:--</span>
-                </div>
+            <div id="festivals-stats" style="margin-bottom: 10px; font-size: 0.9em;"></div>
+            <div id="festivals-content" class="festival-list">
+                <p>축제 정보를 불러오는 중입니다...</p>
             </div>
-        </div>
+             <p class="api-message" id="festivals-main-message"></p>
+             <p class="data-time" id="festivals-time"></p>
+        </section>
 
-        <footer class="footer">
-            <p>© 2025 힐링K 한국 실시간 축제 정보서비스 | 데이터 출처: 기상청, 한국환경공단, 한국관광공사</p>
-            <p id="last-update-time">마지막 업데이트: 2025-05-31 22:00:00</p>
+        <section id="tourism-section" class="info-card">
+            <h2>주요 관광지 및 이벤트 🏛️ (<span id="tourism-region-title">서울</span>)</h2>
+            <div id="tourism-content">
+                <p>데이터를 불러오는 중입니다...</p>
+            </div>
+            <p class="api-message" id="tourism-message"></p>
+            <p class="data-time" id="tourism-time"></p>
+        </section>
+
+        <section id="ranking-section" class="info-card">
+            <h2>관광지 랭킹 🏆</h2>
+            <div id="ranking-content">
+                <p>랭킹 정보를 불러오는 중입니다...</p>
+            </div>
+            <p class="api-message" id="ranking-message"></p>
+            <p class="data-time" id="ranking-time"></p>
+        </section>
+
+        <footer>
+            <p>&copy; <span id="current-year"></span> 힐링K 프로젝트. All rights reserved.</p>
+            <p>데이터 제공: 한국관광공사, 기상청, 에어코리아 등</p>
+            <p>본 서비스에서 제공하는 정보는 실제와 다소 차이가 있을 수 있습니다.</p>
         </footer>
     </div>
 
-    <!-- 여행지 상세 정보 모달 -->
-    <div class="modal" id="toptour-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modal-title">여행지 상세 정보</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                <!-- 여행지 상세 정보가 여기에 로드됩니다 -->
-            </div>
-        </div>
-    </div>
-
     <script>
-        // 기본 설정 및 상수
-        const API_BASE_URL = 'https://healingk-festival.vercel.app/api'; // 실제 배포 URL로 변경 필요
-        const DEFAULT_REGION = '서울';
-        let currentRegion = DEFAULT_REGION;
+        // 중요: 이 URL을 실제 Vercel 배포 URL로 변경하세요. (예: https://your-project-name.vercel.app)
+        const VERCEL_BASE_URL = 'YOUR_VERCEL_PROJECT_BASE_URL'; // <--- 이 부분을 수정해주세요!!!
+
+        const loader = document.getElementById('loader');
+        const errorDisplay = document.getElementById('error-display');
+
+        const regionSelect = document.getElementById('region');
         
-        // 캐시 설정
-        const CACHE_DURATION = {
-            weather: 30 * 60 * 1000, // 30분
-            air: 30 * 60 * 1000, // 30분
-            festivals: 60 * 60 * 1000, // 1시간
-            toptour: 3 * 60 * 60 * 1000, // 3시간
-            ranking: 3 * 60 * 60 * 1000 // 3시간
-        };
+        const currentRegionTitle = document.getElementById('current-region-title');
+        const festivalRegionTitle = document.getElementById('festival-region-title');
+        const tourismRegionTitle = document.getElementById('tourism-region-title');
+
+        const weatherContent = document.getElementById('weather-content');
+        const weatherMessage = document.getElementById('weather-message');
+        const weatherTime = document.getElementById('weather-time');
+
+        const airQualityContent = document.getElementById('air-quality-content');
+        const airQualityMessage = document.getElementById('air-quality-message');
+        const airQualityTime = document.getElementById('air-quality-time');
+
+        const combinedContent = document.getElementById('combined-content');
+        const combinedMessage = document.getElementById('combined-message');
+        const combinedTime = document.getElementById('combined-time');
+
+        const festivalsContent = document.getElementById('festivals-content');
+        const festivalsStats = document.getElementById('festivals-stats');
+        const festivalsMainMessage = document.getElementById('festivals-main-message');
+        const festivalsTime = document.getElementById('festivals-time');
+        const festivalTabs = document.querySelector('.festival-tabs');
+        let currentFestivalTab = 'ongoing';
+        let festivalDataCache = null; // 축제 데이터 캐싱용
+
+        const tourismContent = document.getElementById('tourism-content');
+        const tourismMessage = document.getElementById('tourism-message');
+        const tourismTime = document.getElementById('tourism-time');
         
-        // 캐시 저장소
-        const cache = {
-            weather: {},
-            air: {},
-            festivals: {},
-            toptour: null,
-            ranking: null,
-            timestamp: {
-                weather: {},
-                air: {},
-                festivals: {},
-                toptour: null,
-                ranking: null
+        const rankingContent = document.getElementById('ranking-content');
+        const rankingMessage = document.getElementById('ranking-message');
+        const rankingTime = document.getElementById('ranking-time');
+
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        function showLoader() {
+            loader.style.display = 'block';
+        }
+
+        function hideLoader() {
+            loader.style.display = 'none';
+        }
+        
+        function showError(message) {
+            errorDisplay.textContent = message;
+            errorDisplay.style.display = 'block';
+        }
+
+        function clearError() {
+            errorDisplay.textContent = '';
+            errorDisplay.style.display = 'none';
+        }
+
+        async function fetchData(endpoint, params = {}) {
+            if (VERCEL_BASE_URL === 'YOUR_VERCEL_PROJECT_BASE_URL') {
+                console.error("VERCEL_BASE_URL이 설정되지 않았습니다. 스크립트 상단의 해당 변수를 수정해주세요.");
+                showError("애플리케이션 설정 오류: VERCEL_BASE_URL을 확인해주세요.");
+                // 모든 컨텐츠 영역에 오류 메시지 표시
+                const placeholderText = "애플리케이션 설정 오류입니다.";
+                weatherContent.innerHTML = `<p>${placeholderText}</p>`;
+                airQualityContent.innerHTML = `<p>${placeholderText}</p>`;
+                combinedContent.innerHTML = `<p>${placeholderText}</p>`;
+                festivalsContent.innerHTML = `<p>${placeholderText}</p>`;
+                tourismContent.innerHTML = `<p>${placeholderText}</p>`;
+                rankingContent.innerHTML = `<p>${placeholderText}</p>`;
+                return null;
             }
-        };
-        
-        // DOM 요소
-        const regionSelect = document.getElementById('region-select');
-        const refreshButtons = document.querySelectorAll('.refresh-btn');
-        const modal = document.getElementById('toptour-modal');
-        const modalClose = modal.querySelector('.modal-close');
-        
-        // 날씨 아이콘 매핑
-        const weatherIcons = {
-            '맑음': '☀️',
-            '구름많음': '⛅',
-            '흐림': '☁️',
-            '비': '🌧️',
-            '눈': '❄️',
-            '비/눈': '🌨️',
-            '소나기': '🌦️'
-        };
-        
-        // 대기질 상태 매핑
-        const airQualityStatus = {
-            '좋음': { class: 'status-good', emoji: '😊' },
-            '보통': { class: 'status-medium', emoji: '😐' },
-            '나쁨': { class: 'status-bad', emoji: '😷' },
-            '매우나쁨': { class: 'status-bad', emoji: '🤢' }
-        };
-        
-        // 등급 클래스 매핑
-        const gradeClasses = {
-            'S': 'grade-s',
-            'A': 'grade-a',
-            'B': 'grade-b',
-            'C': 'grade-c',
-            'D': 'grade-d',
-            'F': 'grade-f'
-        };
-        
-        // 이벤트 리스너 설정
-        document.addEventListener('DOMContentLoaded', () => {
-            // 지역 선택 이벤트
-            regionSelect.addEventListener('change', handleRegionChange);
             
-            // 새로고침 버튼 이벤트
-            refreshButtons.forEach(button => {
-                button.addEventListener('click', handleRefresh);
-            });
+            showLoader();
+            clearError();
             
-            // 모달 닫기 이벤트
-            modalClose.addEventListener('click', () => {
-                modal.classList.remove('show');
-            });
-            
-            // 모달 외부 클릭 시 닫기
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('show');
+            const queryParams = new URLSearchParams(params).toString();
+            const url = `${VERCEL_BASE_URL}/api/${endpoint}${queryParams ? '?' + queryParams : ''}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
-            
-            // 초기 데이터 로드
-            loadAllData();
+                const data = await response.json();
+                hideLoader();
+                return data;
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                showError(`데이터를 가져오는 중 오류가 발생했습니다 (${endpoint}): ${error.message}`);
+                hideLoader();
+                return { success: false, message: `클라이언트 요청 오류: ${error.message}` }; // API 응답 형식에 맞게 반환
+            }
+        }
+
+        function displayWeatherData(data) {
+            if (data && data.success && data.data) {
+                const weather = data.data;
+                weatherContent.innerHTML = `
+                    <p><strong>온도:</strong> ${weather.temperature}°C</p>
+                    <p><strong>하늘:</strong> ${weather.sky}</p>
+                    <p><strong>강수:</strong> ${weather.precipitation || '정보 없음'}</p>
+                `;
+                weatherMessage.textContent = weather.message || '데이터 로드 성공';
+                weatherTime.textContent = `업데이트: ${weather.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                weatherContent.innerHTML = `<p>날씨 정보를 불러오지 못했습니다.</p>`;
+                weatherMessage.textContent = data.message || '날씨 정보 없음';
+                weatherTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
+            }
+        }
+
+        function displayAirQualityData(data) {
+            if (data && data.success && data.data) {
+                const air = data.data;
+                airQualityContent.innerHTML = `
+                    <p><strong>미세먼지(PM10):</strong> ${air.pm10 !== null ? air.pm10 + 'µg/m³' : '정보 없음'}</p>
+                    <p><strong>초미세먼지(PM2.5):</strong> ${air.pm25 !== null ? air.pm25 + 'µg/m³' : '정보 없음'}</p>
+                    <p><strong>상태:</strong> ${air.status}</p>
+                    ${air.stationName ? `<p><strong>측정소:</strong> ${air.stationName}</p>` : ''}
+                `;
+                airQualityMessage.textContent = air.message || '데이터 로드 성공';
+                airQualityTime.textContent = `업데이트: ${air.dataTime || air.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                airQualityContent.innerHTML = `<p>대기질 정보를 불러오지 못했습니다.</p>`;
+                airQualityMessage.textContent = data.message || '대기질 정보 없음';
+                airQualityTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
+            }
+        }
+
+        function displayCombinedData(data) {
+            if (data && data.success && data.data) {
+                const combined = data.data;
+                let factorsHtml = '<ul>';
+                if (combined.factors && combined.factors.length > 0) {
+                    combined.factors.forEach(factor => {
+                        factorsHtml += `<li>${factor}</li>`;
+                    });
+                } else {
+                    factorsHtml += '<li>추천 요인 정보 없음</li>';
+                }
+                factorsHtml += '</ul>';
+
+                combinedContent.innerHTML = `
+                    <p><strong>종합 점수:</strong> ${combined.score}점</p>
+                    <p><strong>여행 등급:</strong> ${combined.grade}</p>
+                    <p><strong>추천 상태:</strong> ${combined.recommendation}</p>
+                    <p><strong>주요 요인:</strong></p>
+                    ${factorsHtml}
+                `;
+                combinedMessage.textContent = combined.message || '데이터 로드 성공';
+                combinedTime.textContent = `업데이트: ${combined.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                combinedContent.innerHTML = `<p>종합 정보를 불러오지 못했습니다.</p>`;
+                combinedMessage.textContent = data.message || '종합 정보 없음';
+                combinedTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
+            }
+        }
+        
+        function renderFestivals(festivalsToRender) {
+            if (!festivalsToRender || festivalsToRender.length === 0) {
+                festivalsContent.innerHTML = '<p>해당 조건의 축제가 없습니다.</p>';
+                return;
+            }
+            festivalsContent.innerHTML = festivalsToRender.map(festival => `
+                <div class="festival-item">
+                    ${festival.image ? `<img src="${festival.image}" alt="${festival.title}" onerror="this.style.display='none';">` : '<div style="height:150px; background:#eee; display:flex; align-items:center; justify-content:center; color:#aaa; border-radius:6px; margin-bottom:10px;">이미지 없음</div>'}
+                    <h4>${festival.title}</h4>
+                    <p><strong>장소:</strong> ${festival.location}</p>
+                    <p><strong>기간:</strong> ${festival.startDate} ~ ${festival.endDate}</p>
+                    ${festival.tel ? `<p><strong>문의:</strong> ${festival.tel}</p>` : ''}
+                    <p class="days-left">${festival.daysLeft}</p>
+                    <p><strong>상태:</strong> <span class="status-${festival.status}">${festival.status === 'ongoing' ? '진행중' : '예정'}</span></p>
+                </div>
+            `).join('');
+        }
+
+        function displayFestivalData(data) {
+            festivalDataCache = null; // 캐시 초기화
+            if (data && data.success && data.data) {
+                festivalDataCache = data.data; // 새 데이터로 캐시 업데이트
+                const stats = data.data.stats;
+                festivalsStats.innerHTML = `
+                    <p><strong>총 축제:</strong> ${stats.total}개 | 
+                    <strong>진행 중:</strong> ${stats.ongoing}개 | 
+                    <strong>예정:</strong> ${stats.upcoming}개 |
+                    <strong>이번 주말:</strong> ${stats.thisWeekend}개</p>
+                `;
+                
+                // 현재 활성화된 탭 기준으로 축제 목록 렌더링
+                let festivalsToDisplay;
+                if (currentFestivalTab === 'ongoing') festivalsToDisplay = data.data.ongoing;
+                else if (currentFestivalTab === 'upcoming') festivalsToDisplay = data.data.upcoming;
+                else if (currentFestivalTab === 'thisWeekend') festivalsToDisplay = data.data.thisWeekend;
+                
+                renderFestivals(festivalsToDisplay);
+
+                festivalsMainMessage.textContent = data.data.message || '데이터 로드 성공';
+                festivalsTime.textContent = `업데이트: ${data.data.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                festivalsContent.innerHTML = `<p>축제 정보를 불러오지 못했습니다.</p>`;
+                festivalsStats.innerHTML = '';
+                festivalsMainMessage.textContent = data.message || (data.data && data.data.message) || '축제 정보 없음';
+                festivalsTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
+            }
+        }
+
+        festivalTabs.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                document.querySelectorAll('.festival-tabs button').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                currentFestivalTab = event.target.dataset.tab;
+                
+                if (festivalDataCache) { // 캐시된 데이터가 있으면 사용
+                    let festivalsToDisplay;
+                    if (currentFestivalTab === 'ongoing') festivalsToDisplay = festivalDataCache.ongoing;
+                    else if (currentFestivalTab === 'upcoming') festivalsToDisplay = festivalDataCache.upcoming;
+                    else if (currentFestivalTab === 'thisWeekend') festivalsToDisplay = festivalDataCache.thisWeekend;
+                    renderFestivals(festivalsToDisplay);
+                } else {
+                    // 캐시가 없으면 (예: 페이지 첫 로드 시 또는 오류 후) 다시 로드 시도 (하지만 기본적으로는 displayFestivalData에서 처리)
+                    festivalsContent.innerHTML = '<p>축제 데이터를 다시 불러와주세요.</p>';
+                }
+            }
         });
-        
-        // 지역 변경 핸들러
-        function handleRegionChange() {
-            currentRegion = regionSelect.value;
-            loadRegionalData();
-        }
-        
-        // 새로고침 버튼 핸들러
-        function handleRefresh(e) {
-            const button = e.currentTarget;
-            const dataType = button.dataset.type;
-            const spinner = button.querySelector('.loading-spinner');
-            const icon = button.querySelector('.refresh-icon');
-            
-            // 로딩 상태 표시
-            spinner.style.display = 'inline-block';
-            icon.style.display = 'none';
-            
-            // 캐시 무효화
-            invalidateCache(dataType);
-            
-            // 데이터 다시 로드
-            if (dataType === 'weather') {
-                loadWeatherData(currentRegion, true);
-            } else if (dataType === 'air') {
-                loadAirQualityData(currentRegion, true);
-            } else if (dataType.includes('festival')) {
-                loadFestivalData(true);
-            } else if (dataType === 'toptour') {
-                loadTopTourData(true);
-            } else if (dataType === 'ranking') {
-                loadRankingData(true);
-            }
-            
-            // 로딩 상태 복원 (1초 후)
-            setTimeout(() => {
-                spinner.style.display = 'none';
-                icon.style.display = 'inline-block';
-            }, 1000);
-        }
-        
-        // 캐시 무효화
-        function invalidateCache(dataType) {
-            if (dataType === 'weather') {
-                cache.timestamp.weather[currentRegion] = null;
-            } else if (dataType === 'air') {
-                cache.timestamp.air[currentRegion] = null;
-            } else if (dataType.includes('festival')) {
-                cache.timestamp.festivals = null;
-            } else if (dataType === 'toptour') {
-                cache.timestamp.toptour = null;
-            } else if (dataType === 'ranking') {
-                cache.timestamp.ranking = null;
+
+
+        function displayTourismData(data) {
+            if (data && data.success && data.data) {
+                const tourism = data.data;
+                let attractionsHtml = '<h3>주요 관광지</h3>';
+                if (tourism.attractions && tourism.attractions.length > 0) {
+                    attractionsHtml += '<ul>';
+                    tourism.attractions.forEach(attr => {
+                        attractionsHtml += `
+                            <li>
+                                <strong>${attr.title}</strong> (${attr.category})
+                                ${attr.address ? `<br><small>${attr.address}</small>` : ''}
+                                ${attr.tel ? `<br><small>문의: ${attr.tel}</small>` : ''}
+                            </li>`;
+                    });
+                    attractionsHtml += '</ul>';
+                } else {
+                    attractionsHtml += '<p>추천 관광지 정보가 없습니다.</p>';
+                }
+
+                let eventsHtml = '<h3>주요 이벤트 (샘플)</h3>';
+                 if (tourism.events && tourism.events.length > 0) {
+                    eventsHtml += '<ul>';
+                    tourism.events.forEach(event => {
+                        eventsHtml += `<li><strong>${event.title}</strong> - ${event.location} (예상일: ${event.date || '미정'})</li>`;
+                    });
+                    eventsHtml += '</ul>';
+                } else {
+                    eventsHtml += '<p>이벤트 정보가 없습니다.</p>';
+                }
+
+                tourismContent.innerHTML = attractionsHtml + eventsHtml;
+                tourismMessage.textContent = tourism.message || '데이터 로드 성공';
+                tourismTime.textContent = `업데이트: ${tourism.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                tourismContent.innerHTML = `<p>관광 정보를 불러오지 못했습니다.</p>`;
+                tourismMessage.textContent = data.message || '관광 정보 없음';
+                tourismTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
             }
         }
-        
-        // 모든 데이터 로드
-        function loadAllData() {
-            loadRegionalData();
-            loadFestivalData();
-            loadTopTourData();
-            loadRankingData();
-            updateLastUpdateTime();
-        }
-        
-        // 지역별 데이터 로드
-        function loadRegionalData() {
-            loadWeatherData(currentRegion);
-            loadAirQualityData(currentRegion);
-        }
-        
-        // 날씨 데이터 로드
-        async function loadWeatherData(region, forceRefresh = false) {
-            const contentElement = document.getElementById('weather-content');
-            const updateTimeElement = document.getElementById('weather-update-time');
-            
-            // 캐시 확인
-            const now = Date.now();
-            if (!forceRefresh && 
-                cache.weather[region] && 
-                cache.timestamp.weather[region] && 
-                now - cache.timestamp.weather[region] < CACHE_DURATION.weather) {
-                renderWeatherData(cache.weather[region]);
-                return;
-            }
-            
-            // 로딩 상태 표시
-            contentElement.innerHTML = '<div class="skeleton" style="height: 100px;"></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/weather?region=${region}`);
-                if (!response.ok) throw new Error('날씨 데이터를 불러오는데 실패했습니다.');
-                
-                const data = await response.json();
-                if (!data.success) throw new Error(data.message || '날씨 데이터 오류');
-                
-                // 캐시 저장
-                cache.weather[region] = data.data;
-                cache.timestamp.weather[region] = now;
-                
-                // 데이터 렌더링
-                renderWeatherData(data.data);
-                
-                // 업데이트 시간 표시
-                updateTimeElement.textContent = `업데이트: ${formatTime(new Date())}`;
-            } catch (error) {
-                console.error('날씨 데이터 로드 오류:', error);
-                contentElement.innerHTML = `
-                    <div class="error-message">
-                        <p>날씨 정보를 불러오는데 실패했습니다.</p>
-                        <p>잠시 후 다시 시도해주세요.</p>
-                    </div>
-                `;
+
+        function displayRankingData(data) {
+            if (data && data.success && data.data) {
+                const ranking = data.data;
+                if (ranking.length > 0) {
+                    let tableHtml = '<table class="ranking-table"><thead><tr><th>순위</th><th>지역</th><th>점수</th><th>등급</th><th>날씨</th><th>대기질</th><th>주요 요인</th></tr></thead><tbody>';
+                    ranking.forEach(item => {
+                        tableHtml += `
+                            <tr>
+                                <td class="rank">${item.rank}</td>
+                                <td>${item.region}</td>
+                                <td class="score">${item.score}</td>
+                                <td>${item.grade}</td>
+                                <td>${item.weather}</td>
+                                <td>${item.airQuality}</td>
+                                <td>${item.factors.join(', ') || '정보 없음'}</td>
+                            </tr>
+                        `;
+                    });
+                    tableHtml += '</tbody></table>';
+                    rankingContent.innerHTML = tableHtml;
+                } else {
+                    rankingContent.innerHTML = '<p>랭킹 정보가 없습니다.</p>';
+                }
+                rankingMessage.textContent = data.message || '데이터 로드 성공';
+                rankingTime.textContent = `업데이트: ${data.time || new Date().toLocaleString('ko-KR')}`;
+            } else {
+                rankingContent.innerHTML = `<p>랭킹 정보를 불러오지 못했습니다.</p>`;
+                rankingMessage.textContent = data.message || '랭킹 정보 없음';
+                rankingTime.textContent = `업데이트: ${new Date().toLocaleString('ko-KR')}`;
             }
         }
-        
-        // 날씨 데이터 렌더링
-        function renderWeatherData(data) {
-            const contentElement = document.getElementById('weather-content');
+
+
+        async function loadAllDataForRegion(region) {
+            currentRegionTitle.textContent = region;
+            festivalRegionTitle.textContent = region;
+            tourismRegionTitle.textContent = region;
+
+            // 모든 섹션 초기화
+            weatherContent.innerHTML = '<p>데이터를 불러오는 중입니다...</p>';
+            airQualityContent.innerHTML = '<p>데이터를 불러오는 중입니다...</p>';
+            combinedContent.innerHTML = '<p>데이터를 불러오는 중입니다...</p>';
+            festivalsContent.innerHTML = '<p>축제 정보를 불러오는 중입니다...</p>';
+            festivalsStats.innerHTML = '';
+            tourismContent.innerHTML = '<p>데이터를 불러오는 중입니다...</p>';
+            // 랭킹은 지역별로 다시 로드하지 않음 (전체 랭킹)
+
+            const weatherData = await fetchData('weather', { region });
+            displayWeatherData(weatherData);
+
+            const airQualityData = await fetchData('air-quality', { region });
+            displayAirQualityData(airQualityData);
             
-            const icon = weatherIcons[data.sky] || '🌈';
+            const combinedData = await fetchData('combined', { region });
+            displayCombinedData(combinedData);
+
+            const festivalData = await fetchData('festivals', { region }); // 지역별 축제
+            displayFestivalData(festivalData);
+
+            const tourismData = await fetchData('tourism', { region });
+            displayTourismData(tourismData);
             
-            contentElement.innerHTML = `
-                <div class="weather-info">
-                    <div class="weather-temp">${data.temperature}°C</div>
-                    <div class="weather-icon">${icon}</div>
-                </div>
-                <div class="weather-details">
-                    <div class="weather-detail-item">
-                        <i>🌡️</i> 체감온도: ${data.temperature}°C
-                    </div>
-                    <div class="weather-detail-item">
-                        <i>☁️</i> 하늘상태: ${data.sky}
-                    </div>
-                    <div class="weather-detail-item">
-                        <i>💧</i> 강수: ${data.precipitation || '없음'}
-                    </div>
-                    <div class="weather-detail-item">
-                        <i>📍</i> 지역: ${data.region}
-                    </div>
-                </div>
-            `;
+            // 랭킹 데이터는 페이지 로드 시 한 번만 또는 필요 시 별도 로드
+            // 여기서는 지역 변경 시에도 랭킹을 다시 로드하지 않도록 처리 (이미 전체 랭킹이므로)
+            // 만약 지역별 랭킹이 필요하다면 ranking API도 region 파라미터를 받도록 수정 필요
         }
         
-        // 대기질 데이터 로드
-        async function loadAirQualityData(region, forceRefresh = false) {
-            const contentElement = document.getElementById('air-content');
-            const updateTimeElement = document.getElementById('air-update-time');
-            
-            // 캐시 확인
-            const now = Date.now();
-            if (!forceRefresh && 
-                cache.air[region] && 
-                cache.timestamp.air[region] && 
-                now - cache.timestamp.air[region] < CACHE_DURATION.air) {
-                renderAirQualityData(cache.air[region]);
-                return;
-            }
-            
-            // 로딩 상태 표시
-            contentElement.innerHTML = '<div class="skeleton" style="height: 100px;"></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/air-quality?region=${region}`);
-                if (!response.ok) throw new Error('대기질 데이터를 불러오는데 실패했습니다.');
-                
-                const data = await response.json();
-                if (!data.success) throw new Error(data.message || '대기질 데이터 오류');
-                
-                // 캐시 저장
-                cache.air[region] = data.data;
-                cache.timestamp.air[region] = now;
-                
-                // 데이터 렌더링
-                renderAirQualityData(data.data);
-                
-                // 업데이트 시간 표시
-                updateTimeElement.textContent = `업데이트: ${formatTime(new Date())}`;
-            } catch (error) {
-                console.error('대기질 데이터 로드 오류:', error);
-                contentElement.innerHTML = `
-                    <div class="error-message">
-                        <p>대기질 정보를 불러오는데 실패했습니다.</p>
-                        <p>잠시 후 다시 시도해주세요.</p>
-                    </div>
-                `;
-            }
+        async function loadInitialRanking() {
+            rankingContent.innerHTML = '<p>랭킹 정보를 불러오는 중입니다...</p>';
+            const rankingData = await fetchData('ranking');
+            displayRankingData(rankingData);
         }
-        
-        // 대기질 데이터 렌더링
-        function renderAirQualityData(data) {
-            const contentElement = document.getElementById('air-content');
-            
-            const statusInfo = airQualityStatus[data.status] || { class: '', emoji: '❓' };
-            
-            contentElement.innerHTML = `
-                <div class="air-quality-info">
-                    <div class="air-quality-status ${statusInfo.class}">
-                        ${statusInfo.emoji} ${data.status}
-                    </div>
-                    <div class="air-quality-details">
-                        <div class="air-quality-detail">
-                            <div class="air-quality-detail-value">${data.pm10 || '-'}</div>
-                            <div class="air-quality-detail-label">미세먼지</div>
-                        </div>
-                        <div class="air-quality-detail">
-                            <div class="air-quality-detail-value">${data.pm25 || '-'}</div>
-                            <div class="air-quality-detail-label">초미세먼지</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="weather-details">
-                    <div class="weather-detail-item">
-                        <i>📍</i> 지역: ${data.region}
-                    </div>
-                    <div class="weather-detail-item">
-                        <i>🏢</i> 측정소: ${data.stationName || '정보 없음'}
-                    </div>
-                </div>
-            `;
-        }
-        
-        // 축제 데이터 로드
-        async function loadFestivalData(forceRefresh = false) {
-            const ongoingContentElement = document.getElementById('ongoing-festival-content');
-            const upcomingContentElement = document.getElementById('upcoming-festival-content');
-            const weekendContentElement = document.getElementById('weekend-festival-content');
-            
-            const ongoingCountElement = document.getElementById('ongoing-festival-count');
-            const upcomingCountElement = document.getElementById('upcoming-festival-count');
-            const weekendCountElement = document.getElementById('weekend-festival-count');
-            
-            const updateTimeElements = [
-                document.getElementById('ongoing-festival-update-time'),
-                document.getElementById('upcoming-festival-update-time'),
-                document.getElementById('weekend-festival-update-time')
-            ];
-            
-            // 캐시 확인
-            const now = Date.now();
-            if (!forceRefresh && 
-                cache.festivals.data && 
-                cache.timestamp.festivals && 
-                now - cache.timestamp.festivals < CACHE_DURATION.festivals) {
-                renderFestivalData(cache.festivals);
-                return;
+
+
+        regionSelect.addEventListener('change', (event) => {
+            const selectedRegion = event.target.value;
+            loadAllDataForRegion(selectedRegion);
+        });
+
+        // 초기 데이터 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            if (VERCEL_BASE_URL === 'https://healingk.vercel.app/api') {
+                 showError("애플리케이션 설정 오류: VERCEL_BASE_URL을 확인해주세요. 개발자에게 문의하거나 코드 내 해당 변수를 수정해야 합니다.");
+                 // 로더 숨기기
+                 hideLoader();
+                 return; 
             }
-            
-            // 로딩 상태 표시
-            ongoingContentElement.innerHTML = '<div class="skeleton" style="height: 200px;"></div>';
-            upcomingContentElement.innerHTML = '<div class="skeleton" style="height: 200px;"></div>';
-            weekendContentElement.innerHTML = '<div class="skeleton" style="height: 200px;"></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/festivals`);
-                if (!response.ok) throw new Error('축제 데이터를 불러오는데 실패했습니다.');
-                
-                const data = await response.json();
-                if (!data.success) throw new Error(data.message || '축제 데이터 오류');
-                
-                // 캐시 저장
-                cache.festivals = data.data;
-                cache.timestamp.festivals = now;
-                
-                // 데이터 렌더링
-                renderFestivalData(data.data);
-                
-                // 업데이트 시간 표시
-                updateTimeElements.forEach(el => {
-                    el.textContent = `업데이트: ${formatTime(new Date())}`;
-                });
-            } catch (error) {
-                console.error('축제 데이터 로드 오류:', error);
-                const errorHtml = `
-                    <div class="error-message">
-                        <p>축제 정보를 불러오는데 실패했습니다.</p>
-                        <p>잠시 후 다시 시도해주세요.</p>
-                    </div>
-                `;
-                
-                ongoingContentElement.innerHTML = errorHtml;
-                upcomingContentElement.innerHTML = errorHtml;
-                weekendContentElement.innerHTML = errorHtml;
-            }
-        }
-        
-        // 축제 데이터 렌더링
-        function renderFestivalData(data) {
-            const ongoingContentElement = document.getElementById('ongoing-festival-content');
-            const upcomingContentElement = document.getElementById('upcoming-festival-content');
-            const weekendContentElement = document.getElementById('weekend-festival-content');
-            
-            const ongoingCountElement = document.getElementById('ongoing-festival-count');
-            const upcomingCountElement = document.getElementById('upcoming-festival-count');
-            const weekendCountElement = document.getElementById('weekend-festival-count');
-            
-            // 진행 중인 축제
-            renderFestivalList(ongoingContentElement, data.ongoing, 'ongoing');
-            ongoingCountElement.textContent = `${data.ongoing.length}개 진행 중`;
-            
-            // 예정된 축제
-            renderFestivalList(upcomingContentElement, data.upcoming, 'upcoming');
-            upcomingCountElement.textContent = `${data.upcoming.length}개 예정`;
-            
-            // 주말 축제
-            renderFestivalList(weekendContentElement, data.thisWeekend, 'weekend');
-            weekendCountElement.textContent = `${data.thisWeekend.length}개 주말 축제`;
-        }
-        
-        // 축제 목록 렌더링
-        function renderFestivalList(container, festivals, type) {
-            if (!festivals || festivals.length === 0) {
-                container.innerHTML = `
-                    <p style="text-align: center; padding: 20px;">
-                        현재 ${type === 'ongoing' ? '진행 중인' : type === 'upcoming' ? '예정된' : '주말'} 축제가 없습니다.
-                    </p>
-                `;
-                return;
-            }
-            
-            const badgeClass = type === 'ongoing' ? 'badge-ongoing' : 
-                              type === 'upcoming' ? 'badge-upcoming' : 'badge-weekend';
-            
-            const badgeText = type === 'ongoing' ? '진행중' : 
-                             type === 'upcoming' ? '예정' : '주말';
-            
-            let html = '<ul class="festival-list">';
-            
-            // 최대 5개만 표시
-            const displayFestivals = festivals.slice(0, 5);
-            
-            displayFestivals.forEach(festival => {
-                const imageUrl = festival.image || 'https://placehold.co/100x100?text=Festival';
-                
-                html += `
-                    <li class="festival-item">
-                        <img src="${imageUrl}" alt="${festival.title}" class="festival-image">
-                        <div class="festival-info">
-                            <div class="festival-title">${festival.title}</div>
-                            <div class="festival-location">${festival.location}</div>
-                            <div class="festival-date">
-                                <i>📅</i> ${festival.startDate} ~ ${festival.endDate}
-                                <span class="festival-badge ${badgeClass}">${badgeText}</span>
-                            </div>
-                        </div>
-                    </li>
-                `;
-            });
-            
-            if (festivals.length > 5) {
-                html += `
-                    <li style="text-align: center; padding: 10px;">
-                        <button class="more-btn">더보기 (${festivals.length - 5}개 더)</button>
-                    </li>
-                `;
-            }
-            
-            html += '</ul>';
-            container.innerHTML = html;
-        }
-        
-        // 인기 여행지 데이터 로드
-        async function loadTopTourData(forceRefresh = false) {
-            const contentElement = document.getElementById('toptour-content');
-            const updateTimeElement = document.getElementById('toptour-update-time');
-            
-            // 캐시 확인
-            const now = Date.now();
-            if (!forceRefresh && 
-                cache.toptour && 
-                cache.timestamp.toptour && 
-                now - cache.timestamp.toptour < CACHE_DURATION.toptour) {
-                renderTopTourData(cache.toptour);
-                return;
-            }
-            
-            // 로딩 상태 표시
-            contentElement.innerHTML = '<div class="skeleton" style="height: 250px;"></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/toptour`);
-                if (!response.ok) throw new Error('인기 여행지 데이터를 불러오는데 실패했습니다.');
-                
-                const data = await response.json();
-                
-                // 캐시 저장
-                cache.toptour = data;
-                cache.timestamp.toptour = now;
-                
-                // 데이터 렌더링
-                renderTopTourData(data);
-                
-                // 업데이트 시간 표시
-                updateTimeElement.textContent = `업데이트: ${formatTime(new Date())}`;
-            } catch (error) {
-                console.error('인기 여행지 데이터 로드 오류:', error);
-                contentElement.innerHTML = `
-                    <div class="error-message">
-                        <p>인기 여행지 정보를 불러오는데 실패했습니다.</p>
-                        <p>잠시 후 다시 시도해주세요.</p>
-                    </div>
-                `;
-            }
-        }
-        
-        // 인기 여행지 데이터 렌더링
-        function renderTopTourData(places) {
-            const contentElement = document.getElementById('toptour-content');
-            
-            if (!places || places.length === 0) {
-                contentElement.innerHTML = `
-                    <p style="text-align: center; padding: 20px;">
-                        인기 여행지 정보가 없습니다.
-                    </p>
-                `;
-                return;
-            }
-            
-            // 최대 5개만 표시
-            const displayPlaces = places.slice(0, 5);
-            
-            let slidesHtml = '';
-            let dotsHtml = '';
-            
-            displayPlaces.forEach((place, index) => {
-                const imageUrl = place.image || 'https://placehold.co/400x200?text=Travel';
-                
-                slidesHtml += `
-                    <div class="toptour-slide" data-index="${index}">
-                        <img src="${imageUrl}" alt="${place.name}" class="toptour-image">
-                        <h3 class="toptour-title">${place.name}</h3>
-                        <p class="toptour-description">${place.description}</p>
-                    </div>
-                `;
-                
-                dotsHtml += `
-                    <div class="toptour-nav-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>
-                `;
-            });
-            
-            contentElement.innerHTML = `
-                <div class="toptour-carousel">
-                    <div class="toptour-slides">${slidesHtml}</div>
-                </div>
-                <div class="toptour-nav">${dotsHtml}</div>
-            `;
-            
-            // 캐러셀 기능 설정
-            setupCarousel();
-            
-            // 여행지 상세 정보 모달 이벤트 설정
-            const slides = contentElement.querySelectorAll('.toptour-slide');
-            slides.forEach(slide => {
-                slide.addEventListener('click', () => {
-                    const index = parseInt(slide.dataset.index);
-                    showTopTourDetail(displayPlaces[index]);
-                });
-            });
-        }
-        
-        // 캐러셀 기능 설정
-        function setupCarousel() {
-            const carousel = document.querySelector('.toptour-carousel');
-            const slides = carousel.querySelector('.toptour-slides');
-            const dots = document.querySelectorAll('.toptour-nav-dot');
-            let currentIndex = 0;
-            let slideWidth = carousel.clientWidth;
-            let autoSlideInterval;
-            
-            // 슬라이드 이동 함수
-            function moveToSlide(index) {
-                slides.style.transform = `translateX(-${index * slideWidth}px)`;
-                
-                // 활성 도트 업데이트
-                dots.forEach(dot => dot.classList.remove('active'));
-                dots[index].classList.add('active');
-                
-                currentIndex = index;
-            }
-            
-            // 도트 클릭 이벤트
-            dots.forEach(dot => {
-                dot.addEventListener('click', () => {
-                    const index = parseInt(dot.dataset.index);
-                    moveToSlide(index);
-                    resetAutoSlide();
-                });
-            });
-            
-            // 자동 슬라이드 설정
-            function startAutoSlide() {
-                autoSlideInterval = setInterval(() => {
-                    const nextIndex = (currentIndex + 1) % dots.length;
-                    moveToSlide(nextIndex);
-                }, 5000);
-            }
-            
-            // 자동 슬라이드 재설정
-            function resetAutoSlide() {
-                clearInterval(autoSlideInterval);
-                startAutoSlide();
-            }
-            
-            // 창 크기 변경 시 슬라이드 너비 업데이트
-            window.addEventListener('resize', () => {
-                slideWidth = carousel.clientWidth;
-                moveToSlide(currentIndex);
-            });
-            
-            // 초기 자동 슬라이드 시작
-            startAutoSlide();
-        }
-        
-        // 여행지 상세 정보 모달 표시
-        function showTopTourDetail(place) {
-            const modalTitle = document.getElementById('modal-title');
-            const modalBody = document.getElementById('modal-body');
-            
-            modalTitle.textContent = place.name;
-            
-            const imageUrl = place.image || 'https://placehold.co/600x300?text=Travel';
-            
-            let activitiesHtml = '';
-            if (place.details && place.details.recommendedActivities) {
-                activitiesHtml = `
-                    <div class="modal-section">
-                        <h4 class="modal-section-title">추천 활동</h4>
-                        <ul class="modal-list">
-                            ${place.details.recommendedActivities.map(activity => `<li>${activity}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-            
-            let tipsHtml = '';
-            if (place.details && place.details.tips) {
-                tipsHtml = `
-                    <div class="modal-section">
-                        <h4 class="modal-section-title">여행 팁</h4>
-                        <ul class="modal-list">
-                            ${place.details.tips.map(tip => `<li>${tip}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-            
-            let bestTimeHtml = '';
-            if (place.details && place.details.bestTimeToVisit) {
-                bestTimeHtml = `
-                    <div class="modal-section">
-                        <h4 class="modal-section-title">최적 방문 시기</h4>
-                        <p>${place.details.bestTimeToVisit}</p>
-                    </div>
-                `;
-            }
-            
-            modalBody.innerHTML = `
-                <img src="${imageUrl}" alt="${place.name}" class="modal-image">
-                <div class="modal-section">
-                    <p>${place.description}</p>
-                </div>
-                ${activitiesHtml}
-                ${tipsHtml}
-                ${bestTimeHtml}
-            `;
-            
-            modal.classList.add('show');
-        }
-        
-        // 랭킹 데이터 로드
-        async function loadRankingData(forceRefresh = false) {
-            const contentElement = document.getElementById('ranking-content');
-            const updateTimeElement = document.getElementById('ranking-update-time');
-            
-            // 캐시 확인
-            const now = Date.now();
-            if (!forceRefresh && 
-                cache.ranking && 
-                cache.timestamp.ranking && 
-                now - cache.timestamp.ranking < CACHE_DURATION.ranking) {
-                renderRankingData(cache.ranking);
-                return;
-            }
-            
-            // 로딩 상태 표시
-            contentElement.innerHTML = '<div class="skeleton" style="height: 250px;"></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/ranking`);
-                if (!response.ok) throw new Error('랭킹 데이터를 불러오는데 실패했습니다.');
-                
-                const data = await response.json();
-                if (!data.success) throw new Error(data.message || '랭킹 데이터 오류');
-                
-                // 캐시 저장
-                cache.ranking = data.data;
-                cache.timestamp.ranking = now;
-                
-                // 데이터 렌더링
-                renderRankingData(data.data);
-                
-                // 업데이트 시간 표시
-                updateTimeElement.textContent = `업데이트: ${formatTime(new Date())}`;
-            } catch (error) {
-                console.error('랭킹 데이터 로드 오류:', error);
-                contentElement.innerHTML = `
-                    <div class="error-message">
-                        <p>랭킹 정보를 불러오는데 실패했습니다.</p>
-                        <p>잠시 후 다시 시도해주세요.</p>
-                    </div>
-                `;
-            }
-        }
-        
-        // 랭킹 데이터 렌더링
-        function renderRankingData(rankings) {
-            const contentElement = document.getElementById('ranking-content');
-            
-            if (!rankings || rankings.length === 0) {
-                contentElement.innerHTML = `
-                    <p style="text-align: center; padding: 20px;">
-                        랭킹 정보가 없습니다.
-                    </p>
-                `;
-                return;
-            }
-            
-            // 최대 5개만 표시
-            const displayRankings = rankings.slice(0, 5);
-            
-            let html = '<ul class="ranking-list">';
-            
-            displayRankings.forEach(ranking => {
-                const gradeClass = gradeClasses[ranking.grade] || '';
-                
-                html += `
-                    <li class="ranking-item">
-                        <div class="ranking-rank">${ranking.rank}</div>
-                        <div class="ranking-info">
-                            <div class="ranking-region">${ranking.region}</div>
-                            <div class="ranking-factors">${ranking.factors.join(', ')}</div>
-                        </div>
-                        <div class="ranking-score-container">
-                            <div class="ranking-score">${ranking.score}</div>
-                            <div class="ranking-grade ${gradeClass}">${ranking.grade}</div>
-                        </div>
-                    </li>
-                `;
-            });
-            
-            html += '</ul>';
-            contentElement.innerHTML = html;
-        }
-        
-        // 마지막 업데이트 시간 표시
-        function updateLastUpdateTime() {
-            const lastUpdateElement = document.getElementById('last-update-time');
-            const now = new Date();
-            lastUpdateElement.textContent = `마지막 업데이트: ${formatDateTime(now)}`;
-        }
-        
-        // 시간 포맷팅 (HH:MM)
-        function formatTime(date) {
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes}`;
-        }
-        
-        // 날짜 및 시간 포맷팅 (YYYY-MM-DD HH:MM:SS)
-        function formatDateTime(date) {
-            const year = date.getFullYear();
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            const seconds = date.getSeconds().toString().padStart(2, '0');
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        }
+            const initialRegion = regionSelect.value;
+            loadAllDataForRegion(initialRegion);
+            loadInitialRanking(); // 랭킹은 초기에 한 번 로드
+        });
+
     </script>
 </body>
 </html>
