@@ -1,11 +1,11 @@
-// axios 대신 fetch 사용
-const response = await fetch(url + '?' + new URLSearchParams(params), {
-    method: 'GET',
-    headers: {
-        'User-Agent': 'HealingK/1.0',
-        'Accept': 'application/json'
-    },
-    timeout: 10000
-});
-
-const data = await response.json();
+{
+  "name": "healingk",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  }
+}
