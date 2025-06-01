@@ -18,68 +18,55 @@ module.exports = async function handler(req, res) {
     try {
         const { region = '서울' } = req.query;
         
-        console.log('🏛️ === 일반 관광 API 테스트 시작 ===');
+        console.log('🎉 === KorService2 API 테스트 시작 ===');
         console.log('📅 현재 시간:', new Date().toLocaleString('ko-KR'));
         console.log('🗺️ 요청 지역:', region);
 
-        const possibleKeys = [
-            process.env.TOUR_API_KEY,
-            process.env.TOURISM_API_KEY,
-            process.env.JEONBUK_API_KEY,
-            process.env.WEATHER_API_KEY,
-            process.env.REGIONAL_API_KEY
-        ];
+        // TOURISM_API_KEY 우선 사용
+        const apiKey = process.env.TOURISM_API_KEY;
 
-        console.log('🔑 환경변수 체크:', {
-            TOUR_API_KEY: !!process.env.TOUR_API_KEY,
-            TOURISM_API_KEY: !!process.env.TOURISM_API_KEY,
-            JEONBUK_API_KEY: !!process.env.JEONBUK_API_KEY,
-            WEATHER_API_KEY: !!process.env.WEATHER_API_KEY,
-            REGIONAL_API_KEY: !!process.env.REGIONAL_API_KEY
+        console.log('🔑 TOURISM_API_KEY 체크:', {
+            exists: !!apiKey,
+            preview: apiKey ? `${apiKey.substring(0, 10)}...` : 'NONE'
         });
 
-        const apiKey = possibleKeys.find(key => key);
-
         if (!apiKey) {
-            console.log('❌ API 키 없음');
+            console.log('❌ TOURISM_API_KEY 없음');
             return res.status(200).json({
                 success: true,
                 data: getTourismSampleData(region),
-                message: '⚠️ TOUR_API_KEY 설정 필요',
+                message: '⚠️ TOURISM_API_KEY 설정 필요',
                 timestamp: new Date().toISOString()
             });
         }
 
-        console.log('✅ API 키 발견:', `${apiKey.substring(0, 10)}...`);
-
-        // === 관광지 정보 테스트 ===
-        console.log('🧪 관광지 API 테스트...');
-        const tourismResult = await testTourismAPI(apiKey, region);
-        console.log('📊 관광지 결과:', tourismResult);
+        // === KorService2 테스트 ===
+        console.log('🧪 KorService2 API 테스트...');
+        const tourismResult = await testKorService2(apiKey, region);
+        console.log('📊 결과:', tourismResult);
 
         if (tourismResult.success) {
-            console.log('🎉 관광 API 성공!');
+            console.log('🎉 KorService2 성공!');
             return res.status(200).json({
                 success: true,
                 data: tourismResult.data,
-                message: `🏛️ ${region} 실시간 관광 정보!`,
+                message: `🏛️ ${region} 실시간 관광 정보! (Service2)`,
                 method: tourismResult.method,
                 realTime: true,
                 timestamp: new Date().toISOString()
             });
         }
 
-        console.log('⚠️ 관광 API 테스트 실패');
+        console.log('⚠️ KorService2 테스트 실패');
         return res.status(200).json({
             success: true,
             data: getTourismSampleData(region),
-            message: `🏛️ ${region} 관광 정보 (API 연결 대기중)`,
-            apiStatus: 'testing',
+            message: `🏛️ ${region} 관광 정보 (Service2 연결 대기중)`,
             timestamp: new Date().toISOString()
         });
 
     } catch (error) {
-        console.error('❌ 관광 API 오류:', error);
+        console.error('❌ Service2 API 오류:', error);
         return res.status(200).json({
             success: true,
             data: getTourismSampleData(req.query.region || '서울'),
@@ -89,162 +76,146 @@ module.exports = async function handler(req, res) {
     }
 };
 
-// === 관광 API 테스트 함수 ===
-async function testTourismAPI(apiKey, region) {
+// === KorService2 테스트 함수 ===
+async function testKorService2(apiKey, region) {
     try {
         const areaCode = AREA_CODES[region] || 1;
         
-        // 여러 방법으로 시도
-        const testMethods = [
-            // 방법 1: decodeURIComponent + serviceKey (소문자)
-            {
-                name: 'decodeURI_lowercase',
-                params: {
-                    serviceKey: decodeURIComponent(apiKey),
-                    numOfRows: 10,
-                    pageNo: 1,
-                    MobileOS: 'ETC',
-                    MobileApp: 'HealingK',
-                    _type: 'json',
-                    listYN: 'Y',
-                    arrange: 'A',
-                    contentTypeId: 12,
-                    areaCode: areaCode
-                }
-            },
-            // 방법 2: decodeURIComponent + ServiceKey (대문자)
-            {
-                name: 'decodeURI_uppercase',
-                params: {
-                    ServiceKey: decodeURIComponent(apiKey),
-                    numOfRows: 10,
-                    pageNo: 1,
-                    MobileOS: 'ETC',
-                    MobileApp: 'HealingK',
-                    _type: 'json',
-                    listYN: 'Y',
-                    arrange: 'A',
-                    contentTypeId: 12,
-                    areaCode: areaCode
-                }
-            },
-            // 방법 3: 원본 키 + serviceKey (소문자)
-            {
-                name: 'original_lowercase',
-                params: {
-                    serviceKey: apiKey,
-                    numOfRows: 10,
-                    pageNo: 1,
-                    MobileOS: 'ETC',
-                    MobileApp: 'HealingK',
-                    _type: 'json',
-                    listYN: 'Y',
-                    arrange: 'A',
-                    contentTypeId: 12,
-                    areaCode: areaCode
-                }
-            },
-            // 방법 4: 원본 키 + ServiceKey (대문자)
-            {
-                name: 'original_uppercase',
-                params: {
-                    ServiceKey: apiKey,
-                    numOfRows: 10,
-                    pageNo: 1,
-                    MobileOS: 'ETC',
-                    MobileApp: 'HealingK',
-                    _type: 'json',
-                    listYN: 'Y',
-                    arrange: 'A',
-                    contentTypeId: 12,
-                    areaCode: areaCode
-                }
-            }
+        // KorService2 URL들
+        const service2URLs = [
+            'https://apis.data.go.kr/B551011/KorService2/areaBasedList2',
+            'http://apis.data.go.kr/B551011/KorService2/areaBasedList2',
+            'https://apis.data.go.kr/B551011/KorService2/searchKeyword2',
+            'http://apis.data.go.kr/B551011/KorService2/searchKeyword2',
+            'https://apis.data.go.kr/B551011/KorService2/locationBasedList2',
+            'http://apis.data.go.kr/B551011/KorService2/locationBasedList2'
         ];
 
-        const possibleUrls = [
-            'https://apis.data.go.kr/B551011/Korservice2/areaBasedList1',
-            'http://apis.data.go.kr/B551011/Korservice2/areaBasedList1'
-        ];
+        for (const url of service2URLs) {
+            try {
+                console.log(`🔍 Service2 URL 시도: ${url}`);
 
-        for (const url of possibleUrls) {
-            for (const method of testMethods) {
-                try {
-                    console.log(`🔍 URL: ${url} | 방법: ${method.name}`);
+                let params;
+                
+                if (url.includes('areaBasedList2')) {
+                    params = {
+                        serviceKey: apiKey,
+                        numOfRows: 10,
+                        pageNo: 1,
+                        MobileOS: 'ETC',
+                        MobileApp: 'HealingK',
+                        _type: 'json',
+                        listYN: 'Y',
+                        arrange: 'A',
+                        contentTypeId: 12,
+                        areaCode: areaCode
+                    };
+                } else if (url.includes('searchKeyword2')) {
+                    params = {
+                        serviceKey: apiKey,
+                        numOfRows: 10,
+                        pageNo: 1,
+                        MobileOS: 'ETC',
+                        MobileApp: 'HealingK',
+                        _type: 'json',
+                        listYN: 'Y',
+                        arrange: 'A',
+                        keyword: region,
+                        contentTypeId: 12
+                    };
+                } else if (url.includes('locationBasedList2')) {
+                    params = {
+                        serviceKey: apiKey,
+                        numOfRows: 10,
+                        pageNo: 1,
+                        MobileOS: 'ETC',
+                        MobileApp: 'HealingK',
+                        _type: 'json',
+                        listYN: 'Y',
+                        arrange: 'A',
+                        contentTypeId: 12,
+                        mapX: areaCode === 1 ? '126.9780' : '129.0756',
+                        mapY: areaCode === 1 ? '37.5665' : '35.1796',
+                        radius: '20000'
+                    };
+                }
 
-                    const response = await axios.get(url, {
-                        params: method.params,
-                        timeout: 10000,
-                        headers: {
-                            'Accept': 'application/json',
-                            'User-Agent': 'HealingK/1.0'
+                console.log('📋 파라미터:', {
+                    serviceKey: 'exists',
+                    areaCode: params.areaCode || 'N/A',
+                    keyword: params.keyword || 'N/A'
+                });
+
+                const response = await axios.get(url, {
+                    params: params,
+                    timeout: 10000
+                });
+
+                console.log(`📡 Service2 응답:`, {
+                    status: response.status,
+                    contentType: response.headers['content-type'],
+                    isJSON: response.headers['content-type']?.includes('json'),
+                    dataType: typeof response.data
+                });
+
+                // JSON 응답 처리
+                if (response.data && typeof response.data === 'object') {
+                    const resultCode = response.data.response?.header?.resultCode;
+                    console.log('📊 결과 코드:', resultCode);
+
+                    if (resultCode === '0000') {
+                        const items = response.data.response?.body?.items?.item || [];
+                        console.log('📦 아이템 수:', Array.isArray(items) ? items.length : (items ? 1 : 0));
+
+                        if (items && (Array.isArray(items) ? items.length > 0 : true)) {
+                            console.log('🎉 Service2 데이터 발견!');
+                            return {
+                                success: true,
+                                method: 'korservice2',
+                                data: convertToTourismFormat(items, region)
+                            };
                         }
-                    });
-
-                    console.log(`📡 응답:`, {
-                        status: response.status,
-                        contentType: response.headers['content-type'],
-                        isJSON: response.headers['content-type']?.includes('json'),
-                        dataType: typeof response.data
-                    });
-
-                    if (response.data && typeof response.data === 'object') {
-                        const resultCode = response.data.response?.header?.resultCode;
-                        console.log('📊 결과 코드:', resultCode);
-
-                        if (resultCode === '0000') {
-                            const items = response.data.response?.body?.items?.item || [];
-                            console.log('📦 아이템 수:', Array.isArray(items) ? items.length : (items ? 1 : 0));
-
-                            if (items && (Array.isArray(items) ? items.length > 0 : true)) {
-                                console.log(`🎉 성공! 방법: ${method.name}`);
-                                return {
-                                    success: true,
-                                    method: `tourism_api_${method.name}`,
-                                    data: convertToTourismFormat(items, region)
-                                };
-                            }
-                        } else {
-                            console.log('❌ 응답 오류:', response.data.response?.header?.resultMsg);
-                        }
-                    } else if (typeof response.data === 'string') {
-                        console.log('🔄 XML 응답 확인...');
-                        if (response.data.includes('<resultCode>00</resultCode>')) {
-                            console.log(`🎉 XML 성공! 방법: ${method.name}`);
-                            
-                            const titleMatches = response.data.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g);
-                            if (titleMatches && titleMatches.length > 0) {
-                                const xmlItems = titleMatches.slice(0, 5).map((match, index) => {
-                                    const title = match.replace(/<title><!\[CDATA\[/, '').replace(/\]\]><\/title>/, '');
-                                    return { title, contentid: `xml_${index}` };
-                                });
-                                
-                                return {
-                                    success: true,
-                                    method: `tourism_api_xml_${method.name}`,
-                                    data: convertToTourismFormat(xmlItems, region)
-                                };
-                            }
-                        } else {
-                            console.log('❌ XML 오류:', response.data.substring(0, 200));
-                        }
+                    } else {
+                        console.log('❌ Service2 오류:', response.data.response?.header?.resultMsg);
                     }
-
-                    // 짧은 대기
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                } catch (methodError) {
-                    console.log(`❌ ${method.name} 실패:`, methodError.message);
-                    continue;
                 }
+                // XML 응답 처리
+                else if (typeof response.data === 'string') {
+                    console.log('🔄 Service2 XML 응답 확인...');
+                    
+                    if (response.data.includes('<resultCode>00</resultCode>')) {
+                        console.log('🎉 Service2 XML 성공!');
+                        
+                        const titleMatches = response.data.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g);
+                        if (titleMatches && titleMatches.length > 0) {
+                            const xmlItems = titleMatches.slice(0, 5).map((match, index) => {
+                                const title = match.replace(/<title><!\[CDATA\[/, '').replace(/\]\]><\/title>/, '');
+                                return { title, contentid: `xml_${index}` };
+                            });
+                            
+                            return {
+                                success: true,
+                                method: 'korservice2_xml',
+                                data: convertToTourismFormat(xmlItems, region)
+                            };
+                        }
+                    } else {
+                        console.log('❌ Service2 XML 오류:', response.data.substring(0, 200));
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+            } catch (urlError) {
+                console.log(`❌ Service2 URL 실패:`, urlError.message);
+                continue;
             }
         }
 
-        return { success: false, method: 'tourism_api' };
+        return { success: false, method: 'korservice2' };
 
     } catch (error) {
-        console.log('❌ 전체 테스트 실패:', error.message);
-        return { success: false, method: 'tourism_api', error: error.message };
+        return { success: false, method: 'korservice2', error: error.message };
     }
 }
 
@@ -274,7 +245,7 @@ function convertToTourismFormat(data, region) {
         events,
         attractionCount: attractions.length,
         eventCount: events.length,
-        message: `🏛️ ${region} 관광 정보 (실시간 API 연결)`
+        message: `🏛️ ${region} 관광 정보 (KorService2 연결)`
     };
 }
 
@@ -297,6 +268,6 @@ function getTourismSampleData(region) {
         events,
         attractionCount: attractions.length,
         eventCount: events.length,
-        message: `TOUR_API_KEY 설정 필요 - ${region} 샘플 데이터`
+        message: `TOURISM_API_KEY 설정 필요 - ${region} 샘플 데이터`
     };
 }
