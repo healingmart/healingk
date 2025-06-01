@@ -125,8 +125,8 @@ async function testJeonbukStyleAPI(apiKey, region) {
         
         // 전북 API와 정확히 동일한 URL들 사용
         const jeonbukStyleURLs = [
-            'http://apis.data.go.kr/B551011/KorService1/areaBasedList1',
-            'https://apis.data.go.kr/B551011/KorService1/areaBasedList1'
+            'http://apis.data.go.kr/B551011/KorService2/areaBasedList1',
+            'https://apis.data.go.kr/B551011/KorService2/areaBasedList1'
         ];
 
         for (const url of jeonbukStyleURLs) {
