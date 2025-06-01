@@ -2,79 +2,211 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>날씨 API 테스트</title>
+    <title>날씨 API 디버깅</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .test-result { margin: 20px 0; padding: 15px; border-radius: 8px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .test-result { margin: 15px 0; padding: 15px; border-radius: 8px; }
         .success { background: #d4edda; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; }
         .info { background: #d1ecf1; border: 1px solid #bee5eb; }
-        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
         button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
         .test-btn { background: #007bff; color: white; }
+        .debug-btn { background: #28a745; color: white; }
+        .url-display { background: #e9ecef; padding: 10px; border-radius: 4px; font-family: monospace; }
     </style>
 </head>
 <body>
-    <h1>🌤️ 날씨 API 테스트</h1>
+    <h1>🌤️ 날씨 API 완전 디버깅</h1>
+    
+    <div class="test-result info">
+        <h3>🔍 현재 환경 정보</h3>
+        <div class="url-display">
+            <p><strong>현재 페이지:</strong> <span id="currentUrl"></span></p>
+            <p><strong>감지된 Base URL:</strong> <span id="detectedUrl"></span></p>
+            <p><strong>테스트할 API URL:</strong> <span id="testApiUrl"></span></p>
+        </div>
+    </div>
     
     <div>
+        <button class="debug-btn" onclick="checkEndpoints()">🔧 API 엔드포인트 체크</button>
+        <button class="debug-btn" onclick="testConnection()">🌐 연결 테스트</button>
         <button class="test-btn" onclick="testWeatherAPI('서울')">서울 날씨 테스트</button>
-        <button class="test-btn" onclick="testWeatherAPI('부산')">부산 날씨 테스트</button>
-        <button class="test-btn" onclick="testWeatherAPI('제주')">제주 날씨 테스트</button>
-        <button class="test-btn" onclick="testAllRegions()">전체 지역 테스트</button>
+        <button class="test-btn" onclick="testDirectAPI()">직접 API 테스트</button>
     </div>
 
     <div id="results"></div>
 
     <script>
-        const baseURL = 'https://your-vercel-deployment.vercel.app'; // 실제 URL로 변경
+        // 동적 URL 감지
+        const currentHost = window.location.hostname;
+        const currentProtocol = window.location.protocol;
+        let baseURL;
 
-        async function testWeatherAPI(region) {
-            const resultsDiv = document.getElementById('results');
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+            baseURL = 'http://localhost:3000';
+        } else {
+            baseURL = `${currentProtocol}//${currentHost}`;
+        }
+
+        // 환경 정보 표시
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('detectedUrl').textContent = baseURL;
+        document.getElementById('testApiUrl').textContent = `${baseURL}/api/weather`;
+
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(content, type = 'info') {
+            resultsDiv.innerHTML += `<div class="test-result ${type}">${content}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        // API 엔드포인트 존재 확인
+        async function checkEndpoints() {
+            addResult('<h3>🔧 API 엔드포인트 체크 중...</h3>', 'info');
+            
+            const endpoints = [
+                '/api/weather',
+                '/api/air-quality', 
+                '/api/festivals',
+                '/api/tourism',
+                '/api/combined',
+                '/api/ranking'
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${baseURL}${endpoint}?region=서울`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const status = response.status;
+                    const statusText = response.statusText;
+                    
+                    if (status === 200) {
+                        addResult(`✅ <strong>${endpoint}</strong>: 정상 (${status})`, 'success');
+                    } else {
+                        addResult(`⚠️ <strong>${endpoint}</strong>: 응답 있음 (${status} ${statusText})`, 'warning');
+                    }
+                } catch (error) {
+                    addResult(`❌ <strong>${endpoint}</strong>: 실패 - ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // 기본 연결 테스트
+        async function testConnection() {
+            addResult('<h3>🌐 연결 테스트 중...</h3>', 'info');
             
             try {
-                resultsDiv.innerHTML += `<div class="test-result info">
-                    <h3>🔄 ${region} 날씨 API 테스트 중...</h3>
-                    <p>요청 시간: ${new Date().toLocaleString('ko-KR')}</p>
-                </div>`;
+                // 1. 루트 경로 테스트
+                const rootResponse = await fetch(baseURL);
+                addResult(`✅ 루트 접속: ${rootResponse.status} ${rootResponse.statusText}`, 'success');
+                
+                // 2. CORS 테스트
+                const corsResponse = await fetch(`${baseURL}/api/weather`, {
+                    method: 'OPTIONS'
+                });
+                addResult(`✅ CORS 프리플라이트: ${corsResponse.status}`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ 연결 실패: ${error.message}`, 'error');
+            }
+        }
 
-                const response = await fetch(`${baseURL}/api/weather?region=${region}`);
+        // 향상된 날씨 API 테스트
+        async function testWeatherAPI(region) {
+            const timestamp = new Date().toLocaleString('ko-KR');
+            addResult(`<h3>🔄 ${region} 날씨 API 테스트 시작</h3><p>시간: ${timestamp}</p>`, 'info');
+
+            try {
+                const url = `${baseURL}/api/weather?region=${encodeURIComponent(region)}`;
+                addResult(`<p><strong>요청 URL:</strong> ${url}</p>`, 'info');
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                addResult(`<p><strong>응답 상태:</strong> ${response.status} ${response.statusText}</p>`, 
+                    response.ok ? 'success' : 'warning');
+
+                const contentType = response.headers.get('content-type');
+                addResult(`<p><strong>Content-Type:</strong> ${contentType}</p>`, 'info');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addResult(`<h3>❌ HTTP 오류</h3><pre>${errorText}</pre>`, 'error');
+                    return;
+                }
+
                 const data = await response.json();
-
-                resultsDiv.innerHTML += `<div class="test-result ${data.success ? 'success' : 'error'}">
-                    <h3>✅ ${region} 날씨 결과</h3>
+                
+                addResult(`<h3>✅ ${region} 날씨 데이터 성공!</h3>
                     <p><strong>성공:</strong> ${data.success}</p>
                     <p><strong>온도:</strong> ${data.data?.temperature}°C</p>
                     <p><strong>날씨:</strong> ${data.data?.sky}</p>
                     <p><strong>강수:</strong> ${data.data?.precipitation}</p>
                     <p><strong>메시지:</strong> ${data.data?.message}</p>
                     <details>
-                        <summary>상세 응답 데이터</summary>
+                        <summary>📋 전체 응답 데이터</summary>
                         <pre>${JSON.stringify(data, null, 2)}</pre>
-                    </details>
-                </div>`;
+                    </details>`, 'success');
 
             } catch (error) {
-                resultsDiv.innerHTML += `<div class="test-result error">
-                    <h3>❌ ${region} 날씨 테스트 실패</h3>
-                    <p><strong>오류:</strong> ${error.message}</p>
-                    <pre>${error.stack}</pre>
-                </div>`;
+                if (error.name === 'AbortError') {
+                    addResult(`<h3>⏰ ${region} 날씨 테스트 타임아웃</h3>
+                        <p>15초 내에 응답을 받지 못했습니다.</p>`, 'error');
+                } else {
+                    addResult(`<h3>❌ ${region} 날씨 테스트 실패</h3>
+                        <p><strong>오류 타입:</strong> ${error.name}</p>
+                        <p><strong>오류 메시지:</strong> ${error.message}</p>
+                        <details>
+                            <summary>🔍 상세 오류 정보</summary>
+                            <pre>${error.stack}</pre>
+                        </details>`, 'error');
+                }
             }
         }
 
-        async function testAllRegions() {
-            const regions = ['서울', '부산', '제주', '강릉', '전주', '대구', '광주', '대전'];
+        // 직접 외부 API 테스트 (개발용)
+        async function testDirectAPI() {
+            addResult('<h3>🌍 외부 API 직접 테스트</h3>', 'info');
             
-            for (const region of regions) {
-                await testWeatherAPI(region);
-                await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+            try {
+                // 공개 날씨 API로 연결 테스트
+                const testResponse = await fetch('https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=demo');
+                addResult(`외부 API 연결: ${testResponse.status} (OpenWeather 테스트)`, 
+                    testResponse.status === 401 ? 'warning' : 'info'); // 401은 API키 없음이므로 연결은 됨
+                    
+            } catch (error) {
+                addResult(`외부 API 연결 실패: ${error.message}`, 'error');
             }
         }
 
-        // 페이지 로드 시 자동 테스트
-        window.onload = () => {
-            testWeatherAPI('서울');
+        // 자동 초기 테스트
+        window.onload = async () => {
+            addResult('<h3>🚀 자동 초기 진단 시작</h3>', 'info');
+            await checkEndpoints();
+            await testConnection();
+            
+            // 3초 후 실제 API 테스트
+            setTimeout(() => {
+                testWeatherAPI('서울');
+            }, 3000);
         };
     </script>
 </body>
