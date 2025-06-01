@@ -386,7 +386,7 @@
 
     <script>
         // 중요: 이 URL을 실제 Vercel 배포 URL로 변경하세요. (예: https://your-project-name.vercel.app)
-        const VERCEL_BASE_URL = 'YOUR_VERCEL_PROJECT_BASE_URL'; // <--- 이 부분을 수정해주세요!!!
+        const VERCEL_BASE_URL = 'https://healingk.vercel.app/api'; // <--- 이 부분을 수정해주세요!!!
 
         const loader = document.getElementById('loader');
         const errorDisplay = document.getElementById('error-display');
@@ -446,7 +446,7 @@
         }
 
         async function fetchData(endpoint, params = {}) {
-            if (VERCEL_BASE_URL === 'YOUR_VERCEL_PROJECT_BASE_URL') {
+            if (VERCEL_BASE_URL === 'https://healingk.vercel.app/api') {
                 console.error("VERCEL_BASE_URL이 설정되지 않았습니다. 스크립트 상단의 해당 변수를 수정해주세요.");
                 showError("애플리케이션 설정 오류: VERCEL_BASE_URL을 확인해주세요.");
                 // 모든 컨텐츠 영역에 오류 메시지 표시
