@@ -1,4 +1,4 @@
-// api/all_tourism.js
+// api/alltourism.js
 
 // ===== 지역 코드 및 설정 =====
 const AREA_CODES = {
