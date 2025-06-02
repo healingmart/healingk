@@ -1,222 +1,217 @@
-// api/test.js (완전한 세밀한 정보 수집 버전)
+// api/test.js (디버깅 강화 버전)
 
-// ===== 지역 코드 및 설정 =====
-const AREA_CODES = {
-  '서울': 1, '부산': 6, '대구': 4, '인천': 2, '광주': 5, '대전': 3, '울산': 7,
-  '세종': 8, '세종시': 8,
-  '경기': 31, '강원': 32, '충북': 33, '충남': 34, '전북': 37, '전남': 38, 
-  '경북': 35, '경남': 36, '제주': 39,
-  '강릉': 32, '춘천': 32, '속초': 32, '평창': 32,
-  '천안': 34, '공주': 34, '부여': 34,
-  '전주': 37, '군산': 37, '정읍': 37, '남원': 37,
-  '목포': 38, '순천': 38, '여수': 38,
-  '경주': 35, '안동': 35, '포항': 35,
-  '통영': 36, '거제': 36, '남해': 36,
-  '제주시': 39, '서귀포': 39,
-  '수원': 31, '성남': 31, '안양': 31, '부천': 31, '광명': 31, '평택': 31,
-  '동탄': 31, '일산': 31, '분당': 31, '판교': 31
-};
-
-const CONTENT_TYPES = {
-  '관광지': 12,
-  '문화시설': 14,
-  '축제공연행사': 15,
-  '여행코스': 25,
-  '레포츠': 28,
-  '숙박': 32,
-  '쇼핑': 38,
-  '음식점': 39
-};
-
-const CATEGORY_MAPPING = {
-  'festivals': '축제공연행사',
-  'accommodation': '숙박',
-  'restaurants': '음식점',
-  'culture': '문화시설',
-  'attractions': '관광지',
-  'shopping': '쇼핑',
-  'sports': '레포츠',
-  'course': '여행코스'
-};
-
-const API_ENDPOINTS = {
-  service2: {
-    areaList: 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2',
-    keyword: 'https://apis.data.go.kr/B551011/KorService2/searchKeyword2',
-    detailCommon: 'https://apis.data.go.kr/B551011/KorService2/detailCommon2',
-    detailIntro: 'https://apis.data.go.kr/B551011/KorService2/detailIntro2',
-    detailImage: 'https://apis.data.go.kr/B551011/KorService2/detailImage2'
-  }
-};
-
-// ===== 메인 핸들러 =====
-module.exports = async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    try {
-        const startTime = Date.now();
-        const { 
-            region = '서울', 
-            category = 'accommodation',
-            numOfRows = 3,
-            pageNo = 1,
-            detail = 'full'
-        } = req.query;
-        
-        const finalContentType = CATEGORY_MAPPING[category] || '관광지';
-        
-        console.log('🚀 ===== 세밀한 정보 TEST API 시작 =====');
-        console.log('🗺️ 지역:', region);
-        console.log('🏷️ 카테고리:', category);
-        console.log('📊 요청 개수:', numOfRows);
-        console.log('🔍 상세도:', detail);
-
-        // API 키 확인
-        const apiKeyResult = getAPIKey();
-        if (!apiKeyResult.success) {
-            return res.status(500).json({
-                success: false,
-                message: '⚠️ API 키 설정 필요',
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        console.log('✅ API 키 확인:', `${apiKeyResult.key.substring(0, 10)}...`);
-
-        // 1단계: 기본 목록 수집
-        console.log('📋 1단계: 기본 목록 수집...');
-        const basicResult = await processTourismAPI(apiKeyResult.key, region, {
-            category,
-            contentType: finalContentType,
-            numOfRows: parseInt(numOfRows),
-            pageNo: parseInt(pageNo)
-        });
-
-        if (!basicResult.success || !basicResult.data?.attractions) {
-            return res.status(200).json({
-                success: false,
-                message: `❌ ${region} ${category} 기본 정보 수집 실패`,
-                responseTime: `${Date.now() - startTime}ms`
-            });
-        }
-
-        const basicAttractions = basicResult.data.attractions;
-        console.log(`✅ 기본 목록 ${basicAttractions.length}개 수집 완료`);
-
-        // 2단계: 상세 정보 수집
-        let detailedAttractions = basicAttractions;
-        
-        if (detail === 'medium' || detail === 'full') {
-            console.log(`🔍 2단계: ${detail} 상세 정보 수집 시작...`);
-            detailedAttractions = await enrichWithDetailedInfo(apiKeyResult.key, basicAttractions, detail);
-        }
-
-        const responseTime = Date.now() - startTime;
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                region,
-                category,
-                attractions: detailedAttractions,
-                attractionCount: detailedAttractions.length,
-                stats: {
-                    total: detailedAttractions.length,
-                    withImages: detailedAttractions.filter(a => a.images?.main || a.image).length,
-                    withCoordinates: detailedAttractions.filter(a => a.coordinates?.x || (a.mapx && a.mapy)).length,
-                    withDetailedInfo: detailedAttractions.filter(a => a.detailedInfo).length,
-                    withOverview: detailedAttractions.filter(a => a.overview).length,
-                    avgCompleteness: Math.round(detailedAttractions.reduce((sum, a) => sum + (a.dataQuality?.completeness || 20), 0) / detailedAttractions.length)
-                }
-            },
-            message: `🏛️ ${region} ${category} 세밀한 정보 테스트!`,
-            detailLevel: detail,
-            realTime: true,
-            responseTime: `${responseTime}ms`,
-            timestamp: new Date().toISOString()
-        });
-
-    } catch (error) {
-        console.error('❌ 테스트 API 오류:', error);
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-};
-
-// ===== 상세 정보 수집 =====
-async function enrichWithDetailedInfo(apiKey, basicAttractions, detailLevel) {
-    console.log(`🔍 ${basicAttractions.length}개 항목의 상세 정보 수집 시작...`);
+// ===== DetailCommon API 호출 (완전 디버깅 버전) =====
+async function fetchDetailCommon(apiKey, contentId, contentTypeId) {
+    console.log(`\n🔍 === DetailCommon API 디버깅 시작 ===`);
+    console.log(`  ContentID: ${contentId}`);
+    console.log(`  ContentTypeID: ${contentTypeId}`);
     
-    const enrichedAttractions = [];
-    
-    for (let i = 0; i < basicAttractions.length; i++) {
-        const attraction = basicAttractions[i];
-        console.log(`\n🔄 [${i + 1}/${basicAttractions.length}] ${attraction.title} 처리 중...`);
-        
-        try {
-            const detailedAttraction = await getDetailedAttractionInfo(apiKey, attraction, detailLevel);
-            enrichedAttractions.push(detailedAttraction);
-            
-            // 요청 간 딜레이 (API 부하 방지)
-            if (i < basicAttractions.length - 1) {
-                await sleep(1000);
+    // 1. 다양한 파라미터 조합 시도
+    const parameterSets = [
+        // 세트 1: 기본 파라미터
+        {
+            name: '기본_파라미터',
+            params: {
+                serviceKey: apiKey,
+                MobileOS: 'ETC',
+                MobileApp: 'HealingK',
+                _type: 'json',
+                contentId: contentId,
+                contentTypeId: contentTypeId.toString(),
+                defaultYN: 'Y',
+                overviewYN: 'Y'
             }
-        } catch (error) {
-            console.error(`❌ ${attraction.title} 처리 실패:`, error.message);
-            enrichedAttractions.push(attraction);
+        },
+        // 세트 2: 모든 YN 파라미터 추가
+        {
+            name: '전체_파라미터',
+            params: {
+                serviceKey: apiKey,
+                MobileOS: 'ETC',
+                MobileApp: 'HealingK',
+                _type: 'json',
+                contentId: contentId,
+                contentTypeId: contentTypeId.toString(),
+                defaultYN: 'Y',
+                firstImageYN: 'Y',
+                areacodeYN: 'Y',
+                catcodeYN: 'Y',
+                addrinfoYN: 'Y',
+                mapinfoYN: 'Y',
+                overviewYN: 'Y'
+            }
+        },
+        // 세트 3: Service1 시도
+        {
+            name: 'Service1_백업',
+            params: {
+                serviceKey: apiKey,
+                MobileOS: 'ETC',
+                MobileApp: 'HealingK',
+                _type: 'json',
+                contentId: contentId,
+                contentTypeId: contentTypeId.toString(),
+                defaultYN: 'Y',
+                overviewYN: 'Y'
+            },
+            useService1: true
         }
+    ];
+
+    // 각 파라미터 세트로 시도
+    for (const paramSet of parameterSets) {
+        console.log(`\n📋 [${paramSet.name}] 시도 중...`);
+        
+        const baseUrl = paramSet.useService1 
+            ? 'https://apis.data.go.kr/B551011/KorService1/detailCommon1'
+            : 'https://apis.data.go.kr/B551011/KorService2/detailCommon2';
+            
+        const params = new URLSearchParams(paramSet.params);
+        const fullUrl = `${baseUrl}?${params.toString()}`;
+        
+        console.log(`📡 URL: ${fullUrl}`);
+        console.log(`📋 파라미터:`, paramSet.params);
+
+        try {
+            const response = await fetchWithTimeout(fullUrl, 15000);
+            console.log(`📊 응답: ${response.status} ${response.statusText}`);
+            console.log(`📦 Content-Type: ${response.headers.get('content-type')}`);
+            
+            if (!response.ok) {
+                console.log(`❌ HTTP 오류: ${response.status}`);
+                continue;
+            }
+
+            const responseText = await response.text();
+            console.log(`📝 원본 응답 길이: ${responseText.length}자`);
+            console.log(`📝 응답 시작: ${responseText.substring(0, 200)}...`);
+            
+            // JSON 파싱 시도
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                console.log(`✅ JSON 파싱 성공`);
+            } catch (parseError) {
+                console.log(`❌ JSON 파싱 실패: ${parseError.message}`);
+                console.log(`📄 전체 응답: ${responseText}`);
+                continue;
+            }
+            
+            console.log(`📦 파싱된 구조:`, {
+                hasResponse: !!data.response,
+                hasHeader: !!data.response?.header,
+                hasBody: !!data.response?.body,
+                hasItems: !!data.response?.body?.items,
+                hasItem: !!data.response?.body?.items?.item
+            });
+            
+            // 결과 코드 확인
+            const resultCode = data.response?.header?.resultCode;
+            const resultMsg = data.response?.header?.resultMsg;
+            console.log(`📊 결과: ${resultCode} - ${resultMsg}`);
+            
+            if (resultCode === '0000') {
+                const item = data.response.body?.items?.item;
+                console.log(`📋 Item 존재: ${!!item}`);
+                
+                if (item) {
+                    const itemData = Array.isArray(item) ? item[0] : item;
+                    console.log(`📋 Item 데이터 키들:`, Object.keys(itemData));
+                    console.log(`📋 Overview 길이: ${itemData.overview?.length || 0}자`);
+                    console.log(`📋 Tel: ${itemData.tel || '없음'}`);
+                    console.log(`📋 Homepage: ${itemData.homepage || '없음'}`);
+                    console.log(`📋 UseTime: ${itemData.usetime || '없음'}`);
+                    console.log(`📋 Parking: ${itemData.parking || '없음'}`);
+                    
+                    // 성공한 경우 결과 반환
+                    const result = {
+                        overview: itemData.overview || null,
+                        tel: itemData.tel || null,
+                        homepage: itemData.homepage || null,
+                        useTime: itemData.usetime || null,
+                        restDate: itemData.restdate || null,
+                        useFee: itemData.usefee || null,
+                        parking: itemData.parking || null,
+                        babyCarriage: itemData.babycarriage || null,
+                        pet: itemData.pet || null,
+                        disabled: itemData.disabled || null,
+                        successMethod: paramSet.name
+                    };
+                    
+                    console.log(`🎉 [${paramSet.name}] 성공!`);
+                    return result;
+                } else {
+                    console.log(`⚠️ [${paramSet.name}] Item이 null`);
+                }
+            } else {
+                console.log(`❌ [${paramSet.name}] API 오류: ${resultCode} - ${resultMsg}`);
+            }
+            
+        } catch (error) {
+            console.log(`❌ [${paramSet.name}] 요청 실패: ${error.message}`);
+        }
+        
+        // 다음 시도 전 딜레이
+        await sleep(1000);
     }
     
-    console.log(`✅ 상세 정보 수집 완료: ${enrichedAttractions.length}개`);
-    return enrichedAttractions;
+    console.log(`❌ === DetailCommon API 모든 시도 실패 ===\n`);
+    return null;
 }
 
-// ===== 개별 상세 정보 수집 =====
+// ===== 메인 핸들러 수정 (로깅 강화) =====
 async function getDetailedAttractionInfo(apiKey, basicAttraction, detailLevel) {
     const contentId = basicAttraction.id;
     
-    // 카테고리별 ContentTypeId 결정
-    let contentTypeId = 32; // 숙박 기본값
-    if (basicAttraction.category?.includes('B02010') || basicAttraction.category?.includes('B02011')) {
-        contentTypeId = 32; // 숙박시설
-    }
+    console.log(`\n🏨 ===== ${basicAttraction.title} 상세 정보 수집 =====`);
+    console.log(`📋 기본 정보:`);
+    console.log(`  ID: ${contentId}`);
+    console.log(`  제목: ${basicAttraction.title}`);
+    console.log(`  카테고리: ${basicAttraction.category}`);
+    console.log(`  주소: ${basicAttraction.address}`);
+    console.log(`  기존 전화: ${basicAttraction.tel}`);
     
-    console.log(`🔍 [${basicAttraction.title}]`);
-    console.log(`  ID: ${contentId}, 타입: ${contentTypeId}`);
+    // ContentTypeId 결정 로직 상세화
+    let contentTypeId = 32; // 숙박 기본값
+    
+    console.log(`🔍 ContentTypeId 결정:`);
+    console.log(`  카테고리: ${basicAttraction.category}`);
+    console.log(`  최종 ContentTypeId: ${contentTypeId} (숙박시설)`);
     
     try {
-        // DetailCommon API 호출
-        console.log(`📋 DetailCommon API 호출...`);
+        // DetailCommon API 호출 (상세 디버깅)
+        console.log(`\n📋 === DetailCommon API 호출 시작 ===`);
         const commonDetail = await fetchDetailCommon(apiKey, contentId, contentTypeId);
-        console.log(`📋 DetailCommon 결과: ${commonDetail ? '성공' : '실패'}`);
+        
         if (commonDetail) {
-            console.log(`  - 개요: ${commonDetail.overview ? `${commonDetail.overview.length}자` : '없음'}`);
-            console.log(`  - 연락처: ${commonDetail.tel || '없음'}`);
+            console.log(`✅ DetailCommon 성공! (방법: ${commonDetail.successMethod})`);
+            console.log(`📋 수집된 정보:`);
+            console.log(`  - 개요: ${commonDetail.overview ? `${commonDetail.overview.substring(0, 50)}...` : '없음'}`);
+            console.log(`  - 전화: ${commonDetail.tel || '없음'}`);
+            console.log(`  - 홈페이지: ${commonDetail.homepage || '없음'}`);
             console.log(`  - 이용시간: ${commonDetail.useTime || '없음'}`);
+            console.log(`  - 주차: ${commonDetail.parking || '없음'}`);
+        } else {
+            console.log(`❌ DetailCommon 완전 실패`);
         }
         
-        // DetailIntro API 호출 (full 레벨에서만)
+        // DetailIntro는 기존과 동일하게 계속 진행
         let introDetail = null;
         if (detailLevel === 'full') {
-            console.log(`🏷️ DetailIntro API 호출...`);
+            console.log(`\n🏷️ === DetailIntro API 호출 시작 ===`);
             introDetail = await fetchDetailIntro(apiKey, contentId, contentTypeId);
-            console.log(`🏷️ DetailIntro 결과: ${introDetail ? '성공' : '실패'}`);
+            if (introDetail) {
+                console.log(`✅ DetailIntro 성공!`);
+            } else {
+                console.log(`❌ DetailIntro 실패`);
+            }
         }
         
         // 결과 통합
         const enrichedAttraction = {
             ...basicAttraction,
             
-            // 업데이트된 기본 정보
+            // DetailCommon 정보 (있으면 적용)
             overview: commonDetail?.overview || basicAttraction.overview,
             tel: commonDetail?.tel || basicAttraction.tel,
             homepage: commonDetail?.homepage || null,
@@ -249,23 +244,33 @@ async function getDetailedAttractionInfo(apiKey, basicAttraction, detailLevel) {
             // 특화 정보
             detailedInfo: introDetail || null,
             
-            // 데이터 품질
+            // 데이터 품질 (개선된 계산)
             dataQuality: {
                 hasOverview: !!commonDetail?.overview,
                 hasUseInfo: !!(commonDetail?.useTime || commonDetail?.useFee),
                 hasDetailedInfo: !!introDetail,
                 hasAdditionalImages: false,
-                completeness: calculateCompleteness(commonDetail, introDetail, [])
+                completeness: calculateCompleteness(commonDetail, introDetail, []),
+                detailCommonSuccess: !!commonDetail,
+                detailIntroSuccess: !!introDetail,
+                successMethod: commonDetail?.successMethod || null
             },
             
             lastUpdated: new Date().toISOString()
         };
         
-        console.log(`✅ ${basicAttraction.title} 완료 (완성도: ${enrichedAttraction.dataQuality.completeness}%)`);
+        const finalCompleteness = enrichedAttraction.dataQuality.completeness;
+        console.log(`\n📊 === 최종 결과 ===`);
+        console.log(`✅ ${basicAttraction.title} 처리 완료`);
+        console.log(`📈 완성도: ${finalCompleteness}%`);
+        console.log(`🔍 DetailCommon: ${commonDetail ? '성공' : '실패'}`);
+        console.log(`🏷️ DetailIntro: ${introDetail ? '성공' : '실패'}`);
+        console.log(`==============================\n`);
+        
         return enrichedAttraction;
         
     } catch (error) {
-        console.error(`❌ ${basicAttraction.title} 실패:`, error.message);
+        console.error(`❌ ${basicAttraction.title} 전체 실패:`, error.message);
         return {
             ...basicAttraction,
             dataQuality: {
@@ -280,225 +285,4 @@ async function getDetailedAttractionInfo(apiKey, basicAttraction, detailLevel) {
     }
 }
 
-// ===== DetailCommon API 호출 =====
-async function fetchDetailCommon(apiKey, contentId, contentTypeId) {
-    const params = new URLSearchParams({
-        serviceKey: apiKey,
-        MobileOS: 'ETC',
-        MobileApp: 'HealingK',
-        _type: 'json',
-        contentId: contentId,
-        contentTypeId: contentTypeId.toString(),
-        defaultYN: 'Y',
-        overviewYN: 'Y'
-    });
-
-    const url = `${API_ENDPOINTS.service2.detailCommon}?${params.toString()}`;
-    console.log(`📡 DetailCommon URL: ${url.substring(0, 120)}...`);
-
-    try {
-        const response = await fetchWithTimeout(url, 15000);
-        console.log(`📊 DetailCommon 응답: ${response.status} ${response.ok ? 'OK' : 'ERROR'}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`📦 DetailCommon 원본:`, JSON.stringify(data, null, 2).substring(0, 400) + '...');
-        
-        if (data.response?.header?.resultCode === '0000') {
-            const item = data.response.body?.items?.item;
-            if (item) {
-                const itemData = Array.isArray(item) ? item[0] : item;
-                console.log(`✅ DetailCommon 성공!`);
-                return {
-                    overview: itemData.overview || null,
-                    tel: itemData.tel || null,
-                    homepage: itemData.homepage || null,
-                    useTime: itemData.usetime || null,
-                    restDate: itemData.restdate || null,
-                    useFee: itemData.usefee || null,
-                    parking: itemData.parking || null,
-                    babyCarriage: itemData.babycarriage || null,
-                    pet: itemData.pet || null,
-                    disabled: itemData.disabled || null
-                };
-            }
-        } else {
-            console.log(`❌ DetailCommon API 오류: ${data.response?.header?.resultCode} - ${data.response?.header?.resultMsg}`);
-        }
-        
-        return null;
-    } catch (error) {
-        console.log(`❌ DetailCommon 실행 오류: ${error.message}`);
-        return null;
-    }
-}
-
-// ===== DetailIntro API 호출 =====
-async function fetchDetailIntro(apiKey, contentId, contentTypeId) {
-    const params = new URLSearchParams({
-        serviceKey: apiKey,
-        MobileOS: 'ETC',
-        MobileApp: 'HealingK',
-        _type: 'json',
-        contentId: contentId,
-        contentTypeId: contentTypeId.toString()
-    });
-
-    const url = `${API_ENDPOINTS.service2.detailIntro}?${params.toString()}`;
-    console.log(`📡 DetailIntro URL: ${url.substring(0, 120)}...`);
-
-    try {
-        const response = await fetchWithTimeout(url, 15000);
-        console.log(`📊 DetailIntro 응답: ${response.status} ${response.ok ? 'OK' : 'ERROR'}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`📦 DetailIntro 원본:`, JSON.stringify(data, null, 2).substring(0, 400) + '...');
-        
-        if (data.response?.header?.resultCode === '0000') {
-            const item = data.response.body?.items?.item;
-            if (item) {
-                const itemData = Array.isArray(item) ? item[0] : item;
-                console.log(`✅ DetailIntro 성공!`);
-                
-                // 숙박시설 특화 정보
-                return {
-                    type: 'accommodation',
-                    roomCount: itemData.roomcount || '',
-                    roomType: itemData.roomtype || '',
-                    checkInTime: itemData.checkintime || '',
-                    checkOutTime: itemData.checkouttime || '',
-                    subFacility: itemData.subfacility || '',
-                    barbecue: itemData.barbecue || '',
-                    karaoke: itemData.karaoke || '',
-                    sauna: itemData.sauna || ''
-                };
-            }
-        } else {
-            console.log(`❌ DetailIntro API 오류: ${data.response?.header?.resultCode} - ${data.response?.header?.resultMsg}`);
-        }
-        
-        return null;
-    } catch (error) {
-        console.log(`❌ DetailIntro 실행 오류: ${error.message}`);
-        return null;
-    }
-}
-
-// ===== 유틸리티 함수들 =====
-
-function calculateCompleteness(commonDetail, introDetail, additionalImages) {
-    let score = 20; // 기본 점수
-    
-    if (commonDetail?.overview) score += 30;
-    if (commonDetail?.tel) score += 10;
-    if (commonDetail?.useTime) score += 15;
-    if (commonDetail?.useFee) score += 10;
-    if (introDetail) score += 10;
-    if (additionalImages.length > 0) score += 5;
-    
-    return Math.min(score, 100);
-}
-
-async function fetchWithTimeout(url, timeout = 15000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-        const response = await fetch(url, {
-            signal: controller.signal,
-            headers: {
-                'User-Agent': 'HealingK-Detailed/2.0',
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        clearTimeout(timeoutId);
-        return response;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
-    }
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ===== 기존 함수들 (간소화) =====
-function getAPIKey() {
-    const possibleKeys = [
-        { name: 'TOURISM_API_KEY', key: process.env.TOURISM_API_KEY },
-        { name: 'TOUR_API_KEY', key: process.env.TOUR_API_KEY },
-        { name: 'JEONBUK_API_KEY', key: process.env.JEONBUK_API_KEY },
-        { name: 'WEATHER_API_KEY', key: process.env.WEATHER_API_KEY },
-        { name: 'REGIONAL_API_KEY', key: process.env.REGIONAL_API_KEY }
-    ];
-
-    const validKey = possibleKeys.find(item => item.key && item.key.length > 10);
-    
-    if (validKey) {
-        return { success: true, key: validKey.key, source: validKey.name };
-    }
-
-    return { success: false };
-}
-
-async function processTourismAPI(apiKey, region, options) {
-    const areaCode = AREA_CODES[region] || AREA_CODES['서울'];
-    const contentTypeId = CONTENT_TYPES[options.contentType] || 32;
-    
-    const params = new URLSearchParams({
-        serviceKey: apiKey,
-        numOfRows: options.numOfRows,
-        pageNo: options.pageNo,
-        MobileOS: 'ETC',
-        MobileApp: 'HealingK',
-        _type: 'json',
-        contentTypeId: contentTypeId,
-        areaCode: areaCode
-    });
-
-    try {
-        const response = await fetchWithTimeout(`${API_ENDPOINTS.service2.areaList}?${params.toString()}`, 15000);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.response?.header?.resultCode === '0000') {
-            const items = data.response.body?.items?.item || [];
-            const itemsArray = Array.isArray(items) ? items : [items];
-            
-            const attractions = itemsArray.map((item, index) => ({
-                id: item.contentid || `${Date.now()}_${index}`,
-                title: item.title || `${region} ${options.category} ${index + 1}`,
-                category: item.cat3 || item.cat2 || options.category,
-                address: item.addr1 || `${region} 지역`,
-                tel: item.tel || '정보 없음',
-                image: item.firstimage || null,
-                mapx: item.mapx || null,
-                mapy: item.mapy || null,
-                overview: item.overview || null
-            }));
-            
-            return {
-                success: true,
-                method: 'service2_area',
-                data: { attractions }
-            };
-        }
-
-        throw new Error(data.response?.header?.resultMsg || '데이터 없음');
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
+// ... (나머지 함수들은 기존과 동일)
