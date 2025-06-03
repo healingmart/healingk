@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏝️ 제주 숨은 보석 찾기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 25px 20px;
+        }
+        
+        .location-section {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e3f2fd;
+        }
+        
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .location-title {
+            font-weight: 600;
+            color: #2d3436;
+            font-size: 1.1rem;
+        }
+        
+        .gps-btn {
+            background: #00b894;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .gps-btn:hover {
+            background: #00a085;
+            transform: scale(1.05);
+        }
+        
+        .location-display {
+            color: #636e72;
+            font-size: 0.9rem;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .search-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .option-card {
+            background: white;
+            border: 2px solid #e3f2fd;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .option-card:hover {
+            border-color: #74b9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.2);
+        }
+        
+        .option-card.active {
+            border-color: #0984e3;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+        }
+        
+        .option-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .option-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        
+        .option-desc {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .distance-section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .distance-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .distance-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 12px 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .distance-btn:hover {
+            border-color: #74b9ff;
+        }
+        
+        .distance-btn.active {
+            background: #0984e3;
+            border-color: #0984e3;
+            color: white;
+        }
+        
+        .search-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(232, 67, 147, 0.3);
+        }
+        
+        .search-btn:disabled {
+            background: #ddd;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f2f6;
+        }
+        
+        .results-title {
+            font-weight: 600;
+            color: #2d3436;
+            font-size: 1.2rem;
+        }
+        
+        .results-count {
+            background: #0984e3;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .place-card {
+            background: white;
+            border: 1px solid #e3f2fd;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .place-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .place-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .place-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2d3436;
+            flex: 1;
+        }
+        
+        .place-type {
+            background: #fd79a8;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 10px;
+        }
+        
+        .place-distance {
+            background: #00b894;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .place-address {
+            color: #636e72;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .place-info {
+            background: #f8f9ff;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #2d3436;
+            line-height: 1.4;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #636e72;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0984e3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #ff7675;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #636e72;
+        }
+        
+        .floating-heart {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #fd79a8;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+            animation: heartbeat 2s infinite;
+        }
+        
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (max-width: 380px) {
+            .search-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .distance-options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏝️ 제주 숨은 보석 찾기</h1>
+            <p>아내를 위한 특별한 맛집&여행지 검색기</p>
+        </div>
+        
+        <div class="content">
+            <!-- 위치 설정 -->
+            <div class="location-section">
+                <div class="location-header">
+                    <div class="location-title">📍 현재 위치</div>
+                    <button class="gps-btn" onclick="getCurrentLocation()">내 위치 찾기</button>
+                </div>
+                <div class="location-display" id="locationDisplay">
+                    위치를 설정해주세요 ❤️
+                </div>
+            </div>
+            
+            <!-- 검색 옵션 -->
+            <div class="section-title">🔍 무엇을 찾으시나요?</div>
+            <div class="search-options">
+                <div class="option-card active" onclick="selectOption('restaurant')" id="restaurant-card">
+                    <div class="option-icon">🍽️</div>
+                    <div class="option-title">숨은 맛집</div>
+                    <div class="option-desc">로컬 맛집 추천</div>
+                </div>
+                <div class="option-card" onclick="selectOption('tourist')" id="tourist-card">
+                    <div class="option-icon">🏞️</div>
+                    <div class="option-title">여행지</div>
+                    <div class="option-desc">관광지 & 명소</div>
+                </div>
+            </div>
+            
+            <!-- 거리 선택 -->
+            <div class="distance-section">
+                <div class="section-title">📏 검색 거리</div>
+                <div class="distance-options">
+                    <div class="distance-btn" onclick="selectDistance(3)" id="dist-3">3km</div>
+                    <div class="distance-btn active" onclick="selectDistance(5)" id="dist-5">5km</div>
+                    <div class="distance-btn" onclick="selectDistance(10)" id="dist-10">10km</div>
+                    <div class="distance-btn" onclick="selectDistance(20)" id="dist-20">20km</div>
+                </div>
+            </div>
+            
+            <!-- 검색 버튼 -->
+            <button class="search-btn" onclick="searchPlaces()" id="searchBtn" disabled>
+                위치를 먼저 설정해주세요 💕
+            </button>
+            
+            <!-- 결과 영역 -->
+            <div class="results" id="results">
+                <div class="results-header">
+                    <div class="results-title" id="resultsTitle">검색 결과</div>
+                    <div class="results-count" id="resultsCount">0개</div>
+                </div>
+                <div id="resultsList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 떠다니는 하트 -->
+    <div class="floating-heart">💝</div>
+
+    <script>
+        // 전역 변수
+        let currentLocation = null;
+        let selectedOption = 'restaurant'; // 기본값: 맛집
+        let selectedDistance = 5; // 기본값: 5km
+        
+        // 현재 위치 가져오기
+        function getCurrentLocation() {
+            const locationDisplay = document.getElementById('locationDisplay');
+            const searchBtn = document.getElementById('searchBtn');
+            
+            if (!navigator.geolocation) {
+                alert('이 브라우저는 위치 서비스를 지원하지 않습니다 😅');
+                return;
+            }
+            
+            locationDisplay.innerHTML = '위치를 찾는 중... 🔍';
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    locationDisplay.innerHTML = `
+                        ✅ 위치 설정 완료!<br>
+                        <small>위도: ${currentLocation.lat.toFixed(4)}, 경도: ${currentLocation.lng.toFixed(4)}</small>
+                    `;
+                    
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = '❤️ 숨은 보석 찾기 시작!';
+                },
+                (error) => {
+                    locationDisplay.innerHTML = `
+                        ❌ 위치 가져오기 실패<br>
+                        <small>${error.message}</small>
+                    `;
+                    
+                    // 제주시청을 기본 위치로 설정
+                    currentLocation = { lat: 33.5133, lng: 126.5294 };
+                    locationDisplay.innerHTML = `
+                        📍 제주시청 기준으로 검색합니다<br>
+                        <small>원하시면 '내 위치 찾기'를 다시 눌러주세요</small>
+                    `;
+                    
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = '❤️ 숨은 보석 찾기 시작!';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000
+                }
+            );
+        }
+        
+        // 검색 옵션 선택
+        function selectOption(option) {
+            selectedOption = option;
+            
+            // 카드 스타일 변경
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.getElementById(option + '-card').classList.add('active');
+        }
+        
+        // 거리 선택
+        function selectDistance(distance) {
+            selectedDistance = distance;
+            
+            // 버튼 스타일 변경
+            document.querySelectorAll('.distance-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('dist-' + distance).classList.add('active');
+        }
+        
+        // 장소 검색
+        async function searchPlaces() {
+            if (!currentLocation) {
+                alert('위치를 먼저 설정해주세요! 💕');
+                return;
+            }
+            
+            const results = document.getElementById('results');
+            const resultsList = document.getElementById('resultsList');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            // 로딩 표시
+            results.classList.add('show');
+            resultsList.innerHTML = '<div class="loading">사랑하는 아내를 위해 최고의 장소를 찾는 중</div>';
+            
+            try {
+                // API 호출
+                const contentTypeId = selectedOption === 'restaurant' ? '39' : '12';
+                const url = `/api/alltourism?areaCode=39&contentTypeId=${contentTypeId}&userLat=${currentLocation.lat}&userLng=${currentLocation.lng}&radius=${selectedDistance}&sortBy=distance&sortOrder=asc&numOfRows=20&detailed=true&detailedCount=10&includeImages=true`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data.items.length > 0) {
+                    displayResults(data.data.items);
+                } else {
+                    resultsList.innerHTML = `
+                        <div class="no-results">
+                            😢 ${selectedDistance}km 반경에서 찾지 못했어요<br>
+                            <small>거리를 늘려서 다시 검색해보세요!</small>
+                        </div>
+                    `;
+                }
+                
+                // 결과 개수 업데이트
+                const count = data.data?.items?.length || 0;
+                resultsCount.textContent = count + '개';
+                resultsTitle.textContent = selectedOption === 'restaurant' ? '🍽️ 숨은 맛집' : '🏞️ 여행지';
+                
+            } catch (error) {
+                console.error('검색 오류:', error);
+                resultsList.innerHTML = `
+                    <div class="error">
+                        검색 중 오류가 발생했습니다 😅<br>
+                        잠시 후 다시 시도해주세요!
+                    </div>
+                `;
+            }
+        }
+        
+        // 결과 표시
+        function displayResults(items) {
+            const resultsList = document.getElementById('resultsList');
+            
+            const html = items.map(item => {
+                const typeText = selectedOption === 'restaurant' ? '맛집' : '관광지';
+                const typeColor = selectedOption === 'restaurant' ? '#fd79a8' : '#74b9ff';
+                
+                // 거리 표시
+                const distanceText = item.distance !== null && item.distance !== undefined 
+                    ? `${item.distance}km` 
+                    : '거리 정보 없음';
+                
+                // 상세 정보
+                let infoText = '정보를 불러오는 중...';
+                if (item.detailed) {
+                    if (selectedOption === 'restaurant' && item.detailed.intro) {
+                        infoText = '';
+                        if (item.detailed.intro.treatMenu) infoText += `🍽️ ${item.detailed.intro.treatMenu}<br>`;
+                        if (item.detailed.intro.openTime) infoText += `⏰ ${item.detailed.intro.openTime}<br>`;
+                        if (item.detailed.intro.restDate) infoText += `📅 휴무: ${item.detailed.intro.restDate}`;
+                    } else if (item.detailed.common?.overview) {
+                        infoText = item.detailed.common.overview.substring(0, 150) + '...';
+                    }
+                }
+                
+                return `
+                    <div class="place-card">
+                        <div class="place-header">
+                            <div class="place-title">${item.title}</div>
+                            <div class="place-type" style="background: ${typeColor}">${typeText}</div>
+                        </div>
+                        <div class="place-distance">📍 ${distanceText}</div>
+                        <div class="place-address">📍 ${item.addr1}</div>
+                        <div class="place-info">${infoText}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            resultsList.innerHTML = html;
+        }
+        
+        // 페이지 로드 시 제주시청 기본 위치 설정
+        window.addEventListener('load', () => {
+            // 제주시청을 기본 위치로 설정
+            currentLocation = { lat: 33.5133, lng: 126.5294 };
+            document.getElementById('locationDisplay').innerHTML = `
+                📍 제주시청 기준으로 검색합니다<br>
+                <small>정확한 위치는 '내 위치 찾기'를 눌러주세요 ❤️</small>
+            `;
+            
+            document.getElementById('searchBtn').disabled = false;
+            document.getElementById('searchBtn').innerHTML = '❤️ 숨은 보석 찾기 시작!';
+        });
+    </script>
+</body>
+</html>
