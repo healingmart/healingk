@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관광 API 종합 테스트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .test-section {
+            padding: 30px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .test-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
+        }
+        
+        .test-card h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .test-card .description {
+            color: #6c757d;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input, 
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .results h3 {
+            color: #495057;
+            margin-bottom: 20px;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .result-time {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #dc3545;
+            padding: 15px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .success {
+            color: #155724;
+            padding: 15px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .location-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .current-location {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .location-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏖️ 관광 API 종합 테스트</h1>
+            <p>다양한 검색 시나리오로 API 성능과 기능을 종합적으로 테스트합니다</p>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-grid">
+                <!-- 키워드 검색 테스트 -->
+                <div class="test-card">
+                    <h3>🔍 키워드 검색</h3>
+                    <p class="description">특정 키워드로 관광지를 검색합니다</p>
+                    
+                    <div class="form-group">
+                        <label>검색 키워드</label>
+                        <input type="text" id="keyword" value="제주도" placeholder="예: 제주도, 경복궁">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>결과 개수</label>
+                        <select id="keywordRows">
+                            <option value="5">5개</option>
+                            <option value="10" selected>10개</option>
+                            <option value="20">20개</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="testKeywordSearch()">검색 시작</button>
+                </div>
+                
+                <!-- 지역별 검색 테스트 -->
+                <div class="test-card">
+                    <h3>🗺️ 지역별 검색</h3>
+                    <p class="description">특정 지역의 관광지를 검색합니다</p>
+                    
+                    <div class="form-group">
+                        <label>지역 선택</label>
+                        <select id="areaCode">
+                            <option value="1">서울</option>
+                            <option value="6">부산</option>
+                            <option value="39" selected>제주</option>
+                            <option value="32">강원</option>
+                            <option value="35">경북</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>콘텐츠 타입</label>
+                        <select id="contentType">
+                            <option value="">전체</option>
+                            <option value="12" selected>관광지</option>
+                            <option value="32">숙박</option>
+                            <option value="39">음식점</option>
+                            <option value="38">쇼핑</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="testAreaSearch()">검색 시작</button>
+                </div>
+                
+                <!-- 거리 기반 검색 테스트 -->
+                <div class="test-card">
+                    <h3>📍 거리 기반 검색</h3>
+                    <p class="description">현재 위치 기준으로 가까운 관광지를 검색합니다</p>
+                    
+                    <div class="location-section">
+                        <div class="current-location">
+                            <span>현재 위치:</span>
+                            <button class="location-btn" onclick="getCurrentLocation()">위치 가져오기</button>
+                        </div>
+                        <div id="locationDisplay">위치를 가져와주세요</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>검색 반경 (km)</label>
+                        <select id="radius">
+                            <option value="1">1km</option>
+                            <option value="3" selected>3km</option>
+                            <option value="5">5km</option>
+                            <option value="10">10km</option>
+                            <option value="20">20km</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>지역 제한</label>
+                        <select id="distanceArea">
+                            <option value="1">서울</option>
+                            <option value="6">부산</option>
+                            <option value="39">제주</option>
+                            <option value="31">경기</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="testDistanceSearch()" id="distanceBtn" disabled>위치 설정 후 검색</button>
+                </div>
+                
+                <!-- 성능 테스트 -->
+                <div class="test-card">
+                    <h3>⚡ 성능 테스트</h3>
+                    <p class="description">API 성능과 안정성을 테스트합니다</p>
+                    
+                    <div class="form-group">
+                        <label>테스트 시나리오</label>
+                        <select id="performanceType">
+                            <option value="basic">기본 검색</option>
+                            <option value="detailed">상세정보 포함</option>
+                            <option value="large">대용량 데이터</option>
+                            <option value="concurrent">동시 요청</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>반복 횟수</label>
+                        <select id="repeatCount">
+                            <option value="1">1회</option>
+                            <option value="3" selected>3회</option>
+                            <option value="5">5회</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="testPerformance()">성능 테스트 시작</button>
+                </div>
+                
+                <!-- 종합 테스트 -->
+                <div class="test-card">
+                    <h3>🎯 종합 테스트</h3>
+                    <p class="description">모든 기능을 순차적으로 테스트합니다</p>
+                    
+                    <div class="form-group">
+                        <label>테스트 모드</label>
+                        <select id="comprehensiveMode">
+                            <option value="quick">빠른 테스트</option>
+                            <option value="thorough" selected>상세 테스트</option>
+                            <option value="stress">스트레스 테스트</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>디버그 모드</label>
+                        <select id="debugMode">
+                            <option value="false">비활성화</option>
+                            <option value="true">활성화</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="testComprehensive()">종합 테스트 시작</button>
+                </div>
+                
+                <!-- 실시간 모니터링 -->
+                <div class="test-card">
+                    <h3>📊 실시간 모니터링</h3>
+                    <p class="description">API 상태를 실시간으로 모니터링합니다</p>
+                    
+                    <div class="form-group">
+                        <label>모니터링 간격</label>
+                        <select id="monitorInterval">
+                            <option value="10">10초</option>
+                            <option value="30" selected>30초</option>
+                            <option value="60">1분</option>
+                        </select>
+                    </div>
+                    
+                    <div id="monitorStatus" style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <strong>상태:</strong> <span id="statusText">대기 중</span>
+                    </div>
+                    
+                    <button class="btn" onclick="toggleMonitoring()" id="monitorBtn">모니터링 시작</button>
+                </div>
+            </div>
+            
+            <!-- 결과 영역 -->
+            <div class="results" id="results" style="display: none;">
+                <h3>📋 테스트 결과</h3>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentLocation = null;
+        let monitoringInterval = null;
+        let testResults = [];
+        
+        // API 기본 URL
+        const API_BASE_URL = '/api/alltourism';
+        
+        // 현재 위치 가져오기
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+                return;
+            }
+            
+            document.getElementById('locationDisplay').innerHTML = '위치를 가져오는 중...';
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    document.getElementById('locationDisplay').innerHTML = 
+                        `위도: ${currentLocation.lat.toFixed(6)}, 경도: ${currentLocation.lng.toFixed(6)}`;
+                    
+                    document.getElementById('distanceBtn').disabled = false;
+                    document.getElementById('distanceBtn').textContent = '거리 기반 검색';
+                },
+                (error) => {
+                    document.getElementById('locationDisplay').innerHTML = 
+                        `위치 가져오기 실패: ${error.message}`;
+                    console.error('위치 가져오기 실패:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000
+                }
+            );
+        }
+        
+        // API 호출 함수
+        async function callAPI(params) {
+            const url = new URL(API_BASE_URL, window.location.origin);
+            Object.keys(params).forEach(key => {
+                if (params[key] !== null && params[key] !== '') {
+                    url.searchParams.append(key, params[key]);
+                }
+            });
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const endTime = performance.now();
+                
+                return {
+                    success: true,
+                    data: data,
+                    responseTime: endTime - startTime,
+                    url: url.toString()
+                };
+            } catch (error) {
+                const endTime = performance.now();
+                
+                return {
+                    success: false,
+                    error: error.message,
+                    responseTime: endTime - startTime,
+                    url: url.toString()
+                };
+            }
+        }
+        
+        // 결과 표시 함수
+        function displayResult(testName, result) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultContent');
+            
+            resultsDiv.style.display = 'block';
+            
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const isSuccess = result.success && result.data?.success;
+            
+            let statusClass = isSuccess ? 'success' : 'error';
+            let statusText = isSuccess ? '성공' : '실패';
+            
+            let statsHTML = '';
+            if (isSuccess && result.data?.data) {
+                const data = result.data.data;
+                const performance = result.data.performance;
+                
+                statsHTML = `
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${data.resultInfo?.actualCount || 0}</div>
+                            <div class="stat-label">결과 수</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${Math.round(result.responseTime)}ms</div>
+                            <div class="stat-label">응답 시간</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.resultInfo?.detailedCount || 0}</div>
+                            <div class="stat-label">상세 정보</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.detailStats?.avgCompleteness || 0}%</div>
+                            <div class="stat-label">완성도</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${performance?.itemsPerSecond || 0}</div>
+                            <div class="stat-label">처리율/초</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${data.resultInfo?.withDistance || 0}</div>
+                            <div class="stat-label">거리 정보</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultItem.innerHTML = `
+                <div class="result-header">
+                    <div class="result-title">${testName}</div>
+                    <div class="result-time">${timestamp} - <span class="${statusClass}">${statusText}</span></div>
+                </div>
+                <div style="margin: 10px 0;">
+                    <strong>요청 URL:</strong> <small>${result.url}</small>
+                </div>
+                ${isSuccess ? statsHTML : `<div class="error">오류: ${result.error || result.data?.message || '알 수 없는 오류'}</div>`}
+            `;
+            
+            contentDiv.insertBefore(resultItem, contentDiv.firstChild);
+            
+            // 결과 저장
+            testResults.push({
+                testName,
+                timestamp,
+                success: isSuccess,
+                responseTime: result.responseTime,
+                data: result.data
+            });
+        }
+        
+        // 로딩 표시
+        function showLoading(testName) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultContent');
+            
+            resultsDiv.style.display = 'block';
+            
+            const loadingItem = document.createElement('div');
+            loadingItem.className = 'loading';
+            loadingItem.id = 'loading-item';
+            loadingItem.innerHTML = `${testName} 실행 중`;
+            
+            contentDiv.insertBefore(loadingItem, contentDiv.firstChild);
+        }
+        
+        function hideLoading() {
+            const loadingItem = document.getElementById('loading-item');
+            if (loadingItem) {
+                loadingItem.remove();
+            }
+        }
+        
+        // 테스트 함수들
+        async function testKeywordSearch() {
+            const keyword = document.getElementById('keyword').value;
+            const numOfRows = document.getElementById('keywordRows').value;
+            
+            if (!keyword) {
+                alert('검색 키워드를 입력해주세요.');
+                return;
+            }
+            
+            showLoading('키워드 검색');
+            
+            const result = await callAPI({
+                keyword: keyword,
+                numOfRows: numOfRows,
+                detailed: 'true',
+                detailedCount: '5',
+                includeImages: 'true'
+            });
+            
+            hideLoading();
+            displayResult(`키워드 검색: "${keyword}"`, result);
+        }
+        
+        async function testAreaSearch() {
+            const areaCode = document.getElementById('areaCode').value;
+            const contentTypeId = document.getElementById('contentType').value;
+            
+            showLoading('지역별 검색');
+            
+            const result = await callAPI({
+                areaCode: areaCode,
+                contentTypeId: contentTypeId,
+                numOfRows: '10',
+                detailed: 'true',
+                detailedCount: '5',
+                includeImages: 'true'
+            });
+            
+            hideLoading();
+            displayResult(`지역별 검색: ${getAreaName(areaCode)}`, result);
+        }
+        
+        async function testDistanceSearch() {
+            if (!currentLocation) {
+                alert('위치 정보를 먼저 가져와주세요.');
+                return;
+            }
+            
+            const radius = document.getElementById('radius').value;
+            const areaCode = document.getElementById('distanceArea').value;
+            
+            showLoading('거리 기반 검색');
+            
+            const result = await callAPI({
+                areaCode: areaCode,
+                userLat: currentLocation.lat.toString(),
+                userLng: currentLocation.lng.toString(),
+                radius: radius,
+                sortBy: 'distance',
+                sortOrder: 'asc',
+                numOfRows: '10',
+                detailed: 'true',
+                detailedCount: '3',
+                includeImages: 'true',
+                debug: 'true'
+            });
+            
+            hideLoading();
+            displayResult(`거리 기반 검색: ${radius}km 반경`, result);
+        }
+        
+        async function testPerformance() {
+            const performanceType = document.getElementById('performanceType').value;
+            const repeatCount = parseInt(document.getElementById('repeatCount').value);
+            
+            showLoading('성능 테스트');
+            
+            const results = [];
+            
+            for (let i = 0; i < repeatCount; i++) {
+                let params = {};
+                
+                switch (performanceType) {
+                    case 'basic':
+                        params = { keyword: '관광지', numOfRows: '5' };
+                        break;
+                    case 'detailed':
+                        params = { 
+                            keyword: '제주도', 
+                            numOfRows: '10', 
+                            detailed: 'true', 
+                            detailedCount: '10',
+                            includeImages: 'true'
+                        };
+                        break;
+                    case 'large':
+                        params = { areaCode: '39', numOfRows: '100' };
+                        break;
+                    case 'concurrent':
+                        // 동시 요청은 별도 처리
+                        break;
+                }
+                
+                const result = await callAPI(params);
+                results.push(result);
+                
+                // 요청 간 간격
+                if (i < repeatCount - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            
+            hideLoading();
+            
+            // 성능 통계 계산
+            const avgResponseTime = results.reduce((sum, r) => sum + r.responseTime, 0) / results.length;
+            const successRate = (results.filter(r => r.success).length / results.length) * 100;
+            
+            displayResult(`성능 테스트 (${repeatCount}회 평균: ${Math.round(avgResponseTime)}ms, 성공률: ${successRate.toFixed(1)}%)`, {
+                success: true,
+                data: {
+                    success: true,
+                    data: {
+                        resultInfo: { actualCount: `${repeatCount}회 테스트` },
+                        detailStats: { avgCompleteness: successRate }
+                    },
+                    performance: { itemsPerSecond: Math.round(1000 / avgResponseTime) }
+                },
+                responseTime: avgResponseTime,
+                url: '성능 테스트'
+            });
+        }
+        
+        async function testComprehensive() {
+            const mode = document.getElementById('comprehensiveMode').value;
+            const debug = document.getElementById('debugMode').value;
+            
+            showLoading('종합 테스트');
+            
+            const tests = [
+                { name: '기본 키워드 검색', params: { keyword: '서울', numOfRows: '5' } },
+                { name: '상세 정보 검색', params: { keyword: '제주도', detailed: 'true', detailedCount: '3', includeImages: 'true' } },
+                { name: '지역별 검색', params: { areaCode: '1', contentTypeId: '12', numOfRows: '5' } },
+                { name: '타입별 검색', params: { contentTypeId: '39', numOfRows: '5' } }
+            ];
+            
+            if (mode === 'thorough') {
+                tests.push(
+                    { name: '대용량 검색', params: { areaCode: '39', numOfRows: '50' } },
+                    { name: '축제 검색', params: { contentTypeId: '15', numOfRows: '5' } }
+                );
+            }
+            
+            if (mode === 'stress') {
+                tests.push(
+                    { name: '최대 결과', params: { numOfRows: '1000' } },
+                    { name: '빈 결과', params: { keyword: 'impossiblekeyword123' } }
+                );
+            }
+            
+            hideLoading();
+            
+            for (const test of tests) {
+                showLoading(test.name);
+                
+                if (debug === 'true') {
+                    test.params.debug = 'true';
+                }
+                
+                const result = await callAPI(test.params);
+                
+                hideLoading();
+                displayResult(test.name, result);
+                
+                // 테스트 간 간격
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+        
+        // 모니터링 함수
+        function toggleMonitoring() {
+            const btn = document.getElementById('monitorBtn');
+            const statusText = document.getElementById('statusText');
+            
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                btn.textContent = '모니터링 시작';
+                statusText.textContent = '대기 중';
+                statusText.style.color = '#6c757d';
+            } else {
+                const interval = parseInt(document.getElementById('monitorInterval').value) * 1000;
+                
+                monitoringInterval = setInterval(async () => {
+                    statusText.textContent = '확인 중...';
+                    statusText.style.color = '#ffc107';
+                    
+                    const result = await callAPI({
+                        keyword: 'test',
+                        numOfRows: '1'
+                    });
+                    
+                    if (result.success) {
+                        statusText.textContent = `정상 (${Math.round(result.responseTime)}ms)`;
+                        statusText.style.color = '#28a745';
+                    } else {
+                        statusText.textContent = '오류 발생';
+                        statusText.style.color = '#dc3545';
+                    }
+                }, interval);
+                
+                btn.textContent = '모니터링 중지';
+                statusText.textContent = '시작됨';
+                statusText.style.color = '#28a745';
+            }
+        }
+        
+        // 유틸리티 함수
+        function getAreaName(code) {
+            const areas = {
+                '1': '서울', '6': '부산', '39': '제주', 
+                '32': '강원', '35': '경북', '31': '경기'
+            };
+            return areas[code] || code;
+        }
+        
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            console.log('관광 API 테스트 페이지가 로드되었습니다.');
+            
+            // 기본 위치 설정 (서울 시청)
+            currentLocation = { lat: 37.5665, lng: 126.9780 };
+            document.getElementById('locationDisplay').innerHTML = 
+                `기본 위치: 서울시청 (위도: ${currentLocation.lat}, 경도: ${currentLocation.lng})`;
+            document.getElementById('distanceBtn').disabled = false;
+            document.getElementById('distanceBtn').textContent = '거리 기반 검색';
+        });
+    </script>
+</body>
+</html>
