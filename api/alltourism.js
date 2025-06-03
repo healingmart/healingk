@@ -1,682 +1,1664 @@
-// api/alltourism.js (v4.0 - 다중 소스 통합 검증 시스템)
+// api/tourism-v4.js - 완벽한 TourAPI 4.0 통합 서버리스 백엔드
 
-// 📊 설정 상수
-const CONFIG = {
-    API: {
-        TOURISM_BASE_URL: 'https://apis.data.go.kr/B551011/KorService2',
-        KAKAO_BASE_URL: 'https://dapi.kakao.com/v2/local',
-        NAVER_BASE_URL: 'https://openapi.naver.com/v1/search',
-        GOOGLE_BASE_URL: 'https://maps.googleapis.com/maps/api/place'
-    },
-    TRUST_LEVELS: {
-        PLATINUM: { minScore: 90, minSources: 4, badge: '💎', label: '플래티넘' },
-        GOLD: { minScore: 80, minSources: 3, badge: '🥇', label: '골드' },
-        SILVER: { minScore: 65, minSources: 2, badge: '🥈', label: '실버' },
-        BRONZE: { minScore: 40, minSources: 1, badge: '🥉', label: '브론즈' },
-        UNVERIFIED: { minScore: 0, minSources: 0, badge: '❓', label: '미검증' }
-    },
-    SOURCE_WEIGHTS: {
-        tourism: { weight: 25, icon: '🏛️', name: '한국관광공사' },
-        kakao: { weight: 30, icon: '🗺️', name: '카카오맵' },
-        naver: { weight: 25, icon: '📱', name: '네이버' },
-        google: { weight: 20, icon: '🌐', name: '구글맵' }
-    },
-    BONUS_SCORES: {
-        hasPhone: 10,
-        hasHours: 8,
-        recentReview: 7,
-        highRating: 5,
-        multiplePhotos: 5
-    }
-};
-
-// 🎯 메인 핸들러
 module.exports = async function handler(req, res) {
-    setCorsHeaders(res, req);
-    
+    // CORS 설정
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
     try {
-        const searchParams = parseAndValidateParams(req.query);
-        const multiSourceResults = await executeMultiSourceSearch(searchParams);
-        const response = await buildEnhancedResponse(multiSourceResults, searchParams);
+        const { operation = 'search', ...params } = req.method === 'GET' ? req.query : req.body;
         
-        return res.status(200).json(response);
+        const apiKey = process.env.TOURISM_API_KEY || process.env.TOUR_API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({ 
+                success: false, 
+                message: 'API 키가 설정되지 않았습니다',
+                code: 'MISSING_API_KEY'
+            });
+        }
+
+        console.log(`🚀 TourAPI 요청: ${operation}`, { 
+            params: Object.keys(params),
+            timestamp: new Date().toISOString()
+        });
+
+        const startTime = Date.now();
+        let result;
+
+        // 오퍼레이션별 라우팅
+        switch (operation) {
+            case 'search':
+            case 'areaBasedList':
+                result = await handleAreaBasedSearch(apiKey, params);
+                break;
+            case 'locationBasedList':
+                result = await handleLocationBasedSearch(apiKey, params);
+                break;
+            case 'searchKeyword':
+                result = await handleKeywordSearch(apiKey, params);
+                break;
+            case 'searchFestival':
+                result = await handleFestivalSearch(apiKey, params);
+                break;
+            case 'searchStay':
+                result = await handleStaySearch(apiKey, params);
+                break;
+            case 'detailCommon':
+                result = await handleDetailCommon(apiKey, params);
+                break;
+            case 'detailIntro':
+                result = await handleDetailIntro(apiKey, params);
+                break;
+            case 'detailInfo':
+                result = await handleDetailInfo(apiKey, params);
+                break;
+            case 'detailImage':
+                result = await handleDetailImage(apiKey, params);
+                break;
+            case 'detailPetTour':
+                result = await handleDetailPetTour(apiKey, params);
+                break;
+            case 'areaCode':
+                result = await handleAreaCode(apiKey, params);
+                break;
+            case 'categoryCode':
+                result = await handleCategoryCode(apiKey, params);
+                break;
+            case 'ldongCode':
+                result = await handleLdongCode(apiKey, params);
+                break;
+            case 'lclsSystmCode':
+                result = await handleLclsSystmCode(apiKey, params);
+                break;
+            case 'areaBasedSyncList':
+                result = await handleAreaBasedSyncList(apiKey, params);
+                break;
+            case 'getAllData':
+                result = await handleGetAllData(apiKey, params);
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: `지원하지 않는 오퍼레이션: ${operation}`,
+                    supportedOperations: SUPPORTED_OPERATIONS,
+                    code: 'UNSUPPORTED_OPERATION'
+                });
+        }
+
+        const totalTime = Date.now() - startTime;
+        
+        return res.status(200).json({
+            success: true,
+            operation,
+            data: result.data,
+            metadata: {
+                ...result.metadata,
+                performance: {
+                    ...result.metadata?.performance,
+                    totalTime,
+                    timestamp: new Date().toISOString()
+                },
+                version: '4.3.0',
+                apiVersion: 'TourAPI 4.0'
+            }
+        });
 
     } catch (error) {
-        console.error('다중 소스 검색 API 오류:', error);
-        return res.status(500).json(buildErrorResponse(error));
+        console.error('🚨 TourAPI 오류:', error);
+        
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+            code: error.code || 'INTERNAL_SERVER_ERROR',
+            operation: req.query.operation || req.body?.operation,
+            timestamp: new Date().toISOString(),
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
-// 🔒 CORS 설정
-function setCorsHeaders(res, req) {
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-        ? (process.env.ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'])
-        : ['*'];
-    
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    }
-    
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
+// 지원하는 오퍼레이션 목록
+const SUPPORTED_OPERATIONS = [
+    'search', 'areaBasedList', 'locationBasedList', 'searchKeyword',
+    'searchFestival', 'searchStay', 'detailCommon', 'detailIntro',
+    'detailInfo', 'detailImage', 'detailPetTour', 'areaCode',
+    'categoryCode', 'ldongCode', 'lclsSystmCode', 'areaBasedSyncList',
+    'getAllData'
+];
 
-// 📊 파라미터 파싱
-function parseAndValidateParams(query) {
+// **지역기반 관광정보 조회**
+async function handleAreaBasedSearch(apiKey, params) {
     const {
-        keyword = '',
+        numOfRows = '10',
+        pageNo = '1',
+        arrange = 'C',
         contentTypeId = '',
-        areaCode = '39', // 제주도 기본
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        modifiedtime = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        detailed = 'false',
+        includeImages = 'false',
         userLat = '',
         userLng = '',
-        radius = '10',
-        trustLevel = 'all',
-        sortBy = 'trustScore',
-        sortOrder = 'desc',
-        numOfRows = '20',
-        includeAllSources = 'true',
+        radius = '',
         debug = 'false'
-    } = query;
-    
-    const hasUserLocation = userLat && userLng && 
-        !isNaN(parseFloat(userLat)) && !isNaN(parseFloat(userLng));
-    
-    return {
-        keyword,
-        contentTypeId,
-        areaCode,
-        hasUserLocation,
-        userLocation: hasUserLocation ? {
-            lat: parseFloat(userLat),
-            lng: parseFloat(userLng)
-        } : { lat: 33.5133, lng: 126.5294 }, // 제주시청 기본
-        radiusKm: parseFloat(radius),
-        trustLevel,
-        sortBy,
-        sortOrder,
-        numOfRows: parseInt(numOfRows),
-        includeAllSources: includeAllSources === 'true',
-        debug: debug === 'true'
-    };
-}
+    } = params;
 
-// 🚀 다중 소스 통합 검색
-async function executeMultiSourceSearch(params) {
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2';
+    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}`;
+    
+    // 매뉴얼 v4.3 기준 파라미터 추가
+    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
     const startTime = Date.now();
-    
-    console.log('🔍 다중 소스 검색 시작:', {
-        location: params.userLocation,
-        radius: params.radiusKm,
-        contentType: params.contentTypeId
-    });
-    
-    // 모든 소스에서 병렬 검색
-    const searchPromises = [];
-    
-    // 한국관광공사 API
-    if (process.env.TOURISM_API_KEY) {
-        searchPromises.push(
-            searchTourismAPI(params).catch(err => {
-                console.error('관광공사 API 오류:', err.message);
-                return { source: 'tourism', data: [], error: err.message };
-            })
-        );
-    }
-    
-    // 카카오 로컬 API
-    if (process.env.KAKAO_REST_API_KEY && params.includeAllSources) {
-        searchPromises.push(
-            searchKakaoAPI(params).catch(err => {
-                console.error('카카오 API 오류:', err.message);
-                return { source: 'kakao', data: [], error: err.message };
-            })
-        );
-    }
-    
-    // 네이버 지역검색 API
-    if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET && params.includeAllSources) {
-        searchPromises.push(
-            searchNaverAPI(params).catch(err => {
-                console.error('네이버 API 오류:', err.message);
-                return { source: 'naver', data: [], error: err.message };
-            })
-        );
-    }
-    
-    // 구글 Places API
-    if (process.env.GOOGLE_PLACES_API_KEY && params.includeAllSources) {
-        searchPromises.push(
-            searchGoogleAPI(params).catch(err => {
-                console.error('구글 API 오류:', err.message);
-                return { source: 'google', data: [], error: err.message };
-            })
-        );
-    }
-    
-    const searchResults = await Promise.allSettled(searchPromises);
-    
-    // 결과 정리
-    const sourceData = {};
-    const errors = {};
-    
-    searchResults.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-            const { source, data, error } = result.value;
-            sourceData[source] = data || [];
-            if (error) errors[source] = error;
-        }
-    });
-    
-    console.log('📊 소스별 결과 수집:', Object.entries(sourceData).map(([k,v]) => `${k}: ${v.length}개`));
-    
-    // 데이터 통합 및 검증
-    const integratedPlaces = await integrateAndVerifyData(sourceData, params);
-    
-    // 신뢰도 점수 계산
-    const verifiedPlaces = integratedPlaces.map(place => ({
-        ...place,
-        ...calculateTrustScore(place),
-        aiSummary: generateAISummary(place)
-    }));
-    
-    // 필터링 및 정렬
-    const filteredPlaces = filterByTrustLevel(verifiedPlaces, params.trustLevel);
-    const sortedPlaces = sortPlaces(filteredPlaces, params.sortBy, params.sortOrder);
-    
-    return {
-        places: sortedPlaces.slice(0, params.numOfRows),
-        totalFound: sortedPlaces.length,
-        sourceStats: calculateSourceStats(sourceData),
-        performance: {
-            totalTime: Date.now() - startTime,
-            sourcesUsed: Object.keys(sourceData).length,
-            errors
-        }
-    };
-}
-
-// 🏛️ 한국관광공사 API 검색
-async function searchTourismAPI(params) {
-    const apiKey = process.env.TOURISM_API_KEY;
-    if (!apiKey) throw new Error('관광공사 API 키 없음');
-    
-    let searchUrl;
-    if (params.keyword) {
-        searchUrl = `${CONFIG.API.TOURISM_BASE_URL}/searchKeyword2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=TrustGuide&_type=json&keyword=${encodeURIComponent(params.keyword)}&numOfRows=50&pageNo=1`;
-    } else {
-        searchUrl = `${CONFIG.API.TOURISM_BASE_URL}/areaBasedList2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=TrustGuide&_type=json&areaCode=${params.areaCode}&numOfRows=50&pageNo=1`;
-    }
-    
-    if (params.contentTypeId) searchUrl += `&contentTypeId=${params.contentTypeId}`;
-    
-    const response = await fetch(searchUrl);
+    const response = await fetchWithRetry(url);
     const data = await response.json();
-    
-    const resultCode = data.resultCode || data.response?.header?.resultCode;
-    if (resultCode !== '0' && resultCode !== '0000') {
-        throw new Error(`관광공사 API 오류: ${data.response?.header?.resultMsg}`);
-    }
-    
-    const items = data.response?.body?.items?.item || [];
-    const itemList = Array.isArray(items) ? items : items ? [items] : [];
-    
-    const places = itemList.map(item => ({
-        id: `tourism_${item.contentid}`,
-        name: item.title,
-        address: item.addr1,
-        phone: item.tel || null,
-        lat: parseFloat(item.mapy) || null,
-        lng: parseFloat(item.mapx) || null,
-        category: getContentTypeName(item.contenttypeid),
-        image: item.firstimage || null,
-        source: 'tourism',
-        sourceData: {
-            contentId: item.contentid,
-            contentTypeId: item.contenttypeid,
-            readCount: parseInt(item.readcount) || 0,
-            modifiedTime: item.modifiedtime,
-            officialStatus: '인증'
-        }
-    })).filter(place => place.lat && place.lng);
-    
-    return { source: 'tourism', data: places };
-}
+    const searchTime = Date.now() - startTime;
 
-// 🗺️ 카카오 로컬 API 검색
-async function searchKakaoAPI(params) {
-    const apiKey = process.env.KAKAO_REST_API_KEY;
-    if (!apiKey) throw new Error('카카오 API 키 없음');
-    
-    const query = params.keyword || (params.contentTypeId === '39' ? '맛집' : '관광지');
-    const { lat, lng } = params.userLocation;
-    const radius = Math.min(params.radiusKm * 1000, 20000);
-    
-    const url = `${CONFIG.API.KAKAO_BASE_URL}/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${radius}&size=15&sort=distance`;
-    
-    const response = await fetch(url, {
-        headers: { 'Authorization': `KakaoAK ${apiKey}` }
-    });
-    
-    if (!response.ok) throw new Error(`카카오 API HTTP ${response.status}`);
-    
-    const data = await response.json();
-    
-    const places = (data.documents || []).map(place => ({
-        id: `kakao_${place.id}`,
-        name: place.place_name,
-        address: place.road_address_name || place.address_name,
-        phone: place.phone || null,
-        lat: parseFloat(place.y),
-        lng: parseFloat(place.x),
-        category: place.category_name,
-        source: 'kakao',
-        sourceData: {
-            kakaoId: place.id,
-            placeUrl: place.place_url,
-            distance: parseInt(place.distance),
-            categoryGroupCode: place.category_group_code
-        }
-    }));
-    
-    return { source: 'kakao', data: places };
-}
+    // 응답 검증
+    validateApiResponse(data, 'areaBasedList');
 
-// 📱 네이버 지역검색 API
-async function searchNaverAPI(params) {
-    const clientId = process.env.NAVER_CLIENT_ID;
-    const clientSecret = process.env.NAVER_CLIENT_SECRET;
-    if (!clientId || !clientSecret) throw new Error('네이버 API 키 없음');
-    
-    const query = params.keyword || (params.contentTypeId === '39' ? '제주맛집' : '제주관광지');
-    const url = `${CONFIG.API.NAVER_BASE_URL}/local.json?query=${encodeURIComponent(query)}&display=20&sort=comment`;
-    
-    const response = await fetch(url, {
-        headers: {
-            'X-Naver-Client-Id': clientId,
-            'X-Naver-Client-Secret': clientSecret
-        }
-    });
-    
-    if (!response.ok) throw new Error(`네이버 API HTTP ${response.status}`);
-    
-    const data = await response.json();
-    
-    const places = (data.items || []).map(place => ({
-        id: `naver_${Buffer.from(place.title + place.address).toString('base64').slice(0, 10)}`,
-        name: place.title.replace(/<[^>]*>/g, ''),
-        address: place.address,
-        phone: place.telephone || null,
-        lat: null, // 네이버는 좌표 제공 안함
-        lng: null,
-        category: place.category,
-        source: 'naver',
-        sourceData: {
-            link: place.link,
-            description: place.description?.replace(/<[^>]*>/g, ''),
-            roadAddress: place.roadAddress
-        }
-    }));
-    
-    return { source: 'naver', data: places };
-}
+    const items = extractItems(data);
+    let processedItems = await processBasicItems(items, userLat, userLng, radius, debug);
 
-// 🌐 구글 Places API 검색
-async function searchGoogleAPI(params) {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    if (!apiKey) throw new Error('구글 API 키 없음');
-    
-    const query = params.keyword || (params.contentTypeId === '39' ? 'restaurant' : 'tourist attraction');
-    const { lat, lng } = params.userLocation;
-    const radius = Math.min(params.radiusKm * 1000, 50000);
-    
-    const url = `${CONFIG.API.GOOGLE_BASE_URL}/textsearch/json?query=${encodeURIComponent(query + ' 제주')}&location=${lat},${lng}&radius=${radius}&key=${apiKey}&language=ko`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) throw new Error(`구글 API HTTP ${response.status}`);
-    
-    const data = await response.json();
-    
-    if (data.status !== 'OK') throw new Error(`구글 API 상태: ${data.status}`);
-    
-    const places = (data.results || []).map(place => ({
-        id: `google_${place.place_id}`,
-        name: place.name,
-        address: place.formatted_address,
-        phone: null, // 상세 정보에서 가져와야 함
-        lat: place.geometry?.location?.lat || null,
-        lng: place.geometry?.location?.lng || null,
-        category: place.types?.[0] || 'establishment',
-        source: 'google',
-        sourceData: {
-            placeId: place.place_id,
-            rating: place.rating || null,
-            userRatingsTotal: place.user_ratings_total || 0,
-            priceLevel: place.price_level || null,
-            photos: place.photos || []
-        }
-    })).filter(place => place.lat && place.lng);
-    
-    return { source: 'google', data: places };
-}
-
-// 🔗 데이터 통합 및 검증
-async function integrateAndVerifyData(sourceData, params) {
-    const allPlaces = [];
-    const placeGroups = new Map();
-    
-    // 모든 소스의 데이터를 하나로 합침
-    Object.entries(sourceData).forEach(([source, places]) => {
-        places.forEach(place => {
-            if (place.lat && place.lng) {
-                allPlaces.push(place);
-            }
+    // 상세 정보 추가
+    if (detailed === 'true' && processedItems.length > 0) {
+        processedItems = await addDetailedInfo(apiKey, processedItems, {
+            includeImages: includeImages === 'true',
+            maxItems: Math.min(processedItems.length, 10)
         });
-    });
-    
-    // 좌표 기반으로 같은 장소 그룹핑
-    allPlaces.forEach(place => {
-        const key = findMatchingGroup(place, placeGroups, params.userLocation);
-        
-        if (key) {
-            placeGroups.get(key).sources[place.source] = place;
-        } else {
-            const newKey = `${place.lat.toFixed(4)}_${place.lng.toFixed(4)}_${normalizeString(place.name)}`;
-            placeGroups.set(newKey, {
-                id: `integrated_${newKey}`,
-                primaryName: place.name,
-                primaryAddress: place.address,
-                lat: place.lat,
-                lng: place.lng,
-                distance: calculateDistance(params.userLocation.lat, params.userLocation.lng, place.lat, place.lng),
-                sources: { [place.source]: place },
-                lastUpdated: new Date().toISOString()
-            });
-        }
-    });
-    
-    return Array.from(placeGroups.values());
-}
-
-// 🎯 신뢰도 점수 계산
-function calculateTrustScore(integratedPlace) {
-    let score = 0;
-    const sources = Object.keys(integratedPlace.sources);
-    const sourceCount = sources.length;
-    
-    // 기본 소스 점수
-    sources.forEach(source => {
-        score += CONFIG.SOURCE_WEIGHTS[source]?.weight || 10;
-    });
-    
-    // 보너스 점수
-    const hasPhone = sources.some(s => integratedPlace.sources[s].phone);
-    const hasRating = sources.some(s => integratedPlace.sources[s].sourceData?.rating);
-    const hasOfficialData = integratedPlace.sources.tourism;
-    const hasRecentData = sources.some(s => {
-        const modTime = integratedPlace.sources[s].sourceData?.modifiedTime;
-        return modTime && isRecentDate(modTime, 365); // 1년 이내
-    });
-    
-    if (hasPhone) score += CONFIG.BONUS_SCORES.hasPhone;
-    if (hasRating) score += CONFIG.BONUS_SCORES.highRating;
-    if (hasOfficialData) score += CONFIG.BONUS_SCORES.hasPhone; // 공식 데이터 보너스
-    if (hasRecentData) score += CONFIG.BONUS_SCORES.recentReview;
-    
-    // 다중 소스 보너스
-    if (sourceCount >= 3) score += 15;
-    else if (sourceCount >= 2) score += 10;
-    
-    const finalScore = Math.min(score, 100);
-    
-    // 등급 결정
-    let trustLevel = 'UNVERIFIED';
-    for (const [level, criteria] of Object.entries(CONFIG.TRUST_LEVELS)) {
-        if (finalScore >= criteria.minScore && sourceCount >= criteria.minSources) {
-            trustLevel = level;
-            break;
-        }
     }
-    
+
     return {
-        trustScore: finalScore,
-        trustLevel,
-        trustBadge: CONFIG.TRUST_LEVELS[trustLevel].badge,
-        trustLabel: CONFIG.TRUST_LEVELS[trustLevel].label,
-        sourceCount,
-        verifiedSources: sources
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            }
+        },
+        metadata: {
+            operation: 'areaBasedList',
+            searchParams: params,
+            performance: {
+                searchTime,
+                itemCount: processedItems.length,
+                detailedCount: processedItems.filter(item => item.detailed).length
+            }
+        }
     };
 }
 
-// 🤖 AI 종합 분석
-function generateAISummary(place) {
-    const sources = Object.keys(place.sources);
-    const sourceCount = sources.length;
-    
-    let summary = `${sourceCount}개 플랫폼에서 검증된 `;
-    
-    if (place.trustScore >= 90) summary += '최고급 ';
-    else if (place.trustScore >= 80) summary += '우수한 ';
-    else if (place.trustScore >= 65) summary += '양호한 ';
-    else summary += '기본 ';
-    
-    summary += place.sources.tourism ? '인증 ' : '';
-    summary += getPlaceTypeKorean(place.sources) + '. ';
-    
-    // 특징 분석
-    const features = [];
-    if (place.sources.tourism) features.push('공식인증');
-    if (place.sources.kakao) features.push('실시간정보');
-    if (place.sources.naver) features.push('리뷰풍부');
-    if (place.sources.google) features.push('글로벌검증');
-    
-    const avgRating = calculateAverageRating(place.sources);
-    if (avgRating >= 4.3) features.push('고평점');
-    
-    if (place.distance <= 1) features.push('근거리');
-    else if (place.distance <= 3) features.push('접근용이');
-    
-    if (features.length > 0) {
-        summary += features.slice(0, 3).join(', ') + ' 확인됨.';
+// **위치기반 관광정보 조회**
+async function handleLocationBasedSearch(apiKey, params) {
+    const {
+        numOfRows = '10',
+        pageNo = '1',
+        arrange = 'E', // 거리순 기본
+        contentTypeId = '',
+        mapX, // 필수
+        mapY, // 필수
+        radius, // 필수
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        modifiedtime = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        detailed = 'false',
+        includeImages = 'false'
+    } = params;
+
+    // 필수 파라미터 검증
+    if (!mapX || !mapY || !radius) {
+        throw new ValidationError('위치기반 검색에는 mapX, mapY, radius가 필수입니다');
     }
+
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/locationBasedList2';
+    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&mapX=${mapX}&mapY=${mapY}&radius=${radius}`;
     
-    return summary;
+    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'locationBasedList');
+
+    const items = extractItems(data);
+    let processedItems = items.map(item => ({
+        ...processBasicItem(item),
+        dist: parseFloat(item.dist) || null // API에서 제공하는 거리 정보
+    }));
+
+    // 상세 정보 추가
+    if (detailed === 'true' && processedItems.length > 0) {
+        processedItems = await addDetailedInfo(apiKey, processedItems, {
+            includeImages: includeImages === 'true',
+            maxItems: Math.min(processedItems.length, 10)
+        });
+    }
+
+    return {
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            },
+            searchCenter: {
+                lat: parseFloat(mapY),
+                lng: parseFloat(mapX),
+                radius: parseFloat(radius)
+            }
+        },
+        metadata: {
+            operation: 'locationBasedList',
+            searchParams: params,
+            performance: { searchTime, itemCount: processedItems.length }
+        }
+    };
 }
 
-// 🔍 유틸리티 함수들
-function findMatchingGroup(place, existingGroups, userLocation) {
-    for (const [key, group] of existingGroups) {
-        const distance = calculateDistance(place.lat, place.lng, group.lat, group.lng);
-        const nameMatch = similarity(normalizeString(place.name), normalizeString(group.primaryName));
+// **키워드 검색 조회**
+async function handleKeywordSearch(apiKey, params) {
+    const {
+        numOfRows = '10',
+        pageNo = '1',
+        arrange = 'C',
+        keyword, // 필수
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        detailed = 'false',
+        includeImages = 'false',
+        userLat = '',
+        userLng = '',
+        radius = ''
+    } = params;
+
+    if (!keyword || keyword.trim() === '') {
+        throw new ValidationError('키워드 검색에는 keyword가 필수입니다');
+    }
+
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchKeyword2';
+    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&keyword=${encodeURIComponent(keyword)}`;
+    
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'searchKeyword');
+
+    const items = extractItems(data);
+    let processedItems = await processBasicItems(items, userLat, userLng, radius);
+
+    // 상세 정보 추가
+    if (detailed === 'true' && processedItems.length > 0) {
+        processedItems = await addDetailedInfo(apiKey, processedItems, {
+            includeImages: includeImages === 'true',
+            maxItems: Math.min(processedItems.length, 10)
+        });
+    }
+
+    return {
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            },
+            searchKeyword: keyword
+        },
+        metadata: {
+            operation: 'searchKeyword',
+            searchParams: params,
+            performance: { searchTime, itemCount: processedItems.length }
+        }
+    };
+}
+
+// **행사정보 조회**
+async function handleFestivalSearch(apiKey, params) {
+    const {
+        numOfRows = '10',
+        pageNo = '1',
+        arrange = 'C',
+        eventStartDate, // 필수
+        eventEndDate = '',
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        modifiedtime = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        detailed = 'false',
+        includeImages = 'false'
+    } = params;
+
+    if (!eventStartDate) {
+        throw new ValidationError('행사정보 조회에는 eventStartDate가 필수입니다');
+    }
+
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchFestival2';
+    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&eventStartDate=${eventStartDate}`;
+    
+    if (eventEndDate) url += `&eventEndDate=${eventEndDate}`;
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'searchFestival');
+
+    const items = extractItems(data);
+    let processedItems = items.map(item => ({
+        ...processBasicItem(item),
+        eventstartdate: item.eventstartdate,
+        eventenddate: item.eventenddate,
+        progresstype: item.progresstype || null,
+        festivaltype: item.festivaltype || null
+    }));
+
+    // 상세 정보 추가
+    if (detailed === 'true' && processedItems.length > 0) {
+        processedItems = await addDetailedInfo(apiKey, processedItems, {
+            includeImages: includeImages === 'true',
+            maxItems: Math.min(processedItems.length, 10)
+        });
+    }
+
+    return {
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            },
+            eventPeriod: {
+                startDate: eventStartDate,
+                endDate: eventEndDate || null
+            }
+        },
+        metadata: {
+            operation: 'searchFestival',
+            searchParams: params,
+            performance: { searchTime, itemCount: processedItems.length }
+        }
+    };
+}
+
+// **숙박정보 조회**
+async function handleStaySearch(apiKey, params) {
+    const {
+        numOfRows = '10',
+        pageNo = '1',
+        arrange = 'C',
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        modifiedtime = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        detailed = 'false',
+        includeImages = 'false'
+    } = params;
+
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchStay2';
+    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}`;
+    
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'searchStay');
+
+    const items = extractItems(data);
+    let processedItems = items.map(item => processBasicItem(item));
+
+    // 상세 정보 추가
+    if (detailed === 'true' && processedItems.length > 0) {
+        processedItems = await addDetailedInfo(apiKey, processedItems, {
+            includeImages: includeImages === 'true',
+            maxItems: Math.min(processedItems.length, 10)
+        });
+    }
+
+    return {
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            }
+        },
+        metadata: {
+            operation: 'searchStay',
+            searchParams: params,
+            performance: { searchTime, itemCount: processedItems.length }
+        }
+    };
+}
+
+// **공통정보 조회**
+async function handleDetailCommon(apiKey, params) {
+    const { contentId } = params;
+
+    if (!contentId) {
+        throw new ValidationError('공통정보 조회에는 contentId가 필수입니다');
+    }
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/detailCommon2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'detailCommon');
+
+    const item = extractSingleItem(data);
+    const processedItem = {
+        contentId: item.contentid,
+        contentTypeId: item.contenttypeid,
+        title: item.title,
+        createdtime: item.createdtime,
+        modifiedtime: item.modifiedtime,
+        tel: item.tel || null,
+        telname: item.telname || null,
+        homepage: item.homepage?.replace(/<[^>]*>/g, '') || null,
+        firstimage: item.firstimage || null,
+        firstimage2: item.firstimage2 || null,
+        cpyrhtDivCd: item.cpyrhtDivCd || null,
+        areacode: item.areacode,
+        sigungucode: item.sigungucode,
+        cat1: item.cat1,
+        cat2: item.cat2,
+        cat3: item.cat3,
+        addr1: item.addr1,
+        addr2: item.addr2 || null,
+        zipcode: item.zipcode || null,
+        mapx: parseFloat(item.mapx) || null,
+        mapy: parseFloat(item.mapy) || null,
+        mlevel: item.mlevel || null,
+        overview: item.overview || null,
+        // v4.3 신규 필드
+        lDongRegnCd: item.lDongRegnCd || null,
+        lDongSignguCd: item.lDongSignguCd || null,
+        lclsSystm1: item.lclsSystm1 || null,
+        lclsSystm2: item.lclsSystm2 || null,
+        lclsSystm3: item.lclsSystm3 || null
+    };
+
+    return {
+        data: processedItem,
+        metadata: {
+            operation: 'detailCommon',
+            contentId,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **소개정보 조회**
+async function handleDetailIntro(apiKey, params) {
+    const { contentId, contentTypeId } = params;
+
+    if (!contentId || !contentTypeId) {
+        throw new ValidationError('소개정보 조회에는 contentId와 contentTypeId가 필수입니다');
+    }
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/detailIntro2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&contentTypeId=${contentTypeId}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'detailIntro');
+
+    const item = extractSingleItem(data);
+    const processedItem = processDetailIntroItem(contentTypeId, item);
+
+    return {
+        data: processedItem,
+        metadata: {
+            operation: 'detailIntro',
+            contentId,
+            contentTypeId,
+            typeName: getContentTypeName(contentTypeId),
+            performance: { searchTime }
+        }
+    };
+}
+
+// **반복정보 조회**
+async function handleDetailInfo(apiKey, params) {
+    const { contentId, contentTypeId } = params;
+
+    if (!contentId || !contentTypeId) {
+        throw new ValidationError('반복정보 조회에는 contentId와 contentTypeId가 필수입니다');
+    }
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/detailInfo2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&contentTypeId=${contentTypeId}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'detailInfo');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => processDetailInfoItem(contentTypeId, item));
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'detailInfo',
+            contentId,
+            contentTypeId,
+            typeName: getContentTypeName(contentTypeId),
+            itemCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **이미지정보 조회**
+async function handleDetailImage(apiKey, params) {
+    const { contentId, imageYN = 'Y' } = params;
+
+    if (!contentId) {
+        throw new ValidationError('이미지정보 조회에는 contentId가 필수입니다');
+    }
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/detailImage2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&imageYN=${imageYN}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'detailImage');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => ({
+        contentId: item.contentid,
+        originimgurl: item.originimgurl,
+        smallimageurl: item.smallimageurl,
+        cpyrhtDivCd: item.cpyrhtDivCd || null,
+        imgname: item.imgname || null,
+        serialnum: item.serialnum || null
+    }));
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'detailImage',
+            contentId,
+            imageYN,
+            imageCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **반려동물 여행정보 조회** (v4.1 신규)
+async function handleDetailPetTour(apiKey, params) {
+    const { contentId = '' } = params;
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/detailPetTour2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json${contentId ? `&contentId=${contentId}` : ''}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'detailPetTour');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => ({
+        contentId: item.contentid,
+        petTursmInfo: item.petTursmInfo || null,
+        relaAcdntRiskMtr: item.relaAcdntRiskMtr || null,
+        acmpyTypeCd: item.acmpyTypeCd || null,
+        relaPosesFclty: item.relaPosesFclty || null,
+        relaFrnshPrdlst: item.relaFrnshPrdlst || null,
+        etcAcmpyInfo: item.etcAcmpyInfo || null,
+        relaPurcPrdlst: item.relaPurcPrdlst || null,
+        acmpyPsblCpam: item.acmpyPsblCpam || null,
+        relaRntlPrdlst: item.relaRntlPrdlst || null,
+        acmpyNeedMtr: item.acmpyNeedMtr || null
+    }));
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'detailPetTour',
+            contentId: contentId || 'all',
+            petInfoCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **지역코드 조회**
+async function handleAreaCode(apiKey, params) {
+    const { areaCode = '', numOfRows = '100', pageNo = '1' } = params;
+
+    const url = `https://apis.data.go.kr/B551011/KorService2/areaCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}${areaCode ? `&areaCode=${areaCode}` : ''}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'areaCode');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => ({
+        code: item.code,
+        name: item.name,
+        rnum: item.rnum
+    }));
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'areaCode',
+            areaCode: areaCode || 'all',
+            codeCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **서비스분류코드 조회**
+async function handleCategoryCode(apiKey, params) {
+    const { 
+        contentTypeId = '', 
+        cat1 = '', 
+        cat2 = '', 
+        cat3 = '',
+        numOfRows = '100', 
+        pageNo = '1' 
+    } = params;
+
+    let url = `https://apis.data.go.kr/B551011/KorService2/categoryCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}`;
+    
+    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'categoryCode');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => ({
+        code: item.code,
+        name: item.name,
+        rnum: item.rnum
+    }));
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'categoryCode',
+            searchParams: { contentTypeId, cat1, cat2, cat3 },
+            codeCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **법정동코드 조회** (v4.3 신규)
+async function handleLdongCode(apiKey, params) {
+    const { 
+        lDongRegnCd = '', 
+        lDongListYn = 'N',
+        numOfRows = '1000', 
+        pageNo = '1' 
+    } = params;
+
+    let url = `https://apis.data.go.kr/B551011/KorService2/ldongCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&lDongListYn=${lDongListYn}`;
+    
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'ldongCode');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => {
+        if (lDongListYn === 'Y') {
+            return {
+                lDongRegnCd: item.lDongRegnCd,
+                lDongRegnNm: item.lDongRegnNm,
+                lDongSignguCd: item.lDongSignguCd,
+                lDongSignguNm: item.lDongSignguNm,
+                rnum: item.rnum
+            };
+        } else {
+            return {
+                code: item.code,
+                name: item.name,
+                rnum: item.rnum
+            };
+        }
+    });
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'ldongCode',
+            lDongRegnCd: lDongRegnCd || 'all',
+            listMode: lDongListYn === 'Y',
+            codeCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **분류체계코드 조회** (v4.3 신규)
+async function handleLclsSystmCode(apiKey, params) {
+    const { 
+        lclsSystm1 = '', 
+        lclsSystm2 = '', 
+        lclsSystm3 = '',
+        lclsSystmListYn = 'N',
+        numOfRows = '1000', 
+        pageNo = '1' 
+    } = params;
+
+    let url = `https://apis.data.go.kr/B551011/KorService2/lclsSystmCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&lclsSystmListYn=${lclsSystmListYn}`;
+    
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'lclsSystmCode');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => {
+        if (lclsSystmListYn === 'Y') {
+            return {
+                lclsSystm1Cd: item.lclsSystm1Cd,
+                lclsSystm1Nm: item.lclsSystm1Nm,
+                lclsSystm2Cd: item.lclsSystm2Cd,
+                lclsSystm2Nm: item.lclsSystm2Nm,
+                lclsSystm3Cd: item.lclsSystm3Cd,
+                lclsSystm3Nm: item.lclsSystm3Nm,
+                rnum: item.rnum
+            };
+        } else {
+            return {
+                code: item.code,
+                name: item.name,
+                rnum: item.rnum
+            };
+        }
+    });
+
+    return {
+        data: processedItems,
+        metadata: {
+            operation: 'lclsSystmCode',
+            searchParams: { lclsSystm1, lclsSystm2, lclsSystm3 },
+            listMode: lclsSystmListYn === 'Y',
+            codeCount: processedItems.length,
+            performance: { searchTime }
+        }
+    };
+}
+
+// **동기화 목록 조회**
+async function handleAreaBasedSyncList(apiKey, params) {
+    const {
+        numOfRows = '10',
+        pageNo = '1',
+        showflag = '1',
+        modifiedtime = '',
+        arrange = 'C',
+        contentTypeId = '',
+        areaCode = '',
+        sigunguCode = '',
+        cat1 = '',
+        cat2 = '',
+        cat3 = '',
+        lDongRegnCd = '',
+        lDongSignguCd = '',
+        lclsSystm1 = '',
+        lclsSystm2 = '',
+        lclsSystm3 = '',
+        oldContentid = ''
+    } = params;
+
+    let url = `https://apis.data.go.kr/B551011/KorService2/areaBasedSyncList2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&showflag=${showflag}&arrange=${arrange}`;
+    
+    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
+    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
+    if (areaCode) url += `&areaCode=${areaCode}`;
+    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
+    if (cat1) url += `&cat1=${cat1}`;
+    if (cat2) url += `&cat2=${cat2}`;
+    if (cat3) url += `&cat3=${cat3}`;
+    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
+    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
+    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
+    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
+    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
+    if (oldContentid) url += `&oldContentid=${oldContentid}`;
+
+    const startTime = Date.now();
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+    const searchTime = Date.now() - startTime;
+
+    validateApiResponse(data, 'areaBasedSyncList');
+
+    const items = extractItems(data);
+    const processedItems = items.map(item => ({
+        ...processBasicItem(item),
+        showflag: item.showflag,
+        lDongRegnCd: item.lDongRegnCd || null,
+        lDongSignguCd: item.lDongSignguCd || null,
+        lclsSystm1: item.lclsSystm1 || null,
+        lclsSystm2: item.lclsSystm2 || null,
+        lclsSystm3: item.lclsSystm3 || null
+    }));
+
+    return {
+        data: {
+            items: processedItems,
+            pagination: {
+                totalCount: data.response?.body?.totalCount || processedItems.length,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
+            },
+            syncInfo: {
+                showflag: showflag === '1' ? '표출' : '비표출',
+                modifiedtime: modifiedtime || 'all'
+            }
+        },
+        metadata: {
+            operation: 'areaBasedSyncList',
+            searchParams: params,
+            performance: { searchTime, itemCount: processedItems.length }
+        }
+    };
+}
+
+// **통합 데이터 조회** (모든 정보를 한번에)
+async function handleGetAllData(apiKey, params) {
+    const { contentId, includeImages = 'true' } = params;
+
+    if (!contentId) {
+        throw new ValidationError('통합 데이터 조회에는 contentId가 필수입니다');
+    }
+
+    const startTime = Date.now();
+
+    try {
+        // 기본 정보 조회
+        const commonResult = await handleDetailCommon(apiKey, { contentId });
+        const commonData = commonResult.data;
         
-        // 100m 이내 + 이름 유사도 70% 이상이면 같은 장소로 판단
-        if (distance <= 0.1 && nameMatch >= 0.7) {
-            return key;
+        const contentTypeId = commonData.contentTypeId;
+
+        // 병렬로 상세 정보들 조회
+        const [introResult, infoResult, imageResult, petResult] = await Promise.allSettled([
+            handleDetailIntro(apiKey, { contentId, contentTypeId }),
+            handleDetailInfo(apiKey, { contentId, contentTypeId }),
+            includeImages === 'true' ? handleDetailImage(apiKey, { contentId }) : Promise.resolve(null),
+            handleDetailPetTour(apiKey, { contentId }).catch(() => null) // 반려동물 정보는 선택적
+        ]);
+
+        const allData = {
+            common: commonData,
+            intro: introResult.status === 'fulfilled' ? introResult.value.data : null,
+            info: infoResult.status === 'fulfilled' ? infoResult.value.data : null,
+            images: imageResult.status === 'fulfilled' && imageResult.value ? imageResult.value.data : null,
+            petTour: petResult.status === 'fulfilled' && petResult.value ? petResult.value.data : null,
+            completeness: calculateCompleteness({
+                common: commonData,
+                intro: introResult.status === 'fulfilled' ? introResult.value.data : null,
+                info: infoResult.status === 'fulfilled' ? infoResult.value.data : null,
+                images: imageResult.status === 'fulfilled' && imageResult.value ? imageResult.value.data : null
+            })
+        };
+
+        const totalTime = Date.now() - startTime;
+
+        return {
+            data: allData,
+            metadata: {
+                operation: 'getAllData',
+                contentId,
+                contentTypeId,
+                typeName: getContentTypeName(contentTypeId),
+                performance: {
+                    totalTime,
+                    apiCalls: 4 + (includeImages === 'true' ? 1 : 0)
+                },
+                errors: [
+                    introResult.status === 'rejected' ? `intro: ${introResult.reason?.message}` : null,
+                    infoResult.status === 'rejected' ? `info: ${infoResult.reason?.message}` : null,
+                    imageResult.status === 'rejected' ? `images: ${imageResult.reason?.message}` : null,
+                    petResult.status === 'rejected' ? `petTour: ${petResult.reason?.message}` : null
+                ].filter(Boolean)
+            }
+        };
+
+    } catch (error) {
+        throw new Error(`통합 데이터 조회 실패: ${error.message}`);
+    }
+}
+
+// **유틸리티 함수들**
+
+// API 응답 검증
+function validateApiResponse(data, operation) {
+    const resultCode = data.resultCode || data.response?.header?.resultCode;
+    
+    if (resultCode !== '0' && resultCode !== '0000') {
+        const errorMessage = data.response?.header?.resultMsg || '알 수 없는 오류';
+        throw new ApiError(`${operation} API 오류: ${errorMessage}`, resultCode);
+    }
+}
+
+// 아이템 추출
+function extractItems(data) {
+    const items = data.response?.body?.items?.item || data.items?.item || [];
+    return Array.isArray(items) ? items : items ? [items] : [];
+}
+
+// 단일 아이템 추출
+function extractSingleItem(data) {
+    const items = extractItems(data);
+    if (items.length === 0) {
+        throw new ApiError('데이터를 찾을 수 없습니다', 'NO_DATA');
+    }
+    return items[0];
+}
+
+// 기본 아이템 처리
+function processBasicItem(item) {
+    // 좌표 변환 및 검증
+    let mapx = null;
+    let mapy = null;
+    
+    if (item.mapx && item.mapx !== '' && item.mapx !== '0') {
+        const parsedX = parseFloat(item.mapx);
+        if (!isNaN(parsedX) && parsedX !== 0) {
+            mapx = parsedX;
         }
     }
-    return null;
-}
-
-function normalizeString(str) {
-    return str.toLowerCase()
-        .replace(/[^가-힣a-z0-9\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function similarity(str1, str2) {
-    if (!str1 || !str2) return 0;
-    if (str1 === str2) return 1;
     
-    const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
-    
-    if (longer.length === 0) return 1;
-    
-    const editDistance = levenshteinDistance(longer, shorter);
-    return (longer.length - editDistance) / longer.length;
-}
-
-function levenshteinDistance(str1, str2) {
-    const matrix = [];
-    
-    for (let i = 0; i <= str2.length; i++) {
-        matrix[i] = [i];
+    if (item.mapy && item.mapy !== '' && item.mapy !== '0') {
+        const parsedY = parseFloat(item.mapy);
+        if (!isNaN(parsedY) && parsedY !== 0) {
+            mapy = parsedY;
+        }
     }
-    
-    for (let j = 0; j <= str1.length; j++) {
-        matrix[0][j] = j;
+
+    return {
+        contentId: item.contentid,
+        contentTypeId: item.contenttypeid,
+        title: item.title,
+        addr1: item.addr1 || null,
+        addr2: item.addr2 || null,
+        tel: item.tel || null,
+        firstimage: item.firstimage || null,
+        firstimage2: item.firstimage2 || null,
+        cpyrhtDivCd: item.cpyrhtDivCd || null,
+        mapx: mapx,
+        mapy: mapy,
+        mlevel: item.mlevel || null,
+        areacode: item.areacode || null,
+        sigungucode: item.sigungucode || null,
+        cat1: item.cat1 || null,
+        cat2: item.cat2 || null,
+        cat3: item.cat3 || null,
+        readcount: parseInt(item.readcount) || 0,
+        modifiedtime: item.modifiedtime || null,
+        zipcode: item.zipcode || null,
+        createdtime: item.createdtime || null,
+        typeName: getContentTypeName(item.contenttypeid),
+        categoryInfo: getCategoryInfo(item.cat1, item.cat2, item.cat3),
+        areaInfo: getAreaInfo(item.areacode, item.sigungucode)
+    };
+}
+
+// 기본 아이템들 처리 (거리 계산 포함)
+async function processBasicItems(items, userLat, userLng, radius, debug = false) {
+    let processedItems = items.map(item => processBasicItem(item));
+
+    // 거리 계산
+    const hasUserLocation = userLat && userLng && 
+        userLat.trim() !== '' && userLng.trim() !== '' &&
+        !isNaN(parseFloat(userLat)) && !isNaN(parseFloat(userLng));
+
+    if (hasUserLocation) {
+        const userLatNum = parseFloat(userLat);
+        const userLngNum = parseFloat(userLng);
+        const radiusKm = radius && !isNaN(parseFloat(radius)) ? parseFloat(radius) : null;
+
+        processedItems = processedItems.map(item => {
+            if (item.mapx && item.mapy) {
+                const distance = calculateDistance(userLatNum, userLngNum, item.mapy, item.mapx);
+                return { ...item, distance: distance !== null ? Math.round(distance * 100) / 100 : null };
+            }
+            return { ...item, distance: null };
+        });
+
+        // 반경 필터링
+        if (radiusKm && radiusKm > 0) {
+            const itemsWithDistance = processedItems.filter(item => 
+                item.distance !== null && item.distance <= radiusKm
+            );
+            
+            if (itemsWithDistance.length > 0) {
+                processedItems = itemsWithDistance;
+            }
+        }
+
+        // 거리순 정렬
+        processedItems.sort((a, b) => {
+            const distA = a.distance !== null ? a.distance : 999999;
+            const distB = b.distance !== null ? b.distance : 999999;
+            return distA - distB;
+        });
     }
+
+    return processedItems;
+}
+
+// 상세 정보 추가
+async function addDetailedInfo(apiKey, items, options = {}) {
+    const { includeImages = false, maxItems = 5 } = options;
+    const detailedItems = items.slice(0, maxItems);
     
-    for (let i = 1; i <= str2.length; i++) {
-        for (let j = 1; j <= str1.length; j++) {
-            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-                matrix[i][j] = matrix[i - 1][j - 1];
-            } else {
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + 1,
-                    matrix[i][j - 1] + 1,
-                    matrix[i - 1][j] + 1
+    const detailedPromises = detailedItems.map(async (item) => {
+        try {
+            const detailPromises = [
+                handleDetailCommon(apiKey, { contentId: item.contentId }),
+                handleDetailIntro(apiKey, { contentId: item.contentId, contentTypeId: item.contentTypeId })
+            ];
+
+            if (includeImages) {
+                detailPromises.push(
+                    handleDetailImage(apiKey, { contentId: item.contentId }).catch(() => null)
                 );
             }
+
+            const results = await Promise.allSettled(detailPromises);
+            
+            const detailed = {
+                common: results[0].status === 'fulfilled' ? results[0].value.data : null,
+                intro: results[1].status === 'fulfilled' ? results[1].value.data : null,
+                images: includeImages && results[2] && results[2].status === 'fulfilled' 
+                    ? results[2].value.data : null,
+                completeness: 50, // 기본값
+                hasError: results.some(r => r.status === 'rejected')
+            };
+
+            // Overview가 있으면 업데이트
+            if (detailed.common?.overview && !item.overview) {
+                item.overview = detailed.common.overview;
+            }
+
+            detailed.completeness = calculateCompleteness(detailed);
+
+            return { ...item, detailed };
+        } catch (error) {
+            return { 
+                ...item, 
+                detailed: { 
+                    error: error.message, 
+                    completeness: 20, 
+                    hasError: true 
+                } 
+            };
         }
-    }
-    
-    return matrix[str2.length][str1.length];
-}
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
-function calculateAverageRating(sources) {
-    const ratings = [];
-    Object.values(sources).forEach(source => {
-        if (source.sourceData?.rating) ratings.push(source.sourceData.rating);
     });
-    return ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+
+    const detailedResults = await Promise.all(detailedPromises);
+    return [...detailedResults, ...items.slice(maxItems)];
 }
 
-function getContentTypeName(contentTypeId) {
-    const types = {
-        '12': '관광지', '14': '문화시설', '15': '축제/행사',
-        '25': '여행코스', '28': '레포츠', '32': '숙박',
-        '38': '쇼핑', '39': '음식점'
+// 상세 소개정보 처리
+function processDetailIntroItem(contentTypeId, item) {
+    const baseInfo = {
+        contentId: item.contentid,
+        contentTypeId: item.contenttypeid,
+        typeName: getContentTypeName(contentTypeId)
     };
-    return types[contentTypeId] || '기타';
-}
 
-function getPlaceTypeKorean(sources) {
-    if (sources.tourism) {
-        const contentType = sources.tourism.sourceData?.contentTypeId;
-        return getContentTypeName(contentType);
+    // 타입별 상세 정보 매핑 (매뉴얼 v4.3 기준)
+    switch (contentTypeId) {
+        case '12': // 관광지
+            return {
+                ...baseInfo,
+                accomcount: item.accomcount || null,
+                chkbabycarriage: item.chkbabycarriage || null,
+                chkcreditcard: item.chkcreditcard || null,
+                chkpet: item.chkpet || null,
+                expagerange: item.expagerange || null,
+                expguide: item.expguide || null,
+                heritage1: item.heritage1 || null,
+                heritage2: item.heritage2 || null,
+                heritage3: item.heritage3 || null,
+                infocenter: item.infocenter || null,
+                opendate: item.opendate || null,
+                parking: item.parking || null,
+                restdate: item.restdate || null,
+                useseason: item.useseason || null,
+                usetime: item.usetime || null
+            };
+
+        case '14': // 문화시설
+            return {
+                ...baseInfo,
+                accomcountculture: item.accomcountculture || null,
+                chkbabycarriageculture: item.chkbabycarriageculture || null,
+                chkcreditcardculture: item.chkcreditcardculture || null,
+                chkpetculture: item.chkpetculture || null,
+                discountinfo: item.discountinfo || null,
+                infocenterculture: item.infocenterculture || null,
+                parkingculture: item.parkingculture || null,
+                parkingfee: item.parkingfee || null,
+                restdateculture: item.restdateculture || null,
+                usefee: item.usefee || null,
+                usetimeculture: item.usetimeculture || null,
+                scale: item.scale || null,
+                spendtime: item.spendtime || null
+            };
+
+        case '15': // 행사/공연/축제
+            return {
+                ...baseInfo,
+                agelimit: item.agelimit || null,
+                bookingplace: item.bookingplace || null,
+                discountinfofestival: item.discountinfofestival || null,
+                eventenddate: item.eventenddate || null,
+                eventhomepage: item.eventhomepage || null,
+                eventplace: item.eventplace || null,
+                eventstartdate: item.eventstartdate || null,
+                festivalgrade: item.festivalgrade || null,
+                placeinfo: item.placeinfo || null,
+                playtime: item.playtime || null,
+                program: item.program || null,
+                spendtimefestival: item.spendtimefestival || null,
+                sponsor1: item.sponsor1 || null,
+                sponsor1tel: item.sponsor1tel || null,
+                sponsor2: item.sponsor2 || null,
+                sponsor2tel: item.sponsor2tel || null,
+                subevent: item.subevent || null,
+                usetimefestival: item.usetimefestival || null
+            };
+
+        case '25': // 여행코스
+            return {
+                ...baseInfo,
+                distance: item.distance || null,
+                infocentertourcourse: item.infocentertourcourse || null,
+                schedule: item.schedule || null,
+                taketime: item.taketime || null,
+                theme: item.theme || null
+            };
+
+        case '28': // 레포츠
+            return {
+                ...baseInfo,
+                accomcountleports: item.accomcountleports || null,
+                chkbabycarriageleports: item.chkbabycarriageleports || null,
+                chkcreditcardleports: item.chkcreditcardleports || null,
+                chkpetleports: item.chkpetleports || null,
+                expagerangeleports: item.expagerangeleports || null,
+                infocenterleports: item.infocenterleports || null,
+                openperiod: item.openperiod || null,
+                parkingfeeleports: item.parkingfeeleports || null,
+                parkingleports: item.parkingleports || null,
+                reservation: item.reservation || null,
+                restdateleports: item.restdateleports || null,
+                scaleleports: item.scaleleports || null,
+                usefeeleports: item.usefeeleports || null,
+                usetimeleports: item.usetimeleports || null
+            };
+
+        case '32': // 숙박
+            return {
+                ...baseInfo,
+                accomcountlodging: item.accomcountlodging || null,
+                checkintime: item.checkintime || null,
+                checkouttime: item.checkouttime || null,
+                chkcooking: item.chkcooking || null,
+                foodplace: item.foodplace || null,
+                infocenterlodging: item.infocenterlodging || null,
+                parkinglodging: item.parkinglodging || null,
+                pickup: item.pickup || null,
+                roomcount: item.roomcount || null,
+                reservationlodging: item.reservationlodging || null,
+                reservationurl: item.reservationurl || null,
+                roomtype: item.roomtype || null,
+                scalelodging: item.scalelodging || null,
+                subfacility: item.subfacility || null,
+                barbecue: item.barbecue || null,
+                beauty: item.beauty || null,
+                beverage: item.beverage || null,
+                bicycle: item.bicycle || null,
+                campfire: item.campfire || null,
+                fitness: item.fitness || null,
+                karaoke: item.karaoke || null,
+                publicbath: item.publicbath || null,
+                publicpc: item.publicpc || null,
+                sauna: item.sauna || null,
+                seminar: item.seminar || null,
+                sports: item.sports || null,
+                refundregulation: item.refundregulation || null
+            };
+
+        case '38': // 쇼핑
+            return {
+                ...baseInfo,
+                chkbabycarriageshopping: item.chkbabycarriageshopping || null,
+                chkcreditcardshopping: item.chkcreditcardshopping || null,
+                chkpetshopping: item.chkpetshopping || null,
+                culturecenter: item.culturecenter || null,
+                fairday: item.fairday || null,
+                infocentershopping: item.infocentershopping || null,
+                opendateshopping: item.opendateshopping || null,
+                opentime: item.opentime || null,
+                parkingshopping: item.parkingshopping || null,
+                restdateshopping: item.restdateshopping || null,
+                restroom: item.restroom || null,
+                saleitem: item.saleitem || null,
+                saleitemcost: item.saleitemcost || null,
+                scaleshopping: item.scaleshopping || null,
+                shopguide: item.shopguide || null
+            };
+
+        case '39': // 음식점
+            return {
+                ...baseInfo,
+                chkcreditcardfood: item.chkcreditcardfood || null,
+                discountinfofood: item.discountinfofood || null,
+                firstmenu: item.firstmenu || null,
+                infocenterfood: item.infocenterfood || null,
+                kidsfacility: item.kidsfacility || null,
+                lcnsno: item.lcnsno || null,
+                opendatefood: item.opendatefood || null,
+                opentimefood: item.opentimefood || null,
+                packing: item.packing || null,
+                parkingfood: item.parkingfood || null,
+                reservationfood: item.reservationfood || null,
+                restdatefood: item.restdatefood || null,
+                scalefood: item.scalefood || null,
+                seat: item.seat || null,
+                smoking: item.smoking || null,
+                treatmenu: item.treatmenu || null
+            };
+
+        default:
+            return baseInfo;
     }
-    if (sources.kakao?.category?.includes('음식점')) return '맛집';
-    if (sources.kakao?.category?.includes('관광')) return '관광지';
-    if (sources.naver?.category?.includes('음식')) return '맛집';
-    return '장소';
 }
 
-function isRecentDate(dateString, daysThreshold) {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-    return diffDays <= daysThreshold;
-}
+// 반복정보 처리
+function processDetailInfoItem(contentTypeId, item) {
+    const baseInfo = {
+        contentId: item.contentid,
+        contentTypeId: item.contenttypeid
+    };
 
-// 📊 필터링 및 정렬
-function filterByTrustLevel(places, trustLevel) {
-    if (trustLevel === 'all') return places;
-    
-    const criteria = CONFIG.TRUST_LEVELS[trustLevel.toUpperCase()];
-    if (!criteria) return places;
-    
-    return places.filter(place => 
-        place.trustScore >= criteria.minScore && 
-        place.sourceCount >= criteria.minSources
-    );
-}
-
-function sortPlaces(places, sortBy, sortOrder) {
-    return places.sort((a, b) => {
-        let aVal, bVal;
-        
-        switch (sortBy) {
-            case 'trustScore':
-                aVal = a.trustScore || 0;
-                bVal = b.trustScore || 0;
-                break;
-            case 'distance':
-                aVal = a.distance || 999;
-                bVal = b.distance || 999;
-                break;
-            case 'sourceCount':
-                aVal = a.sourceCount || 0;
-                bVal = b.sourceCount || 0;
-                break;
-            default:
-                aVal = a.trustScore || 0;
-                bVal = b.trustScore || 0;
-        }
-        
-        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-}
-
-function calculateSourceStats(sourceData) {
-    return Object.entries(sourceData).reduce((stats, [source, data]) => {
-        stats[source] = {
-            count: data.length,
-            icon: CONFIG.SOURCE_WEIGHTS[source]?.icon || '❓',
-            name: CONFIG.SOURCE_WEIGHTS[source]?.name || source
+    if (contentTypeId === '32') { // 숙박 - 객실정보
+        return {
+            ...baseInfo,
+            type: 'room',
+            roomcode: item.roomcode || null,
+            roomtitle: item.roomtitle || null,
+            roomsize1: item.roomsize1 || null,
+            roomsize2: item.roomsize2 || null,
+            roomcount: item.roomcount || null,
+            roombasecount: item.roombasecount || null,
+            roommaxcount: item.roommaxcount || null,
+            roomoffseasonminfee1: item.roomoffseasonminfee1 || null,
+            roomoffseasonminfee2: item.roomoffseasonminfee2 || null,
+            roompeakseasonminfee1: item.roompeakseasonminfee1 || null,
+            roompeakseasonminfee2: item.roompeakseasonminfee2 || null,
+            roomintro: item.roomintro || null,
+            // 객실 시설
+            roombathfacility: item.roombathfacility || null,
+            roombath: item.roombath || null,
+            roomhometheater: item.roomhometheater || null,
+            roomaircondition: item.roomaircondition || null,
+            roomtv: item.roomtv || null,
+            roompc: item.roompc || null,
+            roomcable: item.roomcable || null,
+            roominternet: item.roominternet || null,
+            roomrefrigerator: item.roomrefrigerator || null,
+            roomtoiletries: item.roomtoiletries || null,
+            roomsofa: item.roomsofa || null,
+            roomcook: item.roomcook || null,
+            roomtable: item.roomtable || null,
+            roomhairdryer: item.roomhairdryer || null,
+            // 객실 이미지
+            roomimg1: item.roomimg1 || null,
+            roomimg1alt: item.roomimg1alt || null,
+            cpyrhtDivCd1: item.cpyrhtDivCd1 || null,
+            roomimg2: item.roomimg2 || null,
+            roomimg2alt: item.roomimg2alt || null,
+            cpyrhtDivCd2: item.cpyrhtDivCd2 || null,
+            roomimg3: item.roomimg3 || null,
+            roomimg3alt: item.roomimg3alt || null,
+            cpyrhtDivCd3: item.cpyrhtDivCd3 || null,
+            roomimg4: item.roomimg4 || null,
+            roomimg4alt: item.roomimg4alt || null,
+            cpyrhtDivCd4: item.cpyrhtDivCd4 || null,
+            roomimg5: item.roomimg5 || null,
+            roomimg5alt: item.roomimg5alt || null,
+            cpyrhtDivCd5: item.cpyrhtDivCd5 || null
         };
-        return stats;
-    }, {});
+    } else if (contentTypeId === '25') { // 여행코스 - 코스정보
+        return {
+            ...baseInfo,
+            type: 'course',
+            subcontentid: item.subcontentid || null,
+            subname: item.subname || null,
+            subdetailoverview: item.subdetailoverview || null,
+            subdetailimg: item.subdetailimg || null,
+            subdetailalt: item.subdetailalt || null,
+            subnum: item.subnum || null
+        };
+    } else { // 기타 - 일반 반복정보
+        return {
+            ...baseInfo,
+            type: 'general',
+            fldgubun: item.fldgubun || null,
+            infoname: item.infoname || null,
+            infotext: item.infotext || null,
+            serialnum: item.serialnum || null
+        };
+    }
 }
 
-// 🏗️ 응답 구성
-async function buildEnhancedResponse(searchResults, searchParams) {
+// 거리 계산 함수 (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    try {
+        const latitude1 = Number(lat1);
+        const longitude1 = Number(lon1);
+        const latitude2 = Number(lat2);
+        const longitude2 = Number(lon2);
+        
+        if (isNaN(latitude1) || isNaN(longitude1) || isNaN(latitude2) || isNaN(longitude2)) {
+            return null;
+        }
+        
+        if (latitude1 < -90 || latitude1 > 90 || latitude2 < -90 || latitude2 > 90) {
+            return null;
+        }
+        
+        if (longitude1 < -180 || longitude1 > 180 || longitude2 < -180 || longitude2 > 180) {
+            return null;
+        }
+        
+        const R = 6371; // 지구 반지름 (km)
+        
+        const dLat = (latitude2 - latitude1) * Math.PI / 180;
+        const dLon = (longitude2 - longitude1) * Math.PI / 180;
+        
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(latitude1 * Math.PI / 180) * Math.cos(latitude2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        if (isNaN(distance) || distance < 0 || distance > 20000) {
+            return null;
+        }
+        
+        return distance;
+        
+    } catch (error) {
+        return null;
+    }
+}
+
+// 완성도 계산
+function calculateCompleteness(data) {
+    let score = 20; // 기본 점수
+    
+    if (data.common) {
+        if (data.common.overview) score += 25;
+        if (data.common.tel) score += 15;
+        if (data.common.homepage) score += 10;
+        if (data.common.usetime) score += 10;
+        if (data.common.parking) score += 5;
+        if (data.common.usefee) score += 5;
+    }
+    
+    if (data.intro) {
+        score += 10;
+    }
+    
+    if (data.info && Array.isArray(data.info) && data.info.length > 0) {
+        score += 5;
+    }
+    
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+        score += 5;
+    }
+    
+    return Math.min(score, 100);
+}
+
+// HTTP 요청 (재시도 포함)
+async function fetchWithRetry(url, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, {
+                timeout: 10000,
+                headers: {
+                    'User-Agent': 'HealingK-TourAPI/4.3.0'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response;
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+}
+
+// 콘텐츠 타입명
+function getContentTypeName(contentTypeId) {
+    const typeMap = {
+        '12': '관광지',
+        '14': '문화시설',
+        '15': '축제/공연/행사',
+        '25': '여행코스',
+        '28': '레포츠',
+        '32': '숙박',
+        '38': '쇼핑',
+        '39': '음식점'
+    };
+    return typeMap[contentTypeId] || '기타';
+}
+
+// 카테고리 정보
+function getCategoryInfo(cat1, cat2, cat3) {
+    const categoryMap = {
+        'A01': '자연',
+        'A02': '인문(문화/예술/역사)',
+        'A03': '레포츠',
+        'A04': '쇼핑',
+        'A05': '음식',
+        'B02': '숙박',
+        'C01': '추천코스'
+    };
+    
     return {
-        success: true,
-        data: {
-            places: searchResults.places,
-            totalFound: searchResults.totalFound,
-            trustDistribution: calculateTrustDistribution(searchResults.places),
-            sourceStats: searchResults.sourceStats
-        },
-        searchParams,
-        performance: searchResults.performance,
-        timestamp: new Date().toISOString(),
-        version: '4.0.0-multi-source'
+        main: categoryMap[cat1] || '기타',
+        cat1, cat2, cat3
     };
 }
 
-function calculateTrustDistribution(places) {
-    const distribution = {};
-    Object.keys(CONFIG.TRUST_LEVELS).forEach(level => {
-        distribution[level] = places.filter(p => p.trustLevel === level).length;
-    });
-    return distribution;
+// 지역 정보
+function getAreaInfo(areaCode, sigunguCode) {
+    const areaMap = {
+        '1': '서울', '2': '인천', '3': '대전', '4': '대구', '5': '광주',
+        '6': '부산', '7': '울산', '8': '세종', '31': '경기', '32': '강원',
+        '33': '충북', '34': '충남', '35': '경북', '36': '경남', '37': '전북',
+        '38': '전남', '39': '제주'
+    };
+    
+    return {
+        area: areaMap[areaCode] || '기타',
+        areaCode,
+        sigunguCode
+    };
 }
 
-function buildErrorResponse(error) {
-    return {
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString(),
-        version: '4.0.0-multi-source'
-    };
+// 커스텀 에러 클래스들
+class ApiError extends Error {
+    constructor(message, code = 'API_ERROR') {
+        super(message);
+        this.name = 'ApiError';
+        this.code = code;
+    }
+}
+
+class ValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ValidationError';
+        this.code = 'VALIDATION_ERROR';
+    }
 }
