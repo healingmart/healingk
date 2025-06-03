@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏝️ 제주 숨은 보석 찾기</title>
+    <title>🏝️ 제주 숨은 보석 찾기 v3.0</title>
     <style>
         * {
             margin: 0;
@@ -32,6 +32,17 @@
             color: white;
             padding: 30px 20px;
             text-align: center;
+            position: relative;
+        }
+        
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
         }
         
         .header h1 {
@@ -92,6 +103,56 @@
             background: white;
             border-radius: 8px;
             border: 1px solid #ddd;
+        }
+        
+        /* 새로운 고급 검색 옵션 */
+        .advanced-options {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #e3f2fd;
+        }
+        
+        .toggle-advanced {
+            background: none;
+            border: none;
+            color: #0984e3;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: underline;
+            margin-bottom: 15px;
+        }
+        
+        .advanced-content {
+            display: none;
+        }
+        
+        .advanced-content.show {
+            display: block;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 15px;
+            border: 1px solid #ddd;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox-item.active {
+            background: #0984e3;
+            color: white;
+            border-color: #0984e3;
         }
         
         .search-options {
@@ -226,12 +287,21 @@
             font-size: 1.2rem;
         }
         
-        .results-count {
+        .results-stats {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .stat-badge {
             background: #0984e3;
             color: white;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        
+        .enhanced-badge {
+            background: #00b894;
         }
         
         .place-card {
@@ -242,6 +312,7 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
+            position: relative;
         }
         
         .place-card:hover {
@@ -249,11 +320,34 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
         
+        .place-card.enhanced {
+            border-left: 4px solid #00b894;
+        }
+        
+        .gem-score {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: #2d3436;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(253, 203, 110, 0.3);
+        }
+        
+        .gem-score.high {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            color: white;
+        }
+        
         .place-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
+            margin-right: 80px; /* gem-score 공간 확보 */
         }
         
         .place-title {
@@ -263,13 +357,33 @@
             flex: 1;
         }
         
-        .place-type {
+        .place-badges {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .place-badge {
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .type-badge {
             background: #fd79a8;
             color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            margin-left: 10px;
+        }
+        
+        .source-badge {
+            background: #00b894;
+            color: white;
+        }
+        
+        .phone-badge {
+            background: #74b9ff;
+            color: white;
         }
         
         .place-distance {
@@ -281,6 +395,30 @@
             font-size: 0.85rem;
             margin-bottom: 10px;
             display: inline-block;
+        }
+        
+        .place-contact {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .contact-btn {
+            background: #74b9ff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .contact-btn:hover {
+            background: #0984e3;
         }
         
         .place-address {
@@ -296,6 +434,18 @@
             font-size: 0.85rem;
             color: #2d3436;
             line-height: 1.4;
+        }
+        
+        .place-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e3f2fd;
+            font-size: 0.8rem;
+            color: #636e72;
+        }
+        
+        .detail-item {
+            margin-bottom: 5px;
         }
         
         .loading {
@@ -367,12 +517,17 @@
             .distance-options {
                 grid-template-columns: repeat(2, 1fr);
             }
+            
+            .place-header {
+                margin-right: 60px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <div class="version-badge">v3.0</div>
             <h1>🏝️ 제주 숨은 보석 찾기</h1>
             <p>아내를 위한 특별한 맛집&여행지 검색기</p>
         </div>
@@ -386,6 +541,20 @@
                 </div>
                 <div class="location-display" id="locationDisplay">
                     위치를 설정해주세요 ❤️
+                </div>
+            </div>
+            
+            <!-- 고급 검색 옵션 -->
+            <div class="advanced-options">
+                <button class="toggle-advanced" onclick="toggleAdvanced()">🔧 고급 검색 옵션</button>
+                <div class="advanced-content" id="advancedContent">
+                    <div class="section-title" style="font-size: 0.9rem; margin-bottom: 10px;">🎯 검색 필터</div>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" onclick="toggleFilter('enhancedSearch')" id="filter-enhancedSearch">다중 API 검색</div>
+                        <div class="checkbox-item" onclick="toggleFilter('hasPhone')" id="filter-hasPhone">전화번호 있음</div>
+                        <div class="checkbox-item" onclick="toggleFilter('highGemScore')" id="filter-highGemScore">숨은보석 (70점↑)</div>
+                        <div class="checkbox-item" onclick="toggleFilter('includeImages')" id="filter-includeImages">이미지 포함</div>
+                    </div>
                 </div>
             </div>
             
@@ -424,7 +593,9 @@
             <div class="results" id="results">
                 <div class="results-header">
                     <div class="results-title" id="resultsTitle">검색 결과</div>
-                    <div class="results-count" id="resultsCount">0개</div>
+                    <div class="results-stats" id="resultsStats">
+                        <div class="stat-badge" id="totalCount">0개</div>
+                    </div>
                 </div>
                 <div id="resultsList"></div>
             </div>
@@ -437,8 +608,27 @@
     <script>
         // 전역 변수
         let currentLocation = null;
-        let selectedOption = 'restaurant'; // 기본값: 맛집
-        let selectedDistance = 5; // 기본값: 5km
+        let selectedOption = 'restaurant';
+        let selectedDistance = 5;
+        let searchFilters = {
+            enhancedSearch: true,
+            hasPhone: false,
+            highGemScore: false,
+            includeImages: true
+        };
+        
+        // 고급 옵션 토글
+        function toggleAdvanced() {
+            const content = document.getElementById('advancedContent');
+            content.classList.toggle('show');
+        }
+        
+        // 필터 토글
+        function toggleFilter(filterId) {
+            searchFilters[filterId] = !searchFilters[filterId];
+            const element = document.getElementById('filter-' + filterId);
+            element.classList.toggle('active');
+        }
         
         // 현재 위치 가져오기
         function getCurrentLocation() {
@@ -468,12 +658,6 @@
                     searchBtn.innerHTML = '❤️ 숨은 보석 찾기 시작!';
                 },
                 (error) => {
-                    locationDisplay.innerHTML = `
-                        ❌ 위치 가져오기 실패<br>
-                        <small>${error.message}</small>
-                    `;
-                    
-                    // 제주시청을 기본 위치로 설정
                     currentLocation = { lat: 33.5133, lng: 126.5294 };
                     locationDisplay.innerHTML = `
                         📍 제주시청 기준으로 검색합니다<br>
@@ -495,7 +679,6 @@
         function selectOption(option) {
             selectedOption = option;
             
-            // 카드 스타일 변경
             document.querySelectorAll('.option-card').forEach(card => {
                 card.classList.remove('active');
             });
@@ -506,14 +689,13 @@
         function selectDistance(distance) {
             selectedDistance = distance;
             
-            // 버튼 스타일 변경
             document.querySelectorAll('.distance-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             document.getElementById('dist-' + distance).classList.add('active');
         }
         
-        // 장소 검색
+        // 장소 검색 (개선된 버전)
         async function searchPlaces() {
             if (!currentLocation) {
                 alert('위치를 먼저 설정해주세요! 💕');
@@ -523,22 +705,49 @@
             const results = document.getElementById('results');
             const resultsList = document.getElementById('resultsList');
             const resultsTitle = document.getElementById('resultsTitle');
-            const resultsCount = document.getElementById('resultsCount');
+            const resultsStats = document.getElementById('resultsStats');
             
             // 로딩 표시
             results.classList.add('show');
             resultsList.innerHTML = '<div class="loading">사랑하는 아내를 위해 최고의 장소를 찾는 중</div>';
             
             try {
-                // API 호출
+                // API 호출 URL 구성
                 const contentTypeId = selectedOption === 'restaurant' ? '39' : '12';
-                const url = `/api/alltourism?areaCode=39&contentTypeId=${contentTypeId}&userLat=${currentLocation.lat}&userLng=${currentLocation.lng}&radius=${selectedDistance}&sortBy=distance&sortOrder=asc&numOfRows=20&detailed=true&detailedCount=10&includeImages=true`;
+                const params = new URLSearchParams({
+                    areaCode: '39',
+                    contentTypeId,
+                    userLat: currentLocation.lat,
+                    userLng: currentLocation.lng,
+                    radius: selectedDistance,
+                    sortBy: 'hiddenGemScore', // 숨은 보석 점수로 정렬
+                    sortOrder: 'desc',
+                    numOfRows: '20',
+                    detailed: 'true',
+                    detailedCount: '10',
+                    includeImages: searchFilters.includeImages,
+                    enhancedSearch: searchFilters.enhancedSearch,
+                    debug: 'false'
+                });
                 
+                const url = `/api/alltourism?${params.toString()}`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data.success && data.data.items.length > 0) {
-                    displayResults(data.data.items);
+                    // 필터 적용
+                    let filteredItems = data.data.items;
+                    
+                    if (searchFilters.hasPhone) {
+                        filteredItems = filteredItems.filter(item => item.tel);
+                    }
+                    
+                    if (searchFilters.highGemScore) {
+                        filteredItems = filteredItems.filter(item => (item.hiddenGemScore || 0) >= 70);
+                    }
+                    
+                    displayEnhancedResults(filteredItems, data.data);
+                    updateResultsStats(filteredItems, data.data);
                 } else {
                     resultsList.innerHTML = `
                         <div class="no-results">
@@ -546,11 +755,9 @@
                             <small>거리를 늘려서 다시 검색해보세요!</small>
                         </div>
                     `;
+                    updateResultsStats([], {});
                 }
                 
-                // 결과 개수 업데이트
-                const count = data.data?.items?.length || 0;
-                resultsCount.textContent = count + '개';
                 resultsTitle.textContent = selectedOption === 'restaurant' ? '🍽️ 숨은 맛집' : '🏞️ 여행지';
                 
             } catch (error) {
@@ -558,47 +765,96 @@
                 resultsList.innerHTML = `
                     <div class="error">
                         검색 중 오류가 발생했습니다 😅<br>
-                        잠시 후 다시 시도해주세요!
+                        잠시 후 다시 시도해주세요!<br>
+                        <small>${error.message}</small>
                     </div>
                 `;
             }
         }
         
-        // 결과 표시
-        function displayResults(items) {
+        // 향상된 결과 표시
+        function displayEnhancedResults(items, dataInfo) {
             const resultsList = document.getElementById('resultsList');
             
             const html = items.map(item => {
                 const typeText = selectedOption === 'restaurant' ? '맛집' : '관광지';
                 const typeColor = selectedOption === 'restaurant' ? '#fd79a8' : '#74b9ff';
                 
-                // 거리 표시
+                // 숨은 보석 점수
+                const gemScore = item.hiddenGemScore || 0;
+                const gemClass = gemScore >= 70 ? 'high' : '';
+                
+                // 거리 정보
                 const distanceText = item.distance !== null && item.distance !== undefined 
                     ? `${item.distance}km` 
                     : '거리 정보 없음';
                 
+                // 배지들
+                let badges = `<div class="place-badges">
+                    <div class="place-badge type-badge">${typeText}</div>`;
+                
+                if (item.source && item.source !== 'tourism') {
+                    badges += `<div class="place-badge source-badge">${item.source.toUpperCase()}</div>`;
+                }
+                
+                if (item.tel) {
+                    badges += `<div class="place-badge phone-badge">📞</div>`;
+                }
+                
+                badges += `</div>`;
+                
+                // 연락처 버튼들
+                let contactButtons = '';
+                if (item.tel) {
+                    contactButtons += `<a href="tel:${item.tel}" class="contact-btn">📞 ${item.tel}</a>`;
+                }
+                
                 // 상세 정보
-                let infoText = '정보를 불러오는 중...';
+                let infoText = '';
+                let detailsText = '';
+                
                 if (item.detailed) {
                     if (selectedOption === 'restaurant' && item.detailed.intro) {
-                        infoText = '';
-                        if (item.detailed.intro.treatMenu) infoText += `🍽️ ${item.detailed.intro.treatMenu}<br>`;
-                        if (item.detailed.intro.openTime) infoText += `⏰ ${item.detailed.intro.openTime}<br>`;
-                        if (item.detailed.intro.restDate) infoText += `📅 휴무: ${item.detailed.intro.restDate}`;
+                        if (item.detailed.intro.treatMenu) {
+                            infoText += `🍽️ ${item.detailed.intro.treatMenu}<br>`;
+                        }
+                        if (item.detailed.intro.openTime) {
+                            detailsText += `<div class="detail-item">⏰ 운영시간: ${item.detailed.intro.openTime}</div>`;
+                        }
+                        if (item.detailed.intro.restDate) {
+                            detailsText += `<div class="detail-item">📅 휴무일: ${item.detailed.intro.restDate}</div>`;
+                        }
+                        if (item.detailed.intro.firstMenu) {
+                            detailsText += `<div class="detail-item">🌟 대표메뉴: ${item.detailed.intro.firstMenu}</div>`;
+                        }
                     } else if (item.detailed.common?.overview) {
                         infoText = item.detailed.common.overview.substring(0, 150) + '...';
                     }
                 }
                 
+                if (!infoText) {
+                    infoText = item.addr1 || '상세 정보를 불러오는 중...';
+                }
+                
                 return `
-                    <div class="place-card">
+                    <div class="place-card ${item.isEnhanced ? 'enhanced' : ''}">
+                        <div class="gem-score ${gemClass}">💎 ${gemScore}점</div>
+                        
                         <div class="place-header">
                             <div class="place-title">${item.title}</div>
-                            <div class="place-type" style="background: ${typeColor}">${typeText}</div>
                         </div>
+                        
+                        ${badges}
+                        
                         <div class="place-distance">📍 ${distanceText}</div>
+                        
+                        ${contactButtons ? `<div class="place-contact">${contactButtons}</div>` : ''}
+                        
                         <div class="place-address">📍 ${item.addr1}</div>
+                        
                         <div class="place-info">${infoText}</div>
+                        
+                        ${detailsText ? `<div class="place-details">${detailsText}</div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -606,7 +862,33 @@
             resultsList.innerHTML = html;
         }
         
-        // 페이지 로드 시 제주시청 기본 위치 설정
+        // 결과 통계 업데이트
+        function updateResultsStats(items, dataInfo) {
+            const resultsStats = document.getElementById('resultsStats');
+            
+            const totalCount = items.length;
+            const enhancedCount = items.filter(item => item.isEnhanced).length;
+            const withPhoneCount = items.filter(item => item.tel).length;
+            const avgGemScore = dataInfo.resultInfo?.avgHiddenGemScore || 0;
+            
+            let statsHtml = `<div class="stat-badge">${totalCount}개</div>`;
+            
+            if (enhancedCount > 0) {
+                statsHtml += `<div class="stat-badge enhanced-badge">다중API ${enhancedCount}</div>`;
+            }
+            
+            if (withPhoneCount > 0) {
+                statsHtml += `<div class="stat-badge phone-badge">📞 ${withPhoneCount}</div>`;
+            }
+            
+            if (avgGemScore > 0) {
+                statsHtml += `<div class="stat-badge">💎 평균 ${avgGemScore}점</div>`;
+            }
+            
+            resultsStats.innerHTML = statsHtml;
+        }
+        
+        // 초기화
         window.addEventListener('load', () => {
             // 제주시청을 기본 위치로 설정
             currentLocation = { lat: 33.5133, lng: 126.5294 };
@@ -617,6 +899,10 @@
             
             document.getElementById('searchBtn').disabled = false;
             document.getElementById('searchBtn').innerHTML = '❤️ 숨은 보석 찾기 시작!';
+            
+            // 기본 필터 설정
+            document.getElementById('filter-enhancedSearch').classList.add('active');
+            document.getElementById('filter-includeImages').classList.add('active');
         });
     </script>
 </body>
