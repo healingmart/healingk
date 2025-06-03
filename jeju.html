@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏝️ 제주 숨은 보석 찾기 v3.0</title>
+    <title>🔍 제주 다중 소스 검증 가이드</title>
     <style>
         * {
             margin: 0;
@@ -13,58 +13,60 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 10px;
         }
         
         .container {
-            max-width: 480px;
+            max-width: 500px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             overflow: hidden;
         }
         
         .header {
-            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             color: white;
-            padding: 30px 20px;
+            padding: 30px 25px;
             text-align: center;
             position: relative;
         }
         
         .version-badge {
             position: absolute;
-            top: 10px;
-            right: 15px;
+            top: 15px;
+            right: 20px;
             background: rgba(255,255,255,0.2);
-            padding: 4px 8px;
-            border-radius: 10px;
-            font-size: 0.7rem;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
         
         .header h1 {
-            font-size: 1.8rem;
+            font-size: 1.9rem;
             margin-bottom: 8px;
+            font-weight: 700;
         }
         
         .header p {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             opacity: 0.9;
         }
         
         .content {
-            padding: 25px 20px;
+            padding: 25px;
         }
         
         .location-section {
-            background: #f8f9ff;
+            background: linear-gradient(135deg, #f8f9ff, #e3f2fd);
             padding: 20px;
             border-radius: 15px;
             margin-bottom: 20px;
-            border: 2px solid #e3f2fd;
+            border: 2px solid #e1f5fe;
         }
         
         .location-header {
@@ -81,85 +83,53 @@
         }
         
         .gps-btn {
-            background: #00b894;
+            background: #00cec9;
             color: white;
             border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
+            padding: 10px 16px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 0.85rem;
+            font-weight: 600;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 206, 201, 0.3);
         }
         
         .gps-btn:hover {
-            background: #00a085;
-            transform: scale(1.05);
+            background: #00b894;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 206, 201, 0.4);
         }
         
         .location-display {
             color: #636e72;
             font-size: 0.9rem;
-            padding: 10px;
+            padding: 12px;
             background: white;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        
-        /* 새로운 고급 검색 옵션 */
-        .advanced-options {
-            background: #f8f9ff;
-            padding: 15px;
             border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #e3f2fd;
-        }
-        
-        .toggle-advanced {
-            background: none;
-            border: none;
-            color: #0984e3;
-            cursor: pointer;
-            font-size: 0.9rem;
-            text-decoration: underline;
-            margin-bottom: 15px;
-        }
-        
-        .advanced-content {
-            display: none;
-        }
-        
-        .advanced-content.show {
-            display: block;
-        }
-        
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .checkbox-item {
-            background: white;
-            padding: 8px 12px;
-            border-radius: 15px;
             border: 1px solid #ddd;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
         }
         
-        .checkbox-item.active {
-            background: #0984e3;
-            color: white;
-            border-color: #0984e3;
+        /* 검색 옵션 */
+        .search-section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-weight: 700;
+            color: #2d3436;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .search-options {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         
         .option-card {
@@ -170,23 +140,26 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
         .option-card:hover {
             border-color: #74b9ff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(116, 185, 255, 0.15);
         }
         
         .option-card.active {
             border-color: #0984e3;
             background: linear-gradient(135deg, #74b9ff, #0984e3);
             color: white;
+            box-shadow: 0 8px 25px rgba(9, 132, 227, 0.3);
         }
         
         .option-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: block;
         }
         
         .option-title {
@@ -200,15 +173,56 @@
             opacity: 0.8;
         }
         
-        .distance-section {
-            margin-bottom: 25px;
+        /* 신뢰도 필터 */
+        .trust-filter {
+            background: #f8f9ff;
+            padding: 18px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e3f2fd;
         }
         
-        .section-title {
+        .trust-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .trust-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 12px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
             font-weight: 600;
-            color: #2d3436;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .trust-btn:hover {
+            border-color: #74b9ff;
+            transform: translateY(-1px);
+        }
+        
+        .trust-btn.active {
+            background: #0984e3;
+            border-color: #0984e3;
+            color: white;
+            box-shadow: 0 4px 15px rgba(9, 132, 227, 0.3);
+        }
+        
+        .trust-badge {
+            font-size: 1.2rem;
+        }
+        
+        /* 거리 선택 */
+        .distance-section {
+            margin-bottom: 25px;
         }
         
         .distance-options {
@@ -221,7 +235,7 @@
             background: white;
             border: 2px solid #ddd;
             padding: 12px 8px;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             text-align: center;
             font-weight: 600;
@@ -231,6 +245,7 @@
         
         .distance-btn:hover {
             border-color: #74b9ff;
+            transform: translateY(-1px);
         }
         
         .distance-btn.active {
@@ -239,31 +254,35 @@
             color: white;
         }
         
+        /* 검색 버튼 */
         .search-btn {
             width: 100%;
-            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             color: white;
             border: none;
-            padding: 18px;
+            padding: 20px;
             border-radius: 15px;
             font-size: 1.1rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             margin-bottom: 25px;
             transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
         }
         
         .search-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(232, 67, 147, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
         }
         
         .search-btn:disabled {
             background: #ddd;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
+        /* 결과 영역 */
         .results {
             display: none;
         }
@@ -277,193 +296,281 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f1f2f6;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9ff, #e3f2fd);
+            border-radius: 15px;
         }
         
         .results-title {
-            font-weight: 600;
+            font-weight: 700;
             color: #2d3436;
             font-size: 1.2rem;
         }
         
         .results-stats {
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
         }
         
-        .stat-badge {
+        .total-count {
             background: #0984e3;
             color: white;
-            padding: 4px 8px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-        }
-        
-        .enhanced-badge {
-            background: #00b894;
-        }
-        
-        .place-card {
-            background: white;
-            border: 1px solid #e3f2fd;
+            padding: 6px 12px;
             border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        
-        .place-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .place-card.enhanced {
-            border-left: 4px solid #00b894;
-        }
-        
-        .gem-score {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-            color: #2d3436;
-            padding: 6px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            box-shadow: 0 2px 8px rgba(253, 203, 110, 0.3);
         }
         
-        .gem-score.high {
-            background: linear-gradient(135deg, #fd79a8, #e84393);
-            color: white;
-        }
-        
-        .place-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-            margin-right: 80px; /* gem-score 공간 확보 */
-        }
-        
-        .place-title {
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: #2d3436;
-            flex: 1;
-        }
-        
-        .place-badges {
+        .source-indicators {
             display: flex;
             gap: 5px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
         }
         
-        .place-badge {
+        .source-indicator {
+            background: #00b894;
+            color: white;
             padding: 4px 8px;
             border-radius: 10px;
             font-size: 0.7rem;
             font-weight: 600;
         }
         
-        .type-badge {
-            background: #fd79a8;
+        /* 장소 카드 */
+        .place-card {
+            background: white;
+            border: 1px solid #e3f2fd;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .place-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+        
+        .place-card.platinum { border-left: 5px solid #9b59b6; }
+        .place-card.gold { border-left: 5px solid #f39c12; }
+        .place-card.silver { border-left: 5px solid #95a5a6; }
+        .place-card.bronze { border-left: 5px solid #e67e22; }
+        
+        .trust-score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: #2d3436;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
+        }
+        
+        .trust-score.platinum {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
             color: white;
+        }
+        
+        .trust-score.gold {
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
+            color: white;
+        }
+        
+        .place-header {
+            margin-bottom: 15px;
+            margin-right: 100px;
+        }
+        
+        .place-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #2d3436;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .place-category {
+            color: #636e72;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .verification-badges {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
         
         .source-badge {
             background: #00b894;
             color: white;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
         
-        .phone-badge {
-            background: #74b9ff;
-            color: white;
-        }
+        .source-badge.tourism { background: #6c5ce7; }
+        .source-badge.kakao { background: #fdcb6e; color: #2d3436; }
+        .source-badge.naver { background: #00b894; }
+        .source-badge.google { background: #e17055; }
         
         .place-distance {
-            background: #00b894;
+            background: #74b9ff;
             color: white;
-            padding: 6px 12px;
-            border-radius: 15px;
+            padding: 8px 15px;
+            border-radius: 20px;
             font-weight: 600;
             font-size: 0.85rem;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             display: inline-block;
         }
         
         .place-contact {
             display: flex;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
         
         .contact-btn {
-            background: #74b9ff;
+            background: #0984e3;
             color: white;
             border: none;
-            padding: 6px 12px;
-            border-radius: 15px;
+            padding: 8px 15px;
+            border-radius: 20px;
             font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
+            transition: all 0.3s ease;
         }
         
         .contact-btn:hover {
-            background: #0984e3;
+            background: #2d3436;
+            transform: translateY(-1px);
         }
         
         .place-address {
             color: #636e72;
             font-size: 0.9rem;
-            margin-bottom: 10px;
-        }
-        
-        .place-info {
-            background: #f8f9ff;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            color: #2d3436;
+            margin-bottom: 15px;
             line-height: 1.4;
         }
         
-        .place-details {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #e3f2fd;
-            font-size: 0.8rem;
-            color: #636e72;
+        .source-verification {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
         }
         
-        .detail-item {
-            margin-bottom: 5px;
+        .source-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e3f2fd;
+        }
+        
+        .source-item:last-child {
+            border-bottom: none;
+        }
+        
+        .source-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+        
+        .source-data {
+            color: #636e72;
+            font-size: 0.85rem;
+        }
+        
+        .ai-summary {
+            background: linear-gradient(135deg, #e3f2fd, #f8f9ff);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #74b9ff;
+        }
+        
+        .ai-summary-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+        
+        .ai-summary-text {
+            color: #636e72;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #2d3436;
+        }
+        
+        .action-btn:hover {
+            border-color: #74b9ff;
+            background: #74b9ff;
+            color: white;
+            transform: translateY(-1px);
         }
         
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 50px;
             color: #636e72;
+            font-size: 1.1rem;
         }
         
         .loading::after {
             content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
+            display: block;
+            width: 30px;
+            height: 30px;
             border: 3px solid #f3f3f3;
             border-top: 3px solid #0984e3;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-left: 10px;
+            margin: 20px auto 0;
         }
         
         @keyframes spin {
@@ -474,44 +581,31 @@
         .error {
             background: #ff7675;
             color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
             text-align: center;
+            font-weight: 600;
         }
         
         .no-results {
             text-align: center;
-            padding: 40px;
+            padding: 50px;
             color: #636e72;
         }
         
-        .floating-heart {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #fd79a8;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
-            animation: heartbeat 2s infinite;
+        .no-results-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
         }
         
-        @keyframes heartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
-        @media (max-width: 380px) {
+        @media (max-width: 480px) {
             .search-options {
                 grid-template-columns: 1fr;
+            }
+            
+            .trust-options {
+                grid-template-columns: repeat(2, 1fr);
             }
             
             .distance-options {
@@ -519,7 +613,11 @@
             }
             
             .place-header {
-                margin-right: 60px;
+                margin-right: 80px;
+            }
+            
+            .action-buttons {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -527,9 +625,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="version-badge">v3.0</div>
-            <h1>🏝️ 제주 숨은 보석 찾기</h1>
-            <p>아내를 위한 특별한 맛집&여행지 검색기</p>
+            <div class="version-badge">v4.0</div>
+            <h1>🔍 제주 다중 소스 검증 가이드</h1>
+            <p>4개 플랫폼 교차검증으로 진짜 맛집만 찾아드려요</p>
         </div>
         
         <div class="content">
@@ -540,36 +638,43 @@
                     <button class="gps-btn" onclick="getCurrentLocation()">내 위치 찾기</button>
                 </div>
                 <div class="location-display" id="locationDisplay">
-                    위치를 설정해주세요 ❤️
-                </div>
-            </div>
-            
-            <!-- 고급 검색 옵션 -->
-            <div class="advanced-options">
-                <button class="toggle-advanced" onclick="toggleAdvanced()">🔧 고급 검색 옵션</button>
-                <div class="advanced-content" id="advancedContent">
-                    <div class="section-title" style="font-size: 0.9rem; margin-bottom: 10px;">🎯 검색 필터</div>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item" onclick="toggleFilter('enhancedSearch')" id="filter-enhancedSearch">다중 API 검색</div>
-                        <div class="checkbox-item" onclick="toggleFilter('hasPhone')" id="filter-hasPhone">전화번호 있음</div>
-                        <div class="checkbox-item" onclick="toggleFilter('highGemScore')" id="filter-highGemScore">숨은보석 (70점↑)</div>
-                        <div class="checkbox-item" onclick="toggleFilter('includeImages')" id="filter-includeImages">이미지 포함</div>
-                    </div>
+                    제주시청 기준으로 검색합니다 ❤️
                 </div>
             </div>
             
             <!-- 검색 옵션 -->
-            <div class="section-title">🔍 무엇을 찾으시나요?</div>
-            <div class="search-options">
-                <div class="option-card active" onclick="selectOption('restaurant')" id="restaurant-card">
-                    <div class="option-icon">🍽️</div>
-                    <div class="option-title">숨은 맛집</div>
-                    <div class="option-desc">로컬 맛집 추천</div>
+            <div class="search-section">
+                <div class="section-title">🎯 무엇을 찾으시나요?</div>
+                <div class="search-options">
+                    <div class="option-card active" onclick="selectOption('restaurant')" id="restaurant-card">
+                        <div class="option-icon">🍽️</div>
+                        <div class="option-title">검증된 맛집</div>
+                        <div class="option-desc">다중 소스 검증</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption('tourist')" id="tourist-card">
+                        <div class="option-icon">🏞️</div>
+                        <div class="option-title">인증 관광지</div>
+                        <div class="option-desc">공식 검증 완료</div>
+                    </div>
                 </div>
-                <div class="option-card" onclick="selectOption('tourist')" id="tourist-card">
-                    <div class="option-icon">🏞️</div>
-                    <div class="option-title">여행지</div>
-                    <div class="option-desc">관광지 & 명소</div>
+            </div>
+            
+            <!-- 신뢰도 필터 -->
+            <div class="trust-filter">
+                <div class="section-title">💎 신뢰도 필터</div>
+                <div class="trust-options">
+                    <div class="trust-btn active" onclick="selectTrustLevel('all')" id="trust-all">
+                        <div class="trust-badge">🔍</div>
+                        <div>전체</div>
+                    </div>
+                    <div class="trust-btn" onclick="selectTrustLevel('gold')" id="trust-gold">
+                        <div class="trust-badge">🥇</div>
+                        <div>골드+</div>
+                    </div>
+                    <div class="trust-btn" onclick="selectTrustLevel('platinum')" id="trust-platinum">
+                        <div class="trust-badge">💎</div>
+                        <div>플래티넘</div>
+                    </div>
                 </div>
             </div>
             
@@ -578,62 +683,41 @@
                 <div class="section-title">📏 검색 거리</div>
                 <div class="distance-options">
                     <div class="distance-btn" onclick="selectDistance(3)" id="dist-3">3km</div>
-                    <div class="distance-btn active" onclick="selectDistance(5)" id="dist-5">5km</div>
-                    <div class="distance-btn" onclick="selectDistance(10)" id="dist-10">10km</div>
+                    <div class="distance-btn" onclick="selectDistance(5)" id="dist-5">5km</div>
+                    <div class="distance-btn active" onclick="selectDistance(10)" id="dist-10">10km</div>
                     <div class="distance-btn" onclick="selectDistance(20)" id="dist-20">20km</div>
                 </div>
             </div>
             
             <!-- 검색 버튼 -->
-            <button class="search-btn" onclick="searchPlaces()" id="searchBtn" disabled>
-                위치를 먼저 설정해주세요 💕
+            <button class="search-btn" onclick="searchPlaces()" id="searchBtn">
+                🔍 다중 소스 검증 검색 시작
             </button>
             
             <!-- 결과 영역 -->
             <div class="results" id="results">
                 <div class="results-header">
                     <div class="results-title" id="resultsTitle">검색 결과</div>
-                    <div class="results-stats" id="resultsStats">
-                        <div class="stat-badge" id="totalCount">0개</div>
+                    <div class="results-stats">
+                        <div class="total-count" id="totalCount">0개</div>
+                        <div class="source-indicators" id="sourceIndicators"></div>
                     </div>
                 </div>
                 <div id="resultsList"></div>
             </div>
         </div>
     </div>
-    
-    <!-- 떠다니는 하트 -->
-    <div class="floating-heart">💝</div>
 
     <script>
         // 전역 변수
-        let currentLocation = null;
+        let currentLocation = { lat: 33.5133, lng: 126.5294 }; // 제주시청 기본
         let selectedOption = 'restaurant';
-        let selectedDistance = 5;
-        let searchFilters = {
-            enhancedSearch: true,
-            hasPhone: false,
-            highGemScore: false,
-            includeImages: true
-        };
-        
-        // 고급 옵션 토글
-        function toggleAdvanced() {
-            const content = document.getElementById('advancedContent');
-            content.classList.toggle('show');
-        }
-        
-        // 필터 토글
-        function toggleFilter(filterId) {
-            searchFilters[filterId] = !searchFilters[filterId];
-            const element = document.getElementById('filter-' + filterId);
-            element.classList.toggle('active');
-        }
+        let selectedDistance = 10;
+        let selectedTrustLevel = 'all';
         
         // 현재 위치 가져오기
         function getCurrentLocation() {
             const locationDisplay = document.getElementById('locationDisplay');
-            const searchBtn = document.getElementById('searchBtn');
             
             if (!navigator.geolocation) {
                 alert('이 브라우저는 위치 서비스를 지원하지 않습니다 😅');
@@ -653,19 +737,12 @@
                         ✅ 위치 설정 완료!<br>
                         <small>위도: ${currentLocation.lat.toFixed(4)}, 경도: ${currentLocation.lng.toFixed(4)}</small>
                     `;
-                    
-                    searchBtn.disabled = false;
-                    searchBtn.innerHTML = '❤️ 숨은 보석 찾기 시작!';
                 },
                 (error) => {
-                    currentLocation = { lat: 33.5133, lng: 126.5294 };
                     locationDisplay.innerHTML = `
                         📍 제주시청 기준으로 검색합니다<br>
-                        <small>원하시면 '내 위치 찾기'를 다시 눌러주세요</small>
+                        <small>정확한 위치는 '내 위치 찾기'를 눌러주세요</small>
                     `;
-                    
-                    searchBtn.disabled = false;
-                    searchBtn.innerHTML = '❤️ 숨은 보석 찾기 시작!';
                 },
                 {
                     enableHighAccuracy: true,
@@ -685,6 +762,16 @@
             document.getElementById(option + '-card').classList.add('active');
         }
         
+        // 신뢰도 레벨 선택
+        function selectTrustLevel(level) {
+            selectedTrustLevel = level;
+            
+            document.querySelectorAll('.trust-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('trust-' + level).classList.add('active');
+        }
+        
         // 거리 선택
         function selectDistance(distance) {
             selectedDistance = distance;
@@ -695,38 +782,31 @@
             document.getElementById('dist-' + distance).classList.add('active');
         }
         
-        // 장소 검색 (개선된 버전)
+        // 다중 소스 검색
         async function searchPlaces() {
-            if (!currentLocation) {
-                alert('위치를 먼저 설정해주세요! 💕');
-                return;
-            }
-            
             const results = document.getElementById('results');
             const resultsList = document.getElementById('resultsList');
             const resultsTitle = document.getElementById('resultsTitle');
-            const resultsStats = document.getElementById('resultsStats');
+            const totalCount = document.getElementById('totalCount');
+            const sourceIndicators = document.getElementById('sourceIndicators');
             
             // 로딩 표시
             results.classList.add('show');
-            resultsList.innerHTML = '<div class="loading">사랑하는 아내를 위해 최고의 장소를 찾는 중</div>';
+            resultsList.innerHTML = '<div class="loading">4개 플랫폼에서 교차 검증 중입니다</div>';
             
             try {
-                // API 호출 URL 구성
+                // API 호출
                 const contentTypeId = selectedOption === 'restaurant' ? '39' : '12';
                 const params = new URLSearchParams({
-                    areaCode: '39',
-                    contentTypeId,
                     userLat: currentLocation.lat,
                     userLng: currentLocation.lng,
                     radius: selectedDistance,
-                    sortBy: 'hiddenGemScore', // 숨은 보석 점수로 정렬
+                    contentTypeId: contentTypeId,
+                    trustLevel: selectedTrustLevel,
+                    sortBy: 'trustScore',
                     sortOrder: 'desc',
                     numOfRows: '20',
-                    detailed: 'true',
-                    detailedCount: '10',
-                    includeImages: searchFilters.includeImages,
-                    enhancedSearch: searchFilters.enhancedSearch,
+                    includeAllSources: 'true',
                     debug: 'false'
                 });
                 
@@ -734,127 +814,128 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                if (data.success && data.data.items.length > 0) {
-                    // 필터 적용
-                    let filteredItems = data.data.items;
-                    
-                    if (searchFilters.hasPhone) {
-                        filteredItems = filteredItems.filter(item => item.tel);
-                    }
-                    
-                    if (searchFilters.highGemScore) {
-                        filteredItems = filteredItems.filter(item => (item.hiddenGemScore || 0) >= 70);
-                    }
-                    
-                    displayEnhancedResults(filteredItems, data.data);
-                    updateResultsStats(filteredItems, data.data);
+                if (data.success && data.data.places.length > 0) {
+                    displayMultiSourceResults(data.data.places);
+                    updateResultsStats(data.data);
                 } else {
                     resultsList.innerHTML = `
                         <div class="no-results">
-                            😢 ${selectedDistance}km 반경에서 찾지 못했어요<br>
-                            <small>거리를 늘려서 다시 검색해보세요!</small>
+                            <div class="no-results-icon">😢</div>
+                            <div>조건에 맞는 검증된 장소를 찾지 못했어요</div>
+                            <small>신뢰도 필터를 낮추거나 거리를 늘려보세요!</small>
                         </div>
                     `;
-                    updateResultsStats([], {});
                 }
                 
-                resultsTitle.textContent = selectedOption === 'restaurant' ? '🍽️ 숨은 맛집' : '🏞️ 여행지';
+                resultsTitle.textContent = selectedOption === 'restaurant' ? '🍽️ 검증된 맛집' : '🏞️ 인증 관광지';
                 
             } catch (error) {
                 console.error('검색 오류:', error);
                 resultsList.innerHTML = `
                     <div class="error">
-                        검색 중 오류가 발생했습니다 😅<br>
-                        잠시 후 다시 시도해주세요!<br>
-                        <small>${error.message}</small>
+                        🚨 검색 중 오류가 발생했습니다<br>
+                        <small>${error.message}</small><br>
+                        잠시 후 다시 시도해주세요!
                     </div>
                 `;
             }
         }
         
-        // 향상된 결과 표시
-        function displayEnhancedResults(items, dataInfo) {
+        // 다중 소스 결과 표시
+        function displayMultiSourceResults(places) {
             const resultsList = document.getElementById('resultsList');
             
-            const html = items.map(item => {
-                const typeText = selectedOption === 'restaurant' ? '맛집' : '관광지';
-                const typeColor = selectedOption === 'restaurant' ? '#fd79a8' : '#74b9ff';
+            const html = places.map(place => {
+                const trustClass = place.trustLevel.toLowerCase();
+                const hasPhone = Object.values(place.sources).some(s => s.phone);
+                const phone = hasPhone ? Object.values(place.sources).find(s => s.phone)?.phone : null;
                 
-                // 숨은 보석 점수
-                const gemScore = item.hiddenGemScore || 0;
-                const gemClass = gemScore >= 70 ? 'high' : '';
+                // 소스 배지들
+                const sourceBadges = Object.keys(place.sources).map(source => {
+                    const sourceConfig = {
+                        tourism: { name: '관광공사', class: 'tourism', icon: '🏛️' },
+                        kakao: { name: '카카오맵', class: 'kakao', icon: '🗺️' },
+                        naver: { name: '네이버', class: 'naver', icon: '📱' },
+                        google: { name: '구글맵', class: 'google', icon: '🌐' }
+                    };
+                    
+                    const config = sourceConfig[source] || { name: source, class: 'default', icon: '❓' };
+                    return `<div class="source-badge ${config.class}">${config.icon} ${config.name}</div>`;
+                }).join('');
                 
-                // 거리 정보
-                const distanceText = item.distance !== null && item.distance !== undefined 
-                    ? `${item.distance}km` 
-                    : '거리 정보 없음';
-                
-                // 배지들
-                let badges = `<div class="place-badges">
-                    <div class="place-badge type-badge">${typeText}</div>`;
-                
-                if (item.source && item.source !== 'tourism') {
-                    badges += `<div class="place-badge source-badge">${item.source.toUpperCase()}</div>`;
-                }
-                
-                if (item.tel) {
-                    badges += `<div class="place-badge phone-badge">📞</div>`;
-                }
-                
-                badges += `</div>`;
-                
-                // 연락처 버튼들
-                let contactButtons = '';
-                if (item.tel) {
-                    contactButtons += `<a href="tel:${item.tel}" class="contact-btn">📞 ${item.tel}</a>`;
-                }
-                
-                // 상세 정보
-                let infoText = '';
-                let detailsText = '';
-                
-                if (item.detailed) {
-                    if (selectedOption === 'restaurant' && item.detailed.intro) {
-                        if (item.detailed.intro.treatMenu) {
-                            infoText += `🍽️ ${item.detailed.intro.treatMenu}<br>`;
+                // 소스별 검증 정보
+                const sourceVerification = Object.entries(place.sources).map(([source, data]) => {
+                    const sourceConfig = {
+                        tourism: { icon: '🏛️', name: '한국관광공사' },
+                        kakao: { icon: '🗺️', name: '카카오맵' },
+                        naver: { icon: '📱', name: '네이버' },
+                        google: { icon: '🌐', name: '구글맵' }
+                    };
+                    
+                    const config = sourceConfig[source] || { icon: '❓', name: source };
+                    let sourceDataText = '검증 완료';
+                    
+                    if (data.sourceData?.rating) {
+                        sourceDataText = `⭐${data.sourceData.rating} `;
+                        if (data.sourceData.userRatingsTotal) {
+                            sourceDataText += `(리뷰 ${data.sourceData.userRatingsTotal}개)`;
                         }
-                        if (item.detailed.intro.openTime) {
-                            detailsText += `<div class="detail-item">⏰ 운영시간: ${item.detailed.intro.openTime}</div>`;
-                        }
-                        if (item.detailed.intro.restDate) {
-                            detailsText += `<div class="detail-item">📅 휴무일: ${item.detailed.intro.restDate}</div>`;
-                        }
-                        if (item.detailed.intro.firstMenu) {
-                            detailsText += `<div class="detail-item">🌟 대표메뉴: ${item.detailed.intro.firstMenu}</div>`;
-                        }
-                    } else if (item.detailed.common?.overview) {
-                        infoText = item.detailed.common.overview.substring(0, 150) + '...';
+                    } else if (data.sourceData?.officialStatus) {
+                        sourceDataText = data.sourceData.officialStatus;
                     }
-                }
-                
-                if (!infoText) {
-                    infoText = item.addr1 || '상세 정보를 불러오는 중...';
-                }
+                    
+                    return `
+                        <div class="source-item">
+                            <div class="source-info">
+                                <span>${config.icon}</span>
+                                <span>${config.name}</span>
+                            </div>
+                            <div class="source-data">${sourceDataText}</div>
+                        </div>
+                    `;
+                }).join('');
                 
                 return `
-                    <div class="place-card ${item.isEnhanced ? 'enhanced' : ''}">
-                        <div class="gem-score ${gemClass}">💎 ${gemScore}점</div>
-                        
-                        <div class="place-header">
-                            <div class="place-title">${item.title}</div>
+                    <div class="place-card ${trustClass}">
+                        <div class="trust-score ${trustClass}">
+                            ${place.trustBadge} ${place.trustScore}점
                         </div>
                         
-                        ${badges}
+                        <div class="place-header">
+                            <div class="place-name">${place.primaryName}</div>
+                            <div class="place-category">${place.trustLabel} • ${place.sourceCount}개 소스 검증</div>
+                        </div>
                         
-                        <div class="place-distance">📍 ${distanceText}</div>
+                        <div class="verification-badges">
+                            ${sourceBadges}
+                        </div>
                         
-                        ${contactButtons ? `<div class="place-contact">${contactButtons}</div>` : ''}
+                        <div class="place-distance">📍 ${place.distance?.toFixed(1)}km</div>
                         
-                        <div class="place-address">📍 ${item.addr1}</div>
+                        ${phone ? `
+                        <div class="place-contact">
+                            <a href="tel:${phone}" class="contact-btn">📞 ${phone}</a>
+                        </div>
+                        ` : ''}
                         
-                        <div class="place-info">${infoText}</div>
+                        <div class="place-address">📍 ${place.primaryAddress}</div>
                         
-                        ${detailsText ? `<div class="place-details">${detailsText}</div>` : ''}
+                        <div class="source-verification">
+                            ${sourceVerification}
+                        </div>
+                        
+                        <div class="ai-summary">
+                            <div class="ai-summary-header">
+                                <span>🤖</span>
+                                <span>AI 종합 분석</span>
+                            </div>
+                            <div class="ai-summary-text">${place.aiSummary}</div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="openMap(${place.lat}, ${place.lng})">🗺️ 지도보기</button>
+                            <button class="action-btn" onclick="sharePlace('${place.primaryName}')">📤 공유하기</button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -863,46 +944,45 @@
         }
         
         // 결과 통계 업데이트
-        function updateResultsStats(items, dataInfo) {
-            const resultsStats = document.getElementById('resultsStats');
+        function updateResultsStats(data) {
+            const totalCount = document.getElementById('totalCount');
+            const sourceIndicators = document.getElementById('sourceIndicators');
             
-            const totalCount = items.length;
-            const enhancedCount = items.filter(item => item.isEnhanced).length;
-            const withPhoneCount = items.filter(item => item.tel).length;
-            const avgGemScore = dataInfo.resultInfo?.avgHiddenGemScore || 0;
+            totalCount.textContent = `${data.places.length}개`;
             
-            let statsHtml = `<div class="stat-badge">${totalCount}개</div>`;
+            // 소스별 통계
+            const sourceStats = data.sourceStats || {};
+            const indicatorsHtml = Object.entries(sourceStats).map(([source, stats]) => 
+                `<div class="source-indicator">${stats.icon} ${stats.count}</div>`
+            ).join('');
             
-            if (enhancedCount > 0) {
-                statsHtml += `<div class="stat-badge enhanced-badge">다중API ${enhancedCount}</div>`;
+            sourceIndicators.innerHTML = indicatorsHtml;
+        }
+        
+        // 지도 열기
+        function openMap(lat, lng) {
+            const url = `https://map.kakao.com/link/map/${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+        
+        // 장소 공유
+        function sharePlace(placeName) {
+            if (navigator.share) {
+                navigator.share({
+                    title: `제주 검증 맛집: ${placeName}`,
+                    text: `4개 플랫폼에서 검증된 진짜 맛집을 발견했어요!`,
+                    url: window.location.href
+                });
+            } else {
+                // 폴백: 클립보드 복사
+                navigator.clipboard.writeText(`${placeName} - ${window.location.href}`);
+                alert('링크가 클립보드에 복사되었습니다!');
             }
-            
-            if (withPhoneCount > 0) {
-                statsHtml += `<div class="stat-badge phone-badge">📞 ${withPhoneCount}</div>`;
-            }
-            
-            if (avgGemScore > 0) {
-                statsHtml += `<div class="stat-badge">💎 평균 ${avgGemScore}점</div>`;
-            }
-            
-            resultsStats.innerHTML = statsHtml;
         }
         
         // 초기화
         window.addEventListener('load', () => {
-            // 제주시청을 기본 위치로 설정
-            currentLocation = { lat: 33.5133, lng: 126.5294 };
-            document.getElementById('locationDisplay').innerHTML = `
-                📍 제주시청 기준으로 검색합니다<br>
-                <small>정확한 위치는 '내 위치 찾기'를 눌러주세요 ❤️</small>
-            `;
-            
-            document.getElementById('searchBtn').disabled = false;
-            document.getElementById('searchBtn').innerHTML = '❤️ 숨은 보석 찾기 시작!';
-            
-            // 기본 필터 설정
-            document.getElementById('filter-enhancedSearch').classList.add('active');
-            document.getElementById('filter-includeImages').classList.add('active');
+            console.log('🔍 제주 다중 소스 검증 가이드 v4.0 로드 완료');
         });
     </script>
 </body>
