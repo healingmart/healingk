@@ -1,4 +1,4 @@
-// api/alltourism.js (거리 계산 문제 해결 버전)
+// api/alltourism.js (완전 수정 버전)
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        // 🔧 사용자 위치 검증 (더 엄격한 검증)
+        // 사용자 위치 검증
         const hasUserLocation = userLat && userLng && 
             userLat.trim() !== '' && userLng.trim() !== '' &&
             !isNaN(parseFloat(userLat)) && !isNaN(parseFloat(userLng));
@@ -119,7 +119,7 @@ module.exports = async function handler(req, res) {
             booktour: item.booktour || null
         }));
 
-        // 🔧 거리 계산 (강화된 로직)
+        // 거리 계산
         let distanceCalculated = 0;
         let distanceErrors = 0;
         
@@ -138,13 +138,17 @@ module.exports = async function handler(req, res) {
                         
                         if (debug === 'true' && index < 3) {
                             console.log(`📍 ${item.title}: (${item.mapx}, ${item.mapy}) -> 거리: ${distance}km`);
+                            console.log(`   계산 과정: lat1=${userLatNum}, lng1=${userLngNum}, lat2=${item.mapx}, lng2=${item.mapy}`);
                         }
                         
-                        if (distance !== null && !isNaN(distance)) {
+                        if (distance !== null && !isNaN(distance) && distance >= 0) {
                             distanceCalculated++;
                             return { ...item, distance: Math.round(distance * 100) / 100 };
                         } else {
                             distanceErrors++;
+                            if (debug === 'true') {
+                                console.log(`   ❌ 계산 실패: distance=${distance}`);
+                            }
                             return { ...item, distance: null };
                         }
                     } catch (error) {
@@ -155,6 +159,9 @@ module.exports = async function handler(req, res) {
                         return { ...item, distance: null };
                     }
                 } else {
+                    if (debug === 'true' && index < 3) {
+                        console.log(`📍 ${item.title}: 좌표 없음 (${item.mapx}, ${item.mapy})`);
+                    }
                     return { ...item, distance: null };
                 }
             });
@@ -163,20 +170,19 @@ module.exports = async function handler(req, res) {
                 console.log(`📊 거리 계산 통계: 성공 ${distanceCalculated}, 실패 ${distanceErrors}, 총 ${tourismData.length}`);
             }
             
-            // 🔧 반경 필터링 (개선된 로직)
+            // 반경 필터링
             if (radiusKm && radiusKm > 0) {
                 const beforeFilter = tourismData.length;
                 const itemsWithDistance = tourismData.filter(item => item.distance !== null);
                 const itemsWithoutDistance = tourismData.filter(item => item.distance === null);
                 
-                // 거리 정보가 있는 항목만 반경 필터링
                 const filteredWithDistance = itemsWithDistance.filter(item => item.distance <= radiusKm);
                 
-                // 🔧 거리 정보가 없는 항목은 조건부 포함 (반경이 크면 포함)
-                const includeNoDistance = radiusKm >= 20; // 20km 이상이면 좌표 없는 항목도 포함
+                // 거리 정보가 없는 항목은 반경이 큰 경우에만 포함
+                const includeNoDistance = radiusKm >= 20;
                 
                 if (includeNoDistance) {
-                    tourismData = [...filteredWithDistance, ...itemsWithoutDistance.slice(0, 5)]; // 최대 5개만
+                    tourismData = [...filteredWithDistance, ...itemsWithoutDistance.slice(0, 5)];
                 } else {
                     tourismData = filteredWithDistance;
                 }
@@ -189,9 +195,8 @@ module.exports = async function handler(req, res) {
                     console.log(`- 반경 내: ${filteredWithDistance.length}`);
                     console.log(`- 최종 결과: ${tourismData.length}`);
                     
-                    // 샘플 거리 정보 출력
                     filteredWithDistance.slice(0, 5).forEach(item => {
-                        console.log(`  - ${item.title}: ${item.distance}km`);
+                        console.log(`  ✅ ${item.title}: ${item.distance}km`);
                     });
                 }
             }
@@ -227,8 +232,6 @@ module.exports = async function handler(req, res) {
             });
             
             const detailedResults = await Promise.all(detailedPromises);
-            const detailTime = Date.now() - detailStartTime;
-            
             tourismData = [...detailedResults, ...tourismData.slice(maxDetailed)];
         }
 
@@ -302,7 +305,7 @@ module.exports = async function handler(req, res) {
             },
             performance,
             timestamp: new Date().toISOString(),
-            version: '2.2.0',
+            version: '2.3.0',
             debug: debug === 'true' ? {
                 originalItemCount: itemList.length,
                 distanceCalculated,
@@ -324,48 +327,71 @@ module.exports = async function handler(req, res) {
     }
 };
 
-// 🔧 더 안정적인 거리 계산 함수
+// 🔧 수정된 거리 계산 함수
 function calculateDistance(lat1, lon1, lat2, lon2) {
     try {
-        // 입력값 검증
-        if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+        // 숫자 변환 및 검증
+        const latitude1 = Number(lat1);
+        const longitude1 = Number(lon1);
+        const latitude2 = Number(lat2);
+        const longitude2 = Number(lon2);
+        
+        // NaN 체크
+        if (isNaN(latitude1) || isNaN(longitude1) || isNaN(latitude2) || isNaN(longitude2)) {
+            console.log('NaN 값 발견:', { lat1, lon1, lat2, lon2 });
             return null;
         }
         
         // 범위 검증
-        if (lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90) {
+        if (latitude1 < -90 || latitude1 > 90 || latitude2 < -90 || latitude2 > 90) {
+            console.log('위도 범위 오류:', { latitude1, latitude2 });
             return null;
         }
         
-        if (lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180) {
+        if (longitude1 < -180 || longitude1 > 180 || longitude2 < -180 || longitude2 > 180) {
+            console.log('경도 범위 오류:', { longitude1, longitude2 });
             return null;
         }
         
+        // Haversine 공식
         const R = 6371; // 지구 반지름 (km)
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
+        
+        const dLat = (latitude2 - latitude1) * Math.PI / 180;
+        const dLon = (longitude2 - longitude1) * Math.PI / 180;
         
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.cos(latitude1 * Math.PI / 180) * Math.cos(latitude2 * Math.PI / 180) *
             Math.sin(dLon/2) * Math.sin(dLon/2);
         
+        if (isNaN(a)) {
+            console.log('중간 계산 오류 (a):', { dLat, dLon, a });
+            return null;
+        }
+        
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        
+        if (isNaN(c)) {
+            console.log('중간 계산 오류 (c):', { a, c });
+            return null;
+        }
+        
         const distance = R * c;
         
-        // 결과 검증
-        if (isNaN(distance) || distance < 0 || distance > 20000) { // 지구 둘레의 절반 이상은 비정상
+        // 최종 결과 검증
+        if (isNaN(distance) || distance < 0 || distance > 20000) {
+            console.log('최종 거리 오류:', { distance });
             return null;
         }
         
         return distance;
         
     } catch (error) {
-        console.error('거리 계산 오류:', error);
+        console.error('거리 계산 예외:', error.message);
         return null;
     }
 }
 
-// 나머지 함수들은 이전과 동일...
+// 검색 URL 구성
 function buildSearchUrl(apiKey, params) {
     const { keyword, contentTypeId, areaCode, sigunguCode, numOfRows, pageNo } = params;
     
@@ -387,13 +413,13 @@ function buildSearchUrl(apiKey, params) {
     return searchUrl;
 }
 
+// 정렬 함수
 function sortTourismData(data, sortBy, sortOrder) {
     return data.sort((a, b) => {
         let aVal, bVal;
         
         switch (sortBy) {
             case 'distance':
-                // 거리 정보가 없는 항목은 마지막으로
                 aVal = a.distance !== null && a.distance !== undefined ? a.distance : 999999;
                 bVal = b.distance !== null && b.distance !== undefined ? b.distance : 999999;
                 break;
@@ -416,4 +442,252 @@ function sortTourismData(data, sortBy, sortOrder) {
     });
 }
 
-// 나머지 헬퍼 함수들은 이전과 동일...
+// 상세 정보 수집
+async function getEnhancedDetailedInfo(apiKey, contentId, contentTypeId, options = {}) {
+    try {
+        const urls = [
+            `https://apis.data.go.kr/B551011/KorService2/detailCommon2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}`,
+            `https://apis.data.go.kr/B551011/KorService2/detailIntro2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&contentTypeId=${contentTypeId}`
+        ];
+        
+        if (options.includeImages) {
+            urls.push(`https://apis.data.go.kr/B551011/KorService2/detailImage2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&imageYN=Y`);
+        }
+        
+        const responses = await Promise.all(urls.map(url => fetch(url)));
+        const dataArray = await Promise.all(responses.map(res => res.json()));
+        
+        const [commonData, introData, imageData] = dataArray;
+        
+        let detailed = { 
+            completeness: 20,
+            hasError: false,
+            type: getContentTypeName(contentTypeId),
+            collectedAt: new Date().toISOString()
+        };
+        
+        const commonCode = commonData.resultCode || commonData.response?.header?.resultCode;
+        if (commonCode === '0' || commonCode === '0000') {
+            const commonItem = commonData.response?.body?.items?.item || commonData.items?.item || commonData.item;
+            if (commonItem) {
+                const itemData = Array.isArray(commonItem) ? commonItem[0] : commonItem;
+                detailed.common = {
+                    overview: itemData.overview || null,
+                    tel: itemData.tel || null,
+                    homepage: itemData.homepage?.replace(/<[^>]*>/g, '') || null,
+                    usetime: itemData.usetime || null,
+                    parking: itemData.parking || null,
+                    usefee: itemData.usefee || null,
+                    restdate: itemData.restdate || null,
+                    infocenter: itemData.infocenter || null,
+                    zipcode: itemData.zipcode || null,
+                    sponsor1: itemData.sponsor1 || null,
+                    sponsor1tel: itemData.sponsor1tel || null,
+                    sponsor2: itemData.sponsor2 || null,
+                    sponsor2tel: itemData.sponsor2tel || null
+                };
+                
+                if (detailed.common.overview) detailed.completeness += 25;
+                if (detailed.common.tel) detailed.completeness += 15;
+                if (detailed.common.homepage) detailed.completeness += 10;
+                if (detailed.common.usetime) detailed.completeness += 10;
+                if (detailed.common.parking) detailed.completeness += 5;
+                if (detailed.common.usefee) detailed.completeness += 5;
+                if (detailed.common.infocenter) detailed.completeness += 5;
+            }
+        }
+        
+        const introCode = introData.resultCode || introData.response?.header?.resultCode;
+        if (introCode === '0' || introCode === '0000') {
+            const introItem = introData.response?.body?.items?.item || introData.items?.item || introData.item;
+            if (introItem) {
+                const itemData = Array.isArray(introItem) ? introItem[0] : introItem;
+                detailed.intro = buildIntroData(contentTypeId, itemData);
+                detailed.completeness += calculateIntroCompleteness(contentTypeId, detailed.intro);
+            }
+        }
+        
+        if (options.includeImages && imageData) {
+            const imageCode = imageData.resultCode || imageData.response?.header?.resultCode;
+            if (imageCode === '0' || imageCode === '0000') {
+                const imageItems = imageData.response?.body?.items?.item || [];
+                const imageList = Array.isArray(imageItems) ? imageItems : [imageItems];
+                detailed.images = imageList.map(img => ({
+                    originimgurl: img.originimgurl,
+                    smallimageurl: img.smallimageurl,
+                    cpyrhtDivCd: img.cpyrhtDivCd,
+                    imgname: img.imgname,
+                    serialnum: img.serialnum
+                })).filter(img => img.originimgurl);
+                
+                if (detailed.images.length > 0) detailed.completeness += 5;
+            }
+        }
+        
+        detailed.completeness = Math.min(detailed.completeness, 100);
+        return detailed;
+        
+    } catch (error) {
+        return { 
+            completeness: 20, 
+            hasError: true, 
+            error: error.message,
+            type: getContentTypeName(contentTypeId)
+        };
+    }
+}
+
+// 타입별 상세 정보 구성
+function buildIntroData(contentTypeId, itemData) {
+    const baseIntro = { type: getContentTypeName(contentTypeId) };
+    
+    if (contentTypeId === '32') { // 숙박
+        return {
+            ...baseIntro,
+            roomCount: itemData.roomcount || null,
+            checkIn: itemData.checkintime || null,
+            checkOut: itemData.checkouttime || null,
+            roomType: itemData.roomtype || null,
+            accomount: itemData.accomount || null,
+            subfacility: itemData.subfacility || null,
+            barbecue: itemData.barbecue || null,
+            beauty: itemData.beauty || null,
+            bicycle: itemData.bicycle || null,
+            campfire: itemData.campfire || null,
+            fitness: itemData.fitness || null,
+            karaoke: itemData.karaoke || null,
+            publicbath: itemData.publicbath || null,
+            sauna: itemData.sauna || null,
+            seminar: itemData.seminar || null,
+            sports: itemData.sports || null
+        };
+    } else if (contentTypeId === '39') { // 음식점
+        return {
+            ...baseIntro,
+            treatMenu: itemData.treatmenu || null,
+            openTime: itemData.opentimefood || null,
+            restDate: itemData.restdatefood || null,
+            firstMenu: itemData.firstmenu || null,
+            smoking: itemData.smoking || null,
+            packing: itemData.packing || null,
+            seat: itemData.seat || null,
+            lcnsno: itemData.lcnsno || null,
+            kidsfacility: itemData.kidsfacility || null
+        };
+    } else if (contentTypeId === '12') { // 관광지
+        return {
+            ...baseIntro,
+            expguide: itemData.expguide || null,
+            heritage1: itemData.heritage1 || null,
+            heritage2: itemData.heritage2 || null,
+            heritage3: itemData.heritage3 || null,
+            useseason: itemData.useseason || null,
+            accomcount: itemData.accomcount || null,
+            chkbabycarriage: itemData.chkbabycarriage || null,
+            chkpet: itemData.chkpet || null,
+            chkcreditcard: itemData.chkcreditcard || null,
+            expagerange: itemData.expagerange || null
+        };
+    }
+    
+    return baseIntro;
+}
+
+// 완성도 계산
+function calculateIntroCompleteness(contentTypeId, intro) {
+    let score = 0;
+    
+    if (contentTypeId === '32') { // 숙박
+        if (intro.roomCount) score += 10;
+        if (intro.checkIn) score += 5;
+        if (intro.roomType) score += 5;
+        if (intro.subfacility) score += 5;
+    } else if (contentTypeId === '39') { // 음식점
+        if (intro.treatMenu) score += 15;
+        if (intro.openTime) score += 5;
+        if (intro.firstMenu) score += 5;
+    } else if (contentTypeId === '12') { // 관광지
+        if (intro.expguide) score += 10;
+        if (intro.heritage1 && intro.heritage1 !== '0') score += 10;
+        if (intro.useseason) score += 5;
+    }
+    
+    return Math.min(score, 25);
+}
+
+// 카테고리 정보
+function getCategoryInfo(cat1, cat2, cat3) {
+    const categoryMap = {
+        'A01': '자연', 'A02': '인문(문화/예술/역사)', 'A03': '레포츠',
+        'A04': '쇼핑', 'A05': '음식', 'B02': '숙박'
+    };
+    
+    return {
+        main: categoryMap[cat1] || '기타',
+        cat1, cat2, cat3
+    };
+}
+
+// 지역 정보
+function getAreaInfo(areaCode, sigunguCode) {
+    const areaMap = {
+        '1': '서울', '2': '인천', '3': '대전', '4': '대구', '5': '광주',
+        '6': '부산', '7': '울산', '8': '세종', '31': '경기', '32': '강원',
+        '33': '충북', '34': '충남', '35': '경북', '36': '경남', '37': '전북',
+        '38': '전남', '39': '제주'
+    };
+    
+    return {
+        area: areaMap[areaCode] || '기타',
+        areaCode,
+        sigunguCode
+    };
+}
+
+// 콘텐츠 타입명
+function getContentTypeName(contentTypeId) {
+    const typeMap = {
+        '12': '관광지',
+        '14': '문화시설',
+        '15': '축제/공연/행사',
+        '25': '여행코스',
+        '28': '레포츠',
+        '32': '숙박',
+        '38': '쇼핑',
+        '39': '음식점'
+    };
+    return typeMap[contentTypeId] || '기타';
+}
+
+// 🔧 누락된 함수들 추가
+function getCompletenessDistribution(items) {
+    const distribution = { excellent: 0, good: 0, fair: 0, poor: 0 };
+    items.forEach(item => {
+        const score = item.detailed?.completeness || 0;
+        if (score >= 90) distribution.excellent++;
+        else if (score >= 70) distribution.good++;
+        else if (score >= 50) distribution.fair++;
+        else distribution.poor++;
+    });
+    return distribution;
+}
+
+function getTypeStats(items) {
+    const typeStats = {};
+    items.forEach(item => {
+        const type = item.detailed?.type || '기타';
+        if (!typeStats[type]) {
+            typeStats[type] = { count: 0, avgCompleteness: 0 };
+        }
+        typeStats[type].count++;
+        typeStats[type].avgCompleteness += item.detailed?.completeness || 0;
+    });
+    
+    Object.keys(typeStats).forEach(type => {
+        if (typeStats[type].count > 0) {
+            typeStats[type].avgCompleteness = Math.round(typeStats[type].avgCompleteness / typeStats[type].count);
+        }
+    });
+    
+    return typeStats;
+}
