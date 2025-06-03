@@ -153,91 +153,71 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        // 거리 계산
-        let distanceCalculated = 0;
-        let distanceErrors = 0;
-        
-        if (hasUserLocation) {
-            const userLatNum = parseFloat(userLat);
-            const userLngNum = parseFloat(userLng);
-            
-            if (debug === 'true') {
-                console.log(`🎯 사용자 위치: ${userLatNum}, ${userLngNum}`);
-            }
-            
-            tourismData = tourismData.map((item, index) => {
-                if (item.mapx && item.mapy && !isNaN(item.mapx) && !isNaN(item.mapy)) {
-                    try {
-                        const distance = calculateDistance(userLatNum, userLngNum, item.mapx, item.mapy);
-                        
-                        if (debug === 'true' && index < 5) {
-                            console.log(`📍 ${item.title}:`);
-                            console.log(`   좌표: (${item.mapx}, ${item.mapy})`);
-                            console.log(`   거리: ${distance}km`);
-                        }
-                        
-                        if (distance !== null && !isNaN(distance) && distance >= 0) {
-                            distanceCalculated++;
-                            return { ...item, distance: Math.round(distance * 100) / 100 };
-                        } else {
-                            distanceErrors++;
-                            return { ...item, distance: null };
-                        }
-                    } catch (error) {
+      // 🔧 거리 계산 부분 완전 수정
+if (hasUserLocation) {
+    const userLatNum = parseFloat(userLat);
+    const userLngNum = parseFloat(userLng);
+    
+    if (debug === 'true') {
+        console.log(`🎯 사용자 위치: ${userLatNum}, ${userLngNum}`);
+    }
+    
+    tourismData = tourismData.map((item, index) => {
+        if (item.mapx && item.mapy) {
+            try {
+                // 🔧 좌표 변환 강화
+                const itemLat = parseFloat(item.mapy);
+                const itemLng = parseFloat(item.mapx);
+                
+                if (debug === 'true' && index < 3) {
+                    console.log(`📍 처리 중: ${item.title}`);
+                    console.log(`   원본 좌표: mapx="${item.mapx}", mapy="${item.mapy}"`);
+                    console.log(`   변환 좌표: lat=${itemLat}, lng=${itemLng}`);
+                    console.log(`   변환 검증: isNaN(lat)=${isNaN(itemLat)}, isNaN(lng)=${isNaN(itemLng)}`);
+                }
+                
+                // 변환된 좌표 유효성 검사
+                if (!isNaN(itemLat) && !isNaN(itemLng) && 
+                    itemLat !== 0 && itemLng !== 0 &&
+                    itemLat >= -90 && itemLat <= 90 &&
+                    itemLng >= -180 && itemLng <= 180) {
+                    
+                    const distance = calculateDistance(userLatNum, userLngNum, itemLng, itemLat);
+                    
+                    if (debug === 'true' && index < 3) {
+                        console.log(`   거리 계산: ${distance}km`);
+                    }
+                    
+                    if (distance !== null && !isNaN(distance) && distance >= 0) {
+                        distanceCalculated++;
+                        return { ...item, distance: Math.round(distance * 100) / 100 };
+                    } else {
                         distanceErrors++;
-                        if (debug === 'true') {
-                            console.error(`거리 계산 오류 (${item.title}):`, error.message);
+                        if (debug === 'true' && index < 3) {
+                            console.log(`   ❌ 거리 계산 실패: ${distance}`);
                         }
                         return { ...item, distance: null };
                     }
                 } else {
-                    if (debug === 'true' && index < 5) {
-                        console.log(`📍 ${item.title}: 좌표 없음 (mapx: ${item.mapx}, mapy: ${item.mapy})`);
+                    distanceErrors++;
+                    if (debug === 'true' && index < 3) {
+                        console.log(`   ❌ 좌표 변환 실패: lat=${itemLat}, lng=${itemLng}`);
                     }
                     return { ...item, distance: null };
                 }
-            });
-            
-            if (debug === 'true') {
-                console.log(`📊 거리 계산 통계: 성공 ${distanceCalculated}, 실패 ${distanceErrors}, 총 ${tourismData.length}`);
-            }
-            
-            // 반경 필터링
-            if (radiusKm && radiusKm > 0) {
-                const beforeFilter = tourismData.length;
-                const itemsWithDistance = tourismData.filter(item => item.distance !== null);
-                const itemsWithoutDistance = tourismData.filter(item => item.distance === null);
-                
-                const filteredWithDistance = itemsWithDistance.filter(item => item.distance <= radiusKm);
-                
-                // 🔧 반경이 작아도 결과가 없으면 거리 정보 없는 항목 포함
-                if (filteredWithDistance.length === 0 && radiusKm <= 10) {
-                    tourismData = itemsWithoutDistance.slice(0, Math.min(5, numOfRows));
-                    if (debug === 'true') {
-                        console.log(`⚠️  반경 내 결과 없음. 좌표 없는 항목 ${tourismData.length}개 포함`);
-                    }
-                } else {
-                    tourismData = filteredWithDistance;
-                }
-                
+            } catch (error) {
+                distanceErrors++;
                 if (debug === 'true') {
-                    console.log(`🔍 반경 필터링 (${radiusKm}km):`);
-                    console.log(`- 전체: ${beforeFilter}`);
-                    console.log(`- 거리 정보 있음: ${itemsWithDistance.length}`);
-                    console.log(`- 거리 정보 없음: ${itemsWithoutDistance.length}`);
-                    console.log(`- 반경 내: ${filteredWithDistance.length}`);
-                    console.log(`- 최종 결과: ${tourismData.length}`);
-                    
-                    tourismData.slice(0, 5).forEach(item => {
-                        if (item.distance !== null) {
-                            console.log(`  ✅ ${item.title}: ${item.distance}km`);
-                        } else {
-                            console.log(`  📍 ${item.title}: 거리 정보 없음`);
-                        }
-                    });
+                    console.error(`거리 계산 예외 (${item.title}):`, error.message);
                 }
+                return { ...item, distance: null };
             }
+        } else {
+            return { ...item, distance: null };
         }
+    });
+}
+
 
         // 정렬
         tourismData = sortTourismData(tourismData, sortBy, sortOrder);
