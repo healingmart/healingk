@@ -1,4 +1,4 @@
-// api/alltourism.js (완전 수정 버전)
+// api/alltourism.js (디버깅 강화 버전)
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,21 +36,11 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        // 사용자 위치 검증
         const hasUserLocation = userLat && userLng && 
             userLat.trim() !== '' && userLng.trim() !== '' &&
             !isNaN(parseFloat(userLat)) && !isNaN(parseFloat(userLng));
         
         const radiusKm = radius && !isNaN(parseFloat(radius)) ? parseFloat(radius) : null;
-
-        if (debug === 'true') {
-            console.log('🔍 디버그 정보:', {
-                userLat, userLng, radius, 
-                hasUserLocation, radiusKm,
-                userLatNum: hasUserLocation ? parseFloat(userLat) : null,
-                userLngNum: hasUserLocation ? parseFloat(userLng) : null
-            });
-        }
 
         let searchUrl = buildSearchUrl(apiKey, {
             keyword, contentTypeId, areaCode, sigunguCode, numOfRows, pageNo
@@ -78,6 +68,20 @@ module.exports = async function handler(req, res) {
         const items = data.response?.body?.items?.item || [];
         const itemList = Array.isArray(items) ? items : items ? [items] : [];
         
+        // 🔍 원본 데이터 디버깅
+        if (debug === 'true' && itemList.length > 0) {
+            console.log('=== 원본 데이터 샘플 ===');
+            itemList.slice(0, 3).forEach((item, index) => {
+                console.log(`항목 ${index + 1}: ${item.title}`);
+                console.log(`  - mapx (원본): "${item.mapx}" (타입: ${typeof item.mapx})`);
+                console.log(`  - mapy (원본): "${item.mapy}" (타입: ${typeof item.mapy})`);
+                console.log(`  - parseFloat(mapx): ${parseFloat(item.mapx)}`);
+                console.log(`  - parseFloat(mapy): ${parseFloat(item.mapy)}`);
+                console.log(`  - isNaN(parseFloat(mapx)): ${isNaN(parseFloat(item.mapx))}`);
+                console.log(`  - isNaN(parseFloat(mapy)): ${isNaN(parseFloat(item.mapy))}`);
+            });
+        }
+        
         if (itemList.length === 0) {
             return res.status(200).json({
                 success: true,
@@ -89,35 +93,65 @@ module.exports = async function handler(req, res) {
                     hasNext: false
                 },
                 message: '검색 결과가 없습니다',
-                performance: { searchTime },
-                debug: debug === 'true' ? { userLat, userLng, radius, hasUserLocation } : undefined
+                performance: { searchTime }
             });
         }
 
-        // 기본 정보 매핑
-        let tourismData = itemList.map(item => ({
-            contentId: item.contentid,
-            contentTypeId: item.contenttypeid,
-            title: item.title,
-            addr1: item.addr1,
-            addr2: item.addr2 || null,
-            tel: item.tel || null,
-            firstimage: item.firstimage || null,
-            firstimage2: item.firstimage2 || null,
-            mapx: parseFloat(item.mapx) || null,
-            mapy: parseFloat(item.mapy) || null,
-            mlevel: item.mlevel || null,
-            areacode: item.areacode || null,
-            sigungucode: item.sigungucode || null,
-            cat1: item.cat1 || null,
-            cat2: item.cat2 || null,
-            cat3: item.cat3 || null,
-            readcount: parseInt(item.readcount) || 0,
-            modifiedtime: item.modifiedtime || null,
-            zipcode: item.zipcode || null,
-            createdtime: item.createdtime || null,
-            booktour: item.booktour || null
-        }));
+        // 🔧 좌표 처리 개선
+        let tourismData = itemList.map(item => {
+            // 좌표 변환 및 검증 강화
+            let mapx = null;
+            let mapy = null;
+            
+            if (item.mapx && item.mapx !== '' && item.mapx !== '0') {
+                const parsedX = parseFloat(item.mapx);
+                if (!isNaN(parsedX) && parsedX !== 0) {
+                    mapx = parsedX;
+                }
+            }
+            
+            if (item.mapy && item.mapy !== '' && item.mapy !== '0') {
+                const parsedY = parseFloat(item.mapy);
+                if (!isNaN(parsedY) && parsedY !== 0) {
+                    mapy = parsedY;
+                }
+            }
+            
+            return {
+                contentId: item.contentid,
+                contentTypeId: item.contenttypeid,
+                title: item.title,
+                addr1: item.addr1,
+                addr2: item.addr2 || null,
+                tel: item.tel || null,
+                firstimage: item.firstimage || null,
+                firstimage2: item.firstimage2 || null,
+                mapx: mapx,
+                mapy: mapy,
+                mlevel: item.mlevel || null,
+                areacode: item.areacode || null,
+                sigungucode: item.sigungucode || null,
+                cat1: item.cat1 || null,
+                cat2: item.cat2 || null,
+                cat3: item.cat3 || null,
+                readcount: parseInt(item.readcount) || 0,
+                modifiedtime: item.modifiedtime || null,
+                zipcode: item.zipcode || null,
+                createdtime: item.createdtime || null,
+                booktour: item.booktour || null
+            };
+        });
+
+        // 🔍 변환 후 좌표 확인
+        if (debug === 'true') {
+            console.log('=== 변환 후 좌표 확인 ===');
+            const itemsWithCoords = tourismData.filter(item => item.mapx && item.mapy);
+            console.log(`좌표가 있는 항목: ${itemsWithCoords.length}/${tourismData.length}`);
+            
+            itemsWithCoords.slice(0, 3).forEach((item, index) => {
+                console.log(`${index + 1}. ${item.title}: (${item.mapx}, ${item.mapy})`);
+            });
+        }
 
         // 거리 계산
         let distanceCalculated = 0;
@@ -136,9 +170,10 @@ module.exports = async function handler(req, res) {
                     try {
                         const distance = calculateDistance(userLatNum, userLngNum, item.mapx, item.mapy);
                         
-                        if (debug === 'true' && index < 3) {
-                            console.log(`📍 ${item.title}: (${item.mapx}, ${item.mapy}) -> 거리: ${distance}km`);
-                            console.log(`   계산 과정: lat1=${userLatNum}, lng1=${userLngNum}, lat2=${item.mapx}, lng2=${item.mapy}`);
+                        if (debug === 'true' && index < 5) {
+                            console.log(`📍 ${item.title}:`);
+                            console.log(`   좌표: (${item.mapx}, ${item.mapy})`);
+                            console.log(`   거리: ${distance}km`);
                         }
                         
                         if (distance !== null && !isNaN(distance) && distance >= 0) {
@@ -146,9 +181,6 @@ module.exports = async function handler(req, res) {
                             return { ...item, distance: Math.round(distance * 100) / 100 };
                         } else {
                             distanceErrors++;
-                            if (debug === 'true') {
-                                console.log(`   ❌ 계산 실패: distance=${distance}`);
-                            }
                             return { ...item, distance: null };
                         }
                     } catch (error) {
@@ -159,8 +191,8 @@ module.exports = async function handler(req, res) {
                         return { ...item, distance: null };
                     }
                 } else {
-                    if (debug === 'true' && index < 3) {
-                        console.log(`📍 ${item.title}: 좌표 없음 (${item.mapx}, ${item.mapy})`);
+                    if (debug === 'true' && index < 5) {
+                        console.log(`📍 ${item.title}: 좌표 없음 (mapx: ${item.mapx}, mapy: ${item.mapy})`);
                     }
                     return { ...item, distance: null };
                 }
@@ -178,11 +210,12 @@ module.exports = async function handler(req, res) {
                 
                 const filteredWithDistance = itemsWithDistance.filter(item => item.distance <= radiusKm);
                 
-                // 거리 정보가 없는 항목은 반경이 큰 경우에만 포함
-                const includeNoDistance = radiusKm >= 20;
-                
-                if (includeNoDistance) {
-                    tourismData = [...filteredWithDistance, ...itemsWithoutDistance.slice(0, 5)];
+                // 🔧 반경이 작아도 결과가 없으면 거리 정보 없는 항목 포함
+                if (filteredWithDistance.length === 0 && radiusKm <= 10) {
+                    tourismData = itemsWithoutDistance.slice(0, Math.min(5, numOfRows));
+                    if (debug === 'true') {
+                        console.log(`⚠️  반경 내 결과 없음. 좌표 없는 항목 ${tourismData.length}개 포함`);
+                    }
                 } else {
                     tourismData = filteredWithDistance;
                 }
@@ -195,8 +228,12 @@ module.exports = async function handler(req, res) {
                     console.log(`- 반경 내: ${filteredWithDistance.length}`);
                     console.log(`- 최종 결과: ${tourismData.length}`);
                     
-                    filteredWithDistance.slice(0, 5).forEach(item => {
-                        console.log(`  ✅ ${item.title}: ${item.distance}km`);
+                    tourismData.slice(0, 5).forEach(item => {
+                        if (item.distance !== null) {
+                            console.log(`  ✅ ${item.title}: ${item.distance}km`);
+                        } else {
+                            console.log(`  📍 ${item.title}: 거리 정보 없음`);
+                        }
                     });
                 }
             }
@@ -210,7 +247,6 @@ module.exports = async function handler(req, res) {
             const maxDetailed = Math.min(parseInt(detailedCount), tourismData.length, 10);
             const detailedItems = tourismData.slice(0, maxDetailed);
             
-            const detailStartTime = Date.now();
             const detailedPromises = detailedItems.map(async (item, index) => {
                 try {
                     const detailInfo = await getEnhancedDetailedInfo(apiKey, item.contentId, item.contentTypeId, {
@@ -305,14 +341,22 @@ module.exports = async function handler(req, res) {
             },
             performance,
             timestamp: new Date().toISOString(),
-            version: '2.3.0',
+            version: '2.4.0',
             debug: debug === 'true' ? {
                 originalItemCount: itemList.length,
                 distanceCalculated,
                 distanceErrors,
                 afterDistanceFilter: enhancedData.length,
                 hasCoordinates: enhancedData.filter(item => item.mapx && item.mapy).length,
-                radiusFilter: radiusKm ? `${radiusKm}km` : null
+                radiusFilter: radiusKm ? `${radiusKm}km` : null,
+                // 🔍 원본 좌표 데이터 샘플
+                rawCoordinateSample: itemList.slice(0, 2).map(item => ({
+                    title: item.title,
+                    mapx: item.mapx,
+                    mapy: item.mapy,
+                    mapxType: typeof item.mapx,
+                    mapyType: typeof item.mapy
+                }))
             } : undefined
         });
 
@@ -327,35 +371,27 @@ module.exports = async function handler(req, res) {
     }
 };
 
-// 🔧 수정된 거리 계산 함수
+// 나머지 함수들은 이전과 동일...
 function calculateDistance(lat1, lon1, lat2, lon2) {
     try {
-        // 숫자 변환 및 검증
         const latitude1 = Number(lat1);
         const longitude1 = Number(lon1);
         const latitude2 = Number(lat2);
         const longitude2 = Number(lon2);
         
-        // NaN 체크
         if (isNaN(latitude1) || isNaN(longitude1) || isNaN(latitude2) || isNaN(longitude2)) {
-            console.log('NaN 값 발견:', { lat1, lon1, lat2, lon2 });
             return null;
         }
         
-        // 범위 검증
         if (latitude1 < -90 || latitude1 > 90 || latitude2 < -90 || latitude2 > 90) {
-            console.log('위도 범위 오류:', { latitude1, latitude2 });
             return null;
         }
         
         if (longitude1 < -180 || longitude1 > 180 || longitude2 < -180 || longitude2 > 180) {
-            console.log('경도 범위 오류:', { longitude1, longitude2 });
             return null;
         }
         
-        // Haversine 공식
-        const R = 6371; // 지구 반지름 (km)
-        
+        const R = 6371;
         const dLat = (latitude2 - latitude1) * Math.PI / 180;
         const dLon = (longitude2 - longitude1) * Math.PI / 180;
         
@@ -363,35 +399,20 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
             Math.cos(latitude1 * Math.PI / 180) * Math.cos(latitude2 * Math.PI / 180) *
             Math.sin(dLon/2) * Math.sin(dLon/2);
         
-        if (isNaN(a)) {
-            console.log('중간 계산 오류 (a):', { dLat, dLon, a });
-            return null;
-        }
-        
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
-        if (isNaN(c)) {
-            console.log('중간 계산 오류 (c):', { a, c });
-            return null;
-        }
-        
         const distance = R * c;
         
-        // 최종 결과 검증
         if (isNaN(distance) || distance < 0 || distance > 20000) {
-            console.log('최종 거리 오류:', { distance });
             return null;
         }
         
         return distance;
         
     } catch (error) {
-        console.error('거리 계산 예외:', error.message);
         return null;
     }
 }
 
-// 검색 URL 구성
 function buildSearchUrl(apiKey, params) {
     const { keyword, contentTypeId, areaCode, sigunguCode, numOfRows, pageNo } = params;
     
@@ -413,7 +434,6 @@ function buildSearchUrl(apiKey, params) {
     return searchUrl;
 }
 
-// 정렬 함수
 function sortTourismData(data, sortBy, sortOrder) {
     return data.sort((a, b) => {
         let aVal, bVal;
@@ -442,7 +462,7 @@ function sortTourismData(data, sortBy, sortOrder) {
     });
 }
 
-// 상세 정보 수집
+// 나머지 헬퍼 함수들...
 async function getEnhancedDetailedInfo(apiKey, contentId, contentTypeId, options = {}) {
     try {
         const urls = [
@@ -537,11 +557,10 @@ async function getEnhancedDetailedInfo(apiKey, contentId, contentTypeId, options
     }
 }
 
-// 타입별 상세 정보 구성
 function buildIntroData(contentTypeId, itemData) {
     const baseIntro = { type: getContentTypeName(contentTypeId) };
     
-    if (contentTypeId === '32') { // 숙박
+    if (contentTypeId === '32') {
         return {
             ...baseIntro,
             roomCount: itemData.roomcount || null,
@@ -561,7 +580,7 @@ function buildIntroData(contentTypeId, itemData) {
             seminar: itemData.seminar || null,
             sports: itemData.sports || null
         };
-    } else if (contentTypeId === '39') { // 음식점
+    } else if (contentTypeId === '39') {
         return {
             ...baseIntro,
             treatMenu: itemData.treatmenu || null,
@@ -574,7 +593,7 @@ function buildIntroData(contentTypeId, itemData) {
             lcnsno: itemData.lcnsno || null,
             kidsfacility: itemData.kidsfacility || null
         };
-    } else if (contentTypeId === '12') { // 관광지
+    } else if (contentTypeId === '12') {
         return {
             ...baseIntro,
             expguide: itemData.expguide || null,
@@ -593,20 +612,19 @@ function buildIntroData(contentTypeId, itemData) {
     return baseIntro;
 }
 
-// 완성도 계산
 function calculateIntroCompleteness(contentTypeId, intro) {
     let score = 0;
     
-    if (contentTypeId === '32') { // 숙박
+    if (contentTypeId === '32') {
         if (intro.roomCount) score += 10;
         if (intro.checkIn) score += 5;
         if (intro.roomType) score += 5;
         if (intro.subfacility) score += 5;
-    } else if (contentTypeId === '39') { // 음식점
+    } else if (contentTypeId === '39') {
         if (intro.treatMenu) score += 15;
         if (intro.openTime) score += 5;
         if (intro.firstMenu) score += 5;
-    } else if (contentTypeId === '12') { // 관광지
+    } else if (contentTypeId === '12') {
         if (intro.expguide) score += 10;
         if (intro.heritage1 && intro.heritage1 !== '0') score += 10;
         if (intro.useseason) score += 5;
@@ -615,7 +633,6 @@ function calculateIntroCompleteness(contentTypeId, intro) {
     return Math.min(score, 25);
 }
 
-// 카테고리 정보
 function getCategoryInfo(cat1, cat2, cat3) {
     const categoryMap = {
         'A01': '자연', 'A02': '인문(문화/예술/역사)', 'A03': '레포츠',
@@ -628,7 +645,6 @@ function getCategoryInfo(cat1, cat2, cat3) {
     };
 }
 
-// 지역 정보
 function getAreaInfo(areaCode, sigunguCode) {
     const areaMap = {
         '1': '서울', '2': '인천', '3': '대전', '4': '대구', '5': '광주',
@@ -644,7 +660,6 @@ function getAreaInfo(areaCode, sigunguCode) {
     };
 }
 
-// 콘텐츠 타입명
 function getContentTypeName(contentTypeId) {
     const typeMap = {
         '12': '관광지',
@@ -659,7 +674,6 @@ function getContentTypeName(contentTypeId) {
     return typeMap[contentTypeId] || '기타';
 }
 
-// 🔧 누락된 함수들 추가
 function getCompletenessDistribution(items) {
     const distribution = { excellent: 0, good: 0, fair: 0, poor: 0 };
     items.forEach(item => {
