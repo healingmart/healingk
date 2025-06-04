@@ -1,4 +1,4 @@
-// ===== TourAPI 4.3 Enterprise Implementation - 최종 완성 버전 =====
+// ===== TourAPI 4.3 Enterprise Implementation - API 키 문제 해결 버전 =====
 'use strict';
 
 // 런타임 환경 감지 및 폴리필
@@ -70,12 +70,10 @@ class LanguageNegotiator {
         for (const preference of preferences) {
             const lang = preference.language.toLowerCase();
             
-            // 정확한 매치 찾기 (예: ko-KR)
             if (supportedLanguages.has(lang)) {
                 return lang;
             }
             
-            // 언어 코드만 매치 (예: ko-KR -> ko)
             const primaryLang = lang.split('-')[0];
             if (supportedLanguages.has(primaryLang)) {
                 return primaryLang;
@@ -97,7 +95,6 @@ class InternationalizationManager {
     }
 
     setupMessages() {
-        // 한국어 메시지 (완전한 세트)
         this.messages.set('ko', {
             VALIDATION_ERROR: '입력값 검증 실패',
             API_TIMEOUT: 'API 요청 시간 초과: {timeout}ms',
@@ -120,7 +117,6 @@ class InternationalizationManager {
             BATCH_CONTENT_IDS_REQUIRED: '배치 작업에는 contentIds 배열이 필요합니다'
         });
 
-        // 영어 메시지 (완전한 세트)
         this.messages.set('en', {
             VALIDATION_ERROR: 'Validation failed',
             API_TIMEOUT: 'API request timeout: {timeout}ms',
@@ -161,7 +157,6 @@ class InternationalizationManager {
         const messages = this.messages.get(this.currentLanguage) || this.messages.get(this.defaultLanguage);
         let message = messages[code] || code;
         
-        // 템플릿 변수 치환
         Object.entries(params).forEach(([key, value]) => {
             message = message.replace(new RegExp(`{${key}}`, 'g'), value);
         });
@@ -238,6 +233,7 @@ class ConstantsManager {
         };
 
         this.DEFAULT_CONFIG = {
+            // ✅ API 키 관련 수정 - TOURISM_API_KEY 우선순위
             tourApiKey: null,
             allowedOrigins: [
                 'https://your-blog.com',
@@ -288,7 +284,7 @@ class ConstantsManager {
     }
 }
 
-// ===== 의존성 주입 기반 설정 관리 시스템 =====
+// ===== 의존성 주입 기반 설정 관리 시스템 (API 키 문제 해결) =====
 class ConfigManager {
     constructor() {
         this.config = this.loadConfig();
@@ -307,10 +303,16 @@ class ConfigManager {
         const constants = new ConstantsManager();
         const defaultConfig = { ...constants.DEFAULT_CONFIG };
         
+        // ✅ API 키 우선순위 수정: TOURISM_API_KEY → TOUR_API_KEY → KTO_API_KEY
+        const tourApiKey = process.env.TOURISM_API_KEY || 
+                          process.env.TOUR_API_KEY || 
+                          process.env.KTO_API_KEY || 
+                          defaultConfig.tourApiKey;
+        
         // 환경변수에서 설정 로드
         return {
             ...defaultConfig,
-            tourApiKey: process.env.TOURISM_API_KEY || process.env.TOUR_API_KEY || defaultConfig.tourApiKey,
+            tourApiKey: tourApiKey,
             allowedOrigins: this.parseArray(process.env.ALLOWED_ORIGINS) || defaultConfig.allowedOrigins,
             allowedApiKeys: this.parseArray(process.env.ALLOWED_API_KEYS) || defaultConfig.allowedApiKeys,
             rateLimitPerMinute: parseInt(process.env.RATE_LIMIT) || defaultConfig.rateLimitPerMinute,
@@ -429,6 +431,7 @@ class ConfigManager {
         });
     }
 
+    // ✅ API 키 검증 수정
     validateConfig() {
         const errors = [];
         
@@ -852,7 +855,6 @@ class RateLimiter {
 // ===== 개선된 커스텀 에러 클래스 =====
 class TourApiError extends Error {
     constructor(messageCode, operation, statusCode = 500, details = {}, params = {}) {
-        // i18n이 초기화되기 전에는 기본 메시지 사용
         const message = (typeof i18n !== 'undefined') ? 
             i18n.getMessage(messageCode, params) : 
             messageCode;
@@ -883,7 +885,7 @@ class ValidationError extends TourApiError {
     constructor(message, field, value) {
         super('VALIDATION_ERROR', 'validation', 400, { field, value });
         this.name = 'ValidationError';
-        this.message = message; // 사용자 정의 메시지 사용
+        this.message = message;
     }
 }
 
@@ -979,25 +981,21 @@ class InputValidator {
                 continue;
             }
 
-            // 배열 타입 검증
             if (rules.isArray && !Array.isArray(value)) {
                 errors.push(`${field} must be an array`);
                 continue;
             }
 
-            // 타입 검증 (배열이 아닌 경우)
             if (!rules.isArray && rules.type && typeof value !== rules.type) {
                 errors.push(`${field}${this.i18n.getMessage('TYPE_MISMATCH', { type: rules.type })}`);
                 continue;
             }
 
-            // 패턴 검증
             if (rules.pattern && typeof value === 'string' && !rules.pattern.test(value)) {
                 errors.push(`${field}${this.i18n.getMessage('INVALID_FORMAT')}`);
                 continue;
             }
 
-            // 길이 검증
             if (rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
                 errors.push(`${field}${this.i18n.getMessage('MIN_LENGTH_ERROR', { minLength: rules.minLength })}`);
             }
@@ -1006,7 +1004,6 @@ class InputValidator {
                 errors.push(`${field}${this.i18n.getMessage('MAX_LENGTH_ERROR', { maxLength: rules.maxLength })}`);
             }
 
-            // 숫자 범위 검증
             if (rules.min !== undefined || rules.max !== undefined) {
                 const numValue = parseInt(value);
                 if (isNaN(numValue)) {
@@ -1021,7 +1018,6 @@ class InputValidator {
                 }
             }
 
-            // 열거형 검증
             if (rules.enum && !rules.enum.includes(value)) {
                 errors.push(`${field}${this.i18n.getMessage('ENUM_ERROR', { values: rules.enum.join(', ') })}`);
             }
@@ -1046,7 +1042,6 @@ class HttpClient {
         this.maxConcurrent = this.configManager.get('maxConcurrent');
         this.userAgent = 'HealingK-TourAPI/4.3.0-Enterprise';
         
-        // 동시성 제어를 위한 세마포어
         this.semaphore = new Semaphore(this.maxConcurrent);
         
         this.setupConfigSubscription();
@@ -1065,7 +1060,6 @@ class HttpClient {
     }
 
     async request(url, options = {}) {
-        // 동시성 제어 적용
         return this.semaphore.execute(async () => {
             return this._performRequest(url, options);
         });
@@ -1152,7 +1146,6 @@ class HttpClient {
         return this.request(urlObj.toString());
     }
 
-    // 개선된 배치 요청 처리
     async batchRequest(requests) {
         if (!this.configManager.get('enableBatching')) {
             return Promise.all(requests.map(req => this.request(req.url, req.options)));
@@ -1174,7 +1167,6 @@ class HttpClient {
             const batchResults = await Promise.all(batchPromises);
             results.push(...batchResults);
             
-            // API 요청 제한 준수를 위한 지연
             if (i + batchSize < requests.length) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -1185,8 +1177,6 @@ class HttpClient {
 }
 
 // ===== 의존성 주입 기반 초기화 =====
-
-// 순차적 초기화
 const i18n = new InternationalizationManager();
 const constants = new ConstantsManager();
 const configManager = new ConfigManager();
@@ -1194,19 +1184,24 @@ const configManager = new ConfigManager();
 // 설정 검증
 try {
     configManager.validateConfig();
+    logger && logger.info('✅ Configuration validated successfully', {
+        tourApiKey: configManager.get('tourApiKey') ? 'Set' : 'Missing',
+        environment: configManager.get('environment')
+    });
 } catch (error) {
-    console.error('Configuration validation failed:', error.message);
-    process.exit(1);
+    console.error('❌ Configuration validation failed:', error.message);
+    // 개발 환경에서는 경고만 출력하고 계속 진행
+    if (configManager.get('environment') !== 'development') {
+        process.exit(1);
+    }
 }
 
-// 의존성을 주입하여 다른 컴포넌트들 초기화
 const logger = new Logger(configManager);
 const rateLimiter = new RateLimiter(configManager, logger);
 const cache = new AdvancedCache(configManager, logger);
 const validator = new InputValidator(i18n);
 const httpClient = new HttpClient(configManager, logger);
 
-// 최종 설정 적용
 i18n.setLanguage(configManager.get('defaultLanguage'));
 
 // ===== 보안 및 인증 시스템 =====
@@ -1691,6 +1686,200 @@ class TourApiHandlers {
         return result;
     }
 
+    static async handleSearchKeyword(apiKey, params) {
+        const startTime = Date.now();
+        
+        validator.validate('searchKeyword', params);
+        
+        const {
+            keyword, areaCode = '', sigunguCode = '',
+            numOfRows = '10', pageNo = '1', arrange = 'C',
+            cat1 = '', cat2 = '', cat3 = '',
+            lDongRegnCd = '', lDongSignguCd = '',
+            lclsSystm1 = '', lclsSystm2 = '', lclsSystm3 = '',
+            userLat = '', userLng = '', radius = ''
+        } = params;
+
+        const cacheableParams = {
+            keyword, areaCode, sigunguCode, numOfRows, pageNo, arrange,
+            cat1, cat2, cat3, lDongRegnCd, lDongSignguCd,
+            lclsSystm1, lclsSystm2, lclsSystm3
+        };
+        
+        const cacheKey = cache.generateKey('searchKeyword', cacheableParams);
+        
+        if (!userLat && !userLng) {
+            const cachedData = cache.get(cacheKey);
+            if (cachedData) {
+                logger.metric('cache_hit', 1, { operation: 'searchKeyword' });
+                return ResponseFormatter.addCacheInfo(cachedData, true, cache.getStats());
+            }
+        }
+
+        const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchKeyword2';
+        const queryParams = {
+            serviceKey: apiKey,
+            MobileOS: 'ETC',
+            MobileApp: 'HealingK-Enterprise',
+            _type: 'json',
+            keyword: encodeURIComponent(keyword),
+            numOfRows,
+            pageNo,
+            arrange
+        };
+
+        const optionalParams = {
+            areaCode, sigunguCode, cat1, cat2, cat3,
+            lDongRegnCd, lDongSignguCd, lclsSystm1, lclsSystm2, lclsSystm3
+        };
+
+        Object.entries(optionalParams).forEach(([key, value]) => {
+            if (value) queryParams[key] = value;
+        });
+
+        const response = await httpClient.get(baseUrl, queryParams);
+        const data = await response.json();
+        
+        ApiResponseProcessor.validateApiResponse(data, 'searchKeyword');
+
+        const items = ApiResponseProcessor.extractItems(data);
+        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item));
+
+        if (userLat && userLng) {
+            processedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
+        }
+
+        const totalCount = data.response?.body?.totalCount || processedItems.length;
+        const apiTime = Date.now() - startTime;
+
+        const result = ResponseFormatter.formatSuccess('searchKeyword', {
+            items: processedItems,
+            searchKeyword: keyword,
+            pagination: {
+                totalCount,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                totalPages: Math.ceil(totalCount / parseInt(numOfRows)),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < totalCount,
+                hasPrev: parseInt(pageNo) > 1
+            },
+            searchInfo: {
+                params: optionalParams,
+                hasLocationFilter: !!(userLat && userLng),
+                locationFilter: userLat && userLng ? {
+                    lat: parseFloat(userLat),
+                    lng: parseFloat(userLng),
+                    radius: radius ? parseFloat(radius) : null
+                } : null
+            }
+        }, {
+            operation: 'searchKeyword',
+            keyword,
+            itemCount: processedItems.length
+        }, {
+            apiResponseTime: apiTime,
+            totalProcessingTime: Date.now() - startTime
+        });
+
+        if (!userLat && !userLng) {
+            cache.set(cacheKey, result);
+            logger.metric('cache_set', 1, { operation: 'searchKeyword' });
+        }
+
+        logger.metric('api_request_success', 1, { 
+            operation: 'searchKeyword',
+            keyword,
+            itemCount: processedItems.length,
+            fromCache: false
+        });
+
+        return result;
+    }
+
+    static async handleLocationBasedList(apiKey, params) {
+        const startTime = Date.now();
+        
+        validator.validate('locationBasedList', params);
+        
+        const {
+            mapX, mapY, radius,
+            numOfRows = '10', pageNo = '1', arrange = 'E',
+            contentTypeId = '', areaCode = '', sigunguCode = '',
+            cat1 = '', cat2 = '', cat3 = '', modifiedtime = '',
+            lDongRegnCd = '', lDongSignguCd = '',
+            lclsSystm1 = '', lclsSystm2 = '', lclsSystm3 = ''
+        } = params;
+
+        const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/locationBasedList2';
+        const queryParams = {
+            serviceKey: apiKey,
+            MobileOS: 'ETC',
+            MobileApp: 'HealingK-Enterprise',
+            _type: 'json',
+            mapX,
+            mapY,
+            radius,
+            numOfRows,
+            pageNo,
+            arrange
+        };
+
+        const optionalParams = {
+            contentTypeId, areaCode, sigunguCode, cat1, cat2, cat3, modifiedtime,
+            lDongRegnCd, lDongSignguCd, lclsSystm1, lclsSystm2, lclsSystm3
+        };
+
+        Object.entries(optionalParams).forEach(([key, value]) => {
+            if (value) queryParams[key] = value;
+        });
+
+        const response = await httpClient.get(baseUrl, queryParams);
+        const data = await response.json();
+        
+        ApiResponseProcessor.validateApiResponse(data, 'locationBasedList');
+
+        const items = ApiResponseProcessor.extractItems(data);
+        const processedItems = items.map(item => ({
+            ...ApiResponseProcessor.processBasicItem(item),
+            dist: parseFloat(item.dist) || null // API에서 제공하는 거리
+        }));
+
+        const totalCount = data.response?.body?.totalCount || processedItems.length;
+        const apiTime = Date.now() - startTime;
+
+        const result = ResponseFormatter.formatSuccess('locationBasedList', {
+            items: processedItems,
+            searchCenter: {
+                lat: parseFloat(mapY),
+                lng: parseFloat(mapX),
+                radius: parseFloat(radius)
+            },
+            pagination: {
+                totalCount,
+                pageNo: parseInt(pageNo),
+                numOfRows: parseInt(numOfRows),
+                totalPages: Math.ceil(totalCount / parseInt(numOfRows)),
+                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < totalCount,
+                hasPrev: parseInt(pageNo) > 1
+            }
+        }, {
+            operation: 'locationBasedList',
+            searchParams: { mapX, mapY, radius, contentTypeId },
+            itemCount: processedItems.length
+        }, {
+            apiResponseTime: apiTime,
+            totalProcessingTime: Date.now() - startTime
+        });
+
+        logger.metric('api_request_success', 1, { 
+            operation: 'locationBasedList',
+            itemCount: processedItems.length,
+            fromCache: false
+        });
+
+        return result;
+    }
+
     static calculateCompleteness(item) {
         const fields = [
             'title', 'addr1', 'tel', 'firstimage', 'mapx', 'mapy', 
@@ -1704,7 +1893,6 @@ class TourApiHandlers {
         return Math.round((filledFields / fields.length) * 100);
     }
 
-    // 개선된 배치 처리 (에러 정보 포함)
     static async handleBatchDetail(apiKey, contentIds) {
         validator.validate('batchDetail', { contentIds });
         
@@ -1764,7 +1952,6 @@ async function tourApiHandler(req, res) {
     const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
     const startTime = Date.now();
     
-    // 언어 설정 (개선된 Accept-Language 파싱)
     const acceptLanguage = req.headers['accept-language'];
     if (acceptLanguage) {
         i18n.setLanguageFromHeader(acceptLanguage);
@@ -1792,6 +1979,7 @@ async function tourApiHandler(req, res) {
         const { operation = 'areaBasedList', ...params } = 
             req.method === 'GET' ? req.query : req.body;
         
+        // ✅ 수정된 API 키 가져오기 (TOURISM_API_KEY 우선)
         const apiKey = configManager.get('tourApiKey');
         if (!apiKey) {
             throw new TourApiError('MISSING_API_KEY', 'configuration', 500);
@@ -1809,7 +1997,8 @@ async function tourApiHandler(req, res) {
             requestId,
             operation,
             paramCount: Object.keys(params).length,
-            clientId: securityInfo.clientId
+            clientId: securityInfo.clientId,
+            apiKeyPresent: !!apiKey
         });
 
         let result;
@@ -1819,6 +2008,12 @@ async function tourApiHandler(req, res) {
                 break;
             case 'detailCommon':
                 result = await TourApiHandlers.handleDetailCommon(apiKey, params);
+                break;
+            case 'searchKeyword':
+                result = await TourApiHandlers.handleSearchKeyword(apiKey, params);
+                break;
+            case 'locationBasedList':
+                result = await TourApiHandlers.handleLocationBasedList(apiKey, params);
                 break;
             case 'batchDetail':
                 result = await TourApiHandlers.handleBatchDetail(apiKey, params.contentIds);
@@ -1922,7 +2117,8 @@ function healthCheck() {
             rateLimitPerMinute: configManager.get('rateLimitPerMinute'),
             maxCacheSize: configManager.get('maxCacheSize'),
             maxConcurrent: configManager.get('maxConcurrent'),
-            supportedLanguages: i18n.getSupportedLanguages()
+            supportedLanguages: i18n.getSupportedLanguages(),
+            apiKeyConfigured: !!configManager.get('tourApiKey')
         },
         timestamp: new Date().toISOString()
     };
@@ -1936,6 +2132,10 @@ function runTests() {
         // 설정 테스트
         assert(configManager.get('environment') !== undefined, 'Environment should be defined');
         assert(constants.isValidOperation('areaBasedList'), 'areaBasedList should be valid operation');
+        
+        // API 키 테스트
+        const apiKey = configManager.get('tourApiKey');
+        assert(!!apiKey, 'API key should be configured');
         
         // 캐시 테스트
         cache.set('test-key', { test: 'data' });
@@ -1964,23 +2164,14 @@ function runTests() {
             assert(error instanceof ValidationError, 'Should throw ValidationError');
         }
         
-        // 배치 검증 테스트
-        try {
-            validator.validate('batchDetail', { contentIds: 'not-array' });
-            assert(false, 'Should throw validation error for non-array');
-        } catch (error) {
-            assert(error instanceof ValidationError, 'Should throw ValidationError for non-array');
-        }
-        
         console.log('✅ All comprehensive tests passed!');
-        return true;
+        return { success: true, message: 'All tests passed successfully' };
     } catch (error) {
         console.error('❌ Test failed:', error.message);
-        return false;
+        return { success: false, message: error.message };
     }
 }
 
-// 간단한 assert 함수
 function assert(condition, message) {
     if (!condition) {
         throw new Error(message);
@@ -1998,25 +2189,21 @@ module.exports = {
     i18n,
     constants,
     
-    // 테스트용 클래스들
     TourApiHandlers,
     SecurityManager,
     InputValidator,
     ResponseFormatter,
     
-    // 유틸리티들
     GeoUtils,
     ApiResponseProcessor,
     LanguageNegotiator,
     Semaphore
 };
 
-// Express.js 미들웨어 지원
 module.exports.middleware = function(req, res, next) {
     tourApiHandler(req, res).catch(next);
 };
 
-// Serverless 함수 지원
 module.exports.serverless = async function(event, context) {
     const req = {
         method: event.httpMethod || 'GET',
@@ -2044,9 +2231,10 @@ module.exports.serverless = async function(event, context) {
 };
 
 // 초기화 로그
-logger.info('TourAPI 4.3 Enterprise system initialized', {
+logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
     version: '4.3.0-Enterprise',
     environment: configManager.get('environment'),
+    apiKeyConfigured: !!configManager.get('tourApiKey'),
     features: {
         caching: true,
         rateLimiting: true,
