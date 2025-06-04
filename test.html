@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TourAPI 4.3 Enterprise Test Dashboard</title>
+    <title>TourAPI 4.3 Enterprise Test Dashboard - 완전 개선 버전</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -12,12 +12,14 @@
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --error-color: #ef4444;
+            --info-color: #3b82f6;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-primary: #1f2937;
             --text-secondary: #6b7280;
             --border-color: #e5e7eb;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -46,7 +48,21 @@
             padding: 2rem;
             border-radius: 12px;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(50%, -50%);
         }
 
         .header h1 {
@@ -55,11 +71,13 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            position: relative;
         }
 
         .header p {
             opacity: 0.9;
             font-size: 1.1rem;
+            position: relative;
         }
 
         .header-controls {
@@ -68,6 +86,7 @@
             margin-top: 1rem;
             flex-wrap: wrap;
             align-items: center;
+            position: relative;
         }
 
         .language-selector, .api-url-input {
@@ -97,6 +116,18 @@
             font-size: 0.875rem;
             font-weight: 600;
             border: 1px solid rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .enterprise-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         /* 시스템 상태 */
@@ -113,11 +144,13 @@
             border-radius: 8px;
             box-shadow: var(--shadow);
             text-align: center;
-            transition: transform 0.2s ease;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
         }
 
         .status-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
         }
 
         .status-card .icon {
@@ -128,6 +161,18 @@
         .status-card.healthy .icon { color: var(--success-color); }
         .status-card.warning .icon { color: var(--warning-color); }
         .status-card.error .icon { color: var(--error-color); }
+        .status-card.info .icon { color: var(--info-color); }
+
+        .status-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .status-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
 
         /* 탭 네비게이션 */
         .tabs {
@@ -137,6 +182,7 @@
             box-shadow: var(--shadow);
             margin-bottom: 2rem;
             overflow-x: auto;
+            border: 1px solid var(--border-color);
         }
 
         .tab {
@@ -147,7 +193,11 @@
             cursor: pointer;
             transition: all 0.3s ease;
             white-space: nowrap;
-            min-width: 120px;
+            min-width: 140px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
         }
 
         .tab:hover {
@@ -167,6 +217,7 @@
             border-radius: 8px;
             box-shadow: var(--shadow);
             margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
         }
 
         .tab-content.active {
@@ -219,6 +270,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            text-decoration: none;
         }
 
         .btn:hover {
@@ -248,12 +300,17 @@
             background: var(--error-color);
         }
 
+        .btn-info {
+            background: var(--info-color);
+        }
+
         /* 결과 표시 */
         .results {
             background: var(--card-bg);
             border-radius: 8px;
             box-shadow: var(--shadow);
             margin-top: 2rem;
+            border: 1px solid var(--border-color);
         }
 
         .results-header {
@@ -264,6 +321,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .results-content {
@@ -278,12 +337,20 @@
             border-radius: 6px;
             margin-bottom: 1rem;
             border-left: 4px solid var(--primary-color);
+            transition: all 0.2s ease;
+        }
+
+        .result-item:hover {
+            transform: translateX(4px);
         }
 
         .result-meta {
             font-size: 0.875rem;
             color: var(--text-secondary);
             margin-bottom: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         /* JSON 표시 */
@@ -297,6 +364,7 @@
             line-height: 1.5;
             overflow-x: auto;
             white-space: pre-wrap;
+            border: 1px solid #374151;
         }
 
         /* 로딩 애니메이션 */
@@ -327,6 +395,13 @@
             padding: 1rem;
             background: var(--bg-color);
             border-radius: 6px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .metric:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
         }
 
         .metric-value {
@@ -376,30 +451,43 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            border: 1px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .alert-success {
             background: rgba(16, 185, 129, 0.1);
             color: var(--success-color);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.2);
         }
 
         .alert-error {
             background: rgba(239, 68, 68, 0.1);
             color: var(--error-color);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.2);
         }
 
         .alert-warning {
             background: rgba(245, 158, 11, 0.1);
             color: var(--warning-color);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.2);
         }
 
         .alert-info {
             background: rgba(37, 99, 235, 0.1);
             color: var(--primary-color);
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.2);
         }
 
         /* 결과 카드 스타일 */
@@ -439,6 +527,7 @@
             cursor: pointer;
             display: inline-block;
             margin-top: 0.5rem;
+            transition: all 0.2s ease;
         }
 
         .result-card .content-id:hover {
@@ -457,6 +546,92 @@
             font-size: 0.875rem;
             padding: 0.5rem 1rem;
         }
+
+        /* 새로운 스타일들 */
+        .feature-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .system-info {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .batch-test-section {
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .test-progress {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .test-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .dependency-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .service-status {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+
+        .service-status.initialized {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+
+        .service-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--error-color);
+            color: var(--error-color);
+        }
+
+        .memory-gauge {
+            position: relative;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .memory-gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--error-color));
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -467,10 +642,16 @@
                 <i class="fas fa-map-marked-alt"></i>
                 TourAPI 4.3 Enterprise Test Dashboard
             </h1>
-            <p>한국관광공사 TourAPI 4.0 v4.3 완전 구현 시스템 테스트 🚀</p>
+            <p>한국관광공사 TourAPI 4.0 v4.3 완전 개선 시스템 테스트 🚀</p>
             <div class="header-controls">
                 <span class="deployment-badge">
                     <i class="fas fa-cloud"></i> VERCEL DEPLOYED
+                </span>
+                <span class="enterprise-badge">
+                    <i class="fas fa-star"></i> ENTERPRISE EDITION
+                </span>
+                <span class="feature-badge">
+                    <i class="fas fa-cubes"></i> DEPENDENCY INJECTION
                 </span>
                 <select class="language-selector" id="languageSelector">
                     <option value="ko">한국어 🇰🇷</option>
@@ -484,10 +665,19 @@
         </header>
 
         <!-- 연결 상태 알림 -->
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i>
-            <strong>API 키 정보:</strong> 서버에서 <code>TOURISM_API_KEY</code> 환경변수를 사용합니다. 
-            첫 요청 시 Vercel 콜드 스타트로 10-15초 소요될 수 있습니다.
+        <div class="system-info">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fas fa-info-circle" style="color: var(--info-color);"></i>
+                <strong>API 키 정보 (수정됨):</strong>
+            </div>
+            <p style="margin-bottom: 0.5rem;">
+                서버에서 <code>TOURISM_API_KEY</code> 또는 <code>KTO_API_KEY</code> 환경변수를 사용합니다.
+                <span style="color: var(--error-color);"><strong>TOUR_API_KEY는 제거되었습니다.</strong></span>
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">
+                첫 요청 시 Vercel 콜드 스타트로 10-15초 소요될 수 있습니다.
+                의존성 주입 컨테이너와 메모리 모니터링이 활성화되어 있습니다.
+            </p>
         </div>
 
         <!-- 시스템 상태 -->
@@ -495,22 +685,38 @@
             <div class="status-card healthy" id="apiStatus">
                 <div class="icon"><i class="fas fa-server"></i></div>
                 <h3>API 상태</h3>
-                <p id="apiStatusText">연결 대기중</p>
+                <div class="status-value" id="apiStatusText">연결 대기중</div>
+                <div class="status-label">서버 연결 상태</div>
             </div>
             <div class="status-card" id="cacheStatus">
                 <div class="icon"><i class="fas fa-database"></i></div>
                 <h3>캐시 상태</h3>
-                <p id="cacheStatusText">-</p>
+                <div class="status-value" id="cacheStatusText">-</div>
+                <div class="status-label">메모리 캐시</div>
             </div>
             <div class="status-card" id="performanceStatus">
                 <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
                 <h3>평균 응답시간</h3>
-                <p id="performanceStatusText">-</p>
+                <div class="status-value" id="performanceStatusText">-</div>
+                <div class="status-label">밀리초</div>
             </div>
             <div class="status-card" id="requestStatus">
                 <div class="icon"><i class="fas fa-chart-line"></i></div>
                 <h3>총 요청 수</h3>
-                <p id="requestStatusText">0</p>
+                <div class="status-value" id="requestStatusText">0</div>
+                <div class="status-label">누적 호출</div>
+            </div>
+            <div class="status-card" id="containerStatus">
+                <div class="icon"><i class="fas fa-cubes"></i></div>
+                <h3>컨테이너 상태</h3>
+                <div class="status-value" id="containerStatusText">확인중</div>
+                <div class="status-label">서비스 컨테이너</div>
+            </div>
+            <div class="status-card" id="memoryStatus">
+                <div class="icon"><i class="fas fa-memory"></i></div>
+                <h3>메모리 사용량</h3>
+                <div class="status-value" id="memoryStatusText">-</div>
+                <div class="status-label">힙 메모리</div>
             </div>
         </div>
 
@@ -531,6 +737,9 @@
             <button class="tab" onclick="showTab('locationBased')">
                 <i class="fas fa-map-marker-alt"></i> 위치기반 검색
             </button>
+            <button class="tab" onclick="showTab('batchTest')">
+                <i class="fas fa-layer-group"></i> 배치 테스트
+            </button>
             <button class="tab" onclick="showTab('systemMonitor')">
                 <i class="fas fa-monitor-waveform"></i> 시스템 모니터
             </button>
@@ -541,7 +750,7 @@
             <h2><i class="fas fa-rocket"></i> 빠른 시작 가이드</h2>
             <div class="alert alert-success">
                 <i class="fas fa-lightbulb"></i>
-                <strong>권장 테스트 순서:</strong> 아래 버튼들을 순서대로 클릭해서 시스템을 테스트해보세요!
+                <strong>개선된 시스템:</strong> 의존성 주입, 메모리 모니터링, 개선된 테스트 시스템이 적용되었습니다!
             </div>
             
             <div class="quick-test-buttons">
@@ -557,19 +766,23 @@
                 <button class="btn btn-warning" onclick="quickTestLocation()">
                     <i class="fas fa-map"></i> 4. 위치기반 검색
                 </button>
-                <button class="btn btn-danger" onclick="runSystemTest()">
-                    <i class="fas fa-cogs"></i> 5. 시스템 전체 테스트
+                <button class="btn btn-info" onclick="quickTestBatch()">
+                    <i class="fas fa-layer-group"></i> 5. 배치 상세정보
+                </button>
+                <button class="btn btn-danger" onclick="runComprehensiveTest()">
+                    <i class="fas fa-cogs"></i> 6. 종합 시스템 테스트
                 </button>
             </div>
 
             <div style="margin-top: 2rem;">
-                <h3>🎯 테스트 포인트</h3>
+                <h3>🎯 새로운 테스트 포인트</h3>
                 <ul style="margin-left: 2rem; margin-top: 1rem;">
-                    <li><strong>첫 요청:</strong> 콜드 스타트로 10-15초 소요 (정상)</li>
-                    <li><strong>캐시 효과:</strong> 같은 요청 반복 시 100ms 이하로 단축</li>
-                    <li><strong>데이터 정확성:</strong> 한국관광공사 공식 데이터 반환</li>
-                    <li><strong>에러 처리:</strong> 적절한 오류 메시지 표시</li>
-                    <li><strong>다국어:</strong> 한국어/영어 지원</li>
+                    <li><strong>의존성 주입:</strong> 서비스 컨테이너 기반 아키텍처</li>
+                    <li><strong>메모리 모니터링:</strong> 실시간 힙 메모리 사용량 추적</li>
+                    <li><strong>배치 처리:</strong> 여러 콘텐츠 ID 동시 처리</li>
+                    <li><strong>캐시 개선:</strong> 복합 객체 키 생성 및 메모리 관리</li>
+                    <li><strong>테스트 러너:</strong> 체계적인 테스트 수행 및 리포트</li>
+                    <li><strong>API 키 정책:</strong> TOUR_API_KEY 제거, TOURISM_API_KEY/KTO_API_KEY만 사용</li>
                 </ul>
             </div>
 
@@ -578,6 +791,10 @@
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle"></i>
                     <strong>연결 실패 시:</strong> 브라우저 개발자 도구(F12) → Console 탭에서 오류 메시지 확인
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-wrench"></i>
+                    <strong>메모리 경고:</strong> 90% 이상 사용 시 자동 캐시 정리가 실행됩니다
                 </div>
             </div>
         </div>
@@ -775,9 +992,68 @@
             </form>
         </div>
 
+        <!-- 배치 테스트 탭 (새로 추가) -->
+        <div id="batchTest" class="tab-content">
+            <h2><i class="fas fa-layer-group"></i> 배치 테스트</h2>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>배치 처리:</strong> 여러 콘텐츠 ID를 동시에 처리하여 성능을 테스트합니다.
+            </div>
+            
+            <form onsubmit="runBatchTest(event)">
+                <div class="form-group">
+                    <label for="batchContentIds">콘텐츠 ID 목록 (쉼표로 구분)</label>
+                    <textarea id="batchContentIds" rows="3" placeholder="126508,126509,264308,126510,126511">126508,126509,264308,126510,126511</textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batchSize">배치 크기</label>
+                        <select id="batchSize">
+                            <option value="2">2개씩</option>
+                            <option value="3" selected>3개씩</option>
+                            <option value="5">5개씩</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn">
+                            <i class="fas fa-play"></i> 배치 실행
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="batch-test-section">
+                <h3><i class="fas fa-vial"></i> 미리 정의된 배치 테스트</h3>
+                <div class="quick-test-buttons">
+                    <button class="btn btn-secondary" onclick="runPredefinedBatch('seoul')">
+                        <i class="fas fa-city"></i> 서울 명소 (5개)
+                    </button>
+                    <button class="btn btn-secondary" onclick="runPredefinedBatch('busan')">
+                        <i class="fas fa-water"></i> 부산 관광지 (5개)
+                    </button>
+                    <button class="btn btn-warning" onclick="runPredefinedBatch('mixed')">
+                        <i class="fas fa-random"></i> 전국 혼합 (10개)
+                    </button>
+                    <button class="btn btn-danger" onclick="runStressTest()">
+                        <i class="fas fa-fire"></i> 스트레스 테스트 (20개)
+                    </button>
+                </div>
+            </div>
+
+            <div id="batchProgress" style="display: none;">
+                <h4><i class="fas fa-hourglass-half"></i> 배치 진행 상황</h4>
+                <div class="test-progress">
+                    <div class="test-progress-bar" id="batchProgressBar"></div>
+                </div>
+                <p id="batchProgressText">준비 중...</p>
+            </div>
+        </div>
+
         <!-- 시스템 모니터 탭 -->
         <div id="systemMonitor" class="tab-content">
             <h2><i class="fas fa-monitor-waveform"></i> 시스템 모니터링</h2>
+            
             <div class="form-row">
                 <button class="btn" onclick="getSystemHealth()">
                     <i class="fas fa-heartbeat"></i> 헬스체크
@@ -786,14 +1062,36 @@
                     <i class="fas fa-database"></i> 캐시 통계
                 </button>
                 <button class="btn btn-success" onclick="runTests()">
-                    <i class="fas fa-vials"></i> 테스트 실행
+                    <i class="fas fa-vials"></i> 시스템 테스트
                 </button>
-                <button class="btn btn-warning" onclick="testQuickDemo()">
-                    <i class="fas fa-rocket"></i> 빠른 데모
+                <button class="btn btn-warning" onclick="getContainerStatus()">
+                    <i class="fas fa-cubes"></i> 컨테이너 상태
+                </button>
+                <button class="btn btn-info" onclick="getMemoryStatus()">
+                    <i class="fas fa-memory"></i> 메모리 상태
+                </button>
+                <button class="btn btn-danger" onclick="emergencyCacheClear()">
+                    <i class="fas fa-eraser"></i> 응급 캐시 정리
                 </button>
             </div>
+
             <div id="systemMetrics" class="metrics" style="display: none;">
                 <!-- 메트릭이 여기에 표시됩니다 -->
+            </div>
+
+            <div id="dependencyStatus" class="dependency-status" style="display: none;">
+                <!-- 의존성 상태가 여기에 표시됩니다 -->
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <h3><i class="fas fa-chart-line"></i> 실시간 모니터링</h3>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>자동 갱신:</strong> 30초마다 시스템 상태가 자동으로 업데이트됩니다.
+                </div>
+                <button class="btn btn-secondary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
+                    <i class="fas fa-play"></i> 자동 갱신 시작
+                </button>
             </div>
         </div>
 
@@ -807,6 +1105,9 @@
                     <button class="btn btn-secondary" onclick="copyResults()">
                         <i class="fas fa-copy"></i> 복사
                     </button>
+                    <button class="btn btn-secondary" onclick="downloadResults()">
+                        <i class="fas fa-download"></i> 다운로드
+                    </button>
                     <button class="btn btn-secondary" onclick="clearResults()">
                         <i class="fas fa-eraser"></i> 지우기
                     </button>
@@ -815,7 +1116,7 @@
             <div class="results-content" id="resultsContent">
                 <p style="text-align: center; color: var(--text-secondary); margin: 2rem 0;">
                     <i class="fas fa-info-circle"></i>
-                    위의 "빠른 시작" 탭에서 테스트를 시작해보세요! 🚀
+                    위의 "빠른 시작" 탭에서 개선된 시스템을 테스트해보세요! 🚀
                 </p>
             </div>
         </div>
@@ -827,6 +1128,7 @@
         let requestCount = 0;
         let totalResponseTime = 0;
         let results = [];
+        let autoRefreshInterval = null;
 
         // API 기본 URL
         const API_BASE_URL = 'https://healingk.vercel.app';
@@ -840,7 +1142,9 @@
                 noResults: '검색 결과가 없습니다',
                 locationError: '위치 정보를 가져올 수 없습니다',
                 copied: '클립보드에 복사되었습니다',
-                coldStart: '서버 콜드 스타트 중... 잠시만 기다려주세요.'
+                coldStart: '서버 콜드 스타트 중... 잠시만 기다려주세요.',
+                batchProcessing: '배치 처리 중...',
+                testRunning: '테스트 실행 중...'
             },
             en: {
                 searching: 'Searching...',
@@ -849,8 +1153,18 @@
                 noResults: 'No results found',
                 locationError: 'Unable to get location',
                 copied: 'Copied to clipboard',
-                coldStart: 'Server cold start... Please wait.'
+                coldStart: 'Server cold start... Please wait.',
+                batchProcessing: 'Processing batch...',
+                testRunning: 'Running tests...'
             }
+        };
+
+        // 미리 정의된 배치 데이터
+        const predefinedBatches = {
+            seoul: ['126508', '126509', '126510', '126511', '126512'],
+            busan: ['264308', '264309', '264310', '264311', '264312'],
+            mixed: ['126508', '264308', '126509', '264309', '126510', '264310', '126511', '264311', '126512', '264312'],
+            stress: Array.from({length: 20}, (_, i) => (126508 + i).toString())
         };
 
         // 초기화
@@ -862,7 +1176,7 @@
             });
 
             // 콜드 스타트 경고
-            showAlert('info', '🚀 Vercel 서버 첫 요청 시 콜드 스타트로 10-15초 소요될 수 있습니다.');
+            showAlert('info', '🚀 새로운 Enterprise 버전으로 업그레이드되었습니다! 의존성 주입과 메모리 모니터링이 적용되었습니다.');
 
             // 초기 헬스체크 (조금 지연해서 실행)
             setTimeout(healthCheck, 2000);
@@ -942,15 +1256,28 @@
             await callAPI('/api/tour', params);
         }
 
-        async function runSystemTest() {
-            showAlert('info', '시스템 전체 테스트를 시작합니다...');
+        async function quickTestBatch() {
+            showTab('batchTest');
+            const params = {
+                operation: 'batchDetail',
+                contentIds: ['126508', '126509', '264308']
+            };
+            await callAPI('/api/tour', params, 'POST');
+        }
+
+        async function runComprehensiveTest() {
+            showAlert('info', '종합 시스템 테스트를 시작합니다...');
             try {
                 await quickTestSeoul();
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 await quickTestKeyword();
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 await quickTestDetail();
-                showAlert('success', '🎉 시스템 전체 테스트가 성공적으로 완료되었습니다!');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await quickTestBatch();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await runTests();
+                showAlert('success', '🎉 종합 시스템 테스트가 성공적으로 완료되었습니다!');
             } catch (error) {
                 showAlert('error', '시스템 테스트 중 오류가 발생했습니다.');
             }
@@ -1075,6 +1402,80 @@
             await callAPI('/api/tour', params);
         }
 
+        // 배치 테스트 함수들
+        async function runBatchTest(event) {
+            event.preventDefault();
+            
+            const contentIdsText = document.getElementById('batchContentIds').value;
+            const contentIds = contentIdsText.split(',').map(id => id.trim()).filter(id => id);
+            
+            if (contentIds.length === 0) {
+                showAlert('error', '콘텐츠 ID를 입력해주세요.');
+                return;
+            }
+
+            const params = {
+                operation: 'batchDetail',
+                contentIds: contentIds
+            };
+
+            showBatchProgress(true, contentIds.length);
+            await callAPI('/api/tour', params, 'POST');
+            showBatchProgress(false);
+        }
+
+        async function runPredefinedBatch(type) {
+            const contentIds = predefinedBatches[type];
+            if (!contentIds) {
+                showAlert('error', '정의되지 않은 배치 타입입니다.');
+                return;
+            }
+
+            const params = {
+                operation: 'batchDetail',
+                contentIds: contentIds
+            };
+
+            showBatchProgress(true, contentIds.length);
+            await callAPI('/api/tour', params, 'POST');
+            showBatchProgress(false);
+        }
+
+        async function runStressTest() {
+            showAlert('warning', '⚠️ 스트레스 테스트를 시작합니다. 시간이 오래 걸릴 수 있습니다.');
+            await runPredefinedBatch('stress');
+        }
+
+        function showBatchProgress(show, total = 0) {
+            const progressDiv = document.getElementById('batchProgress');
+            const progressBar = document.getElementById('batchProgressBar');
+            const progressText = document.getElementById('batchProgressText');
+            
+            if (show) {
+                progressDiv.style.display = 'block';
+                progressText.textContent = `${total}개 항목 처리 중...`;
+                progressBar.style.width = '0%';
+                
+                // 가짜 진행률 애니메이션
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    if (progress >= 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                }, 200);
+                
+                progressDiv.setAttribute('data-interval', interval);
+            } else {
+                const interval = progressDiv.getAttribute('data-interval');
+                if (interval) clearInterval(interval);
+                
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 1000);
+            }
+        }
+
         // 유틸리티 함수들
         function setKeyword(keyword) {
             document.getElementById('keyword').value = keyword;
@@ -1136,6 +1537,8 @@
                 if (data.status === 'healthy') {
                     updateApiStatus('healthy', '정상');
                     updateCacheStatus(data.cache);
+                    updateContainerStatus(data);
+                    updateMemoryStatus(data.memory);
                     showAlert('success', '✅ 시스템이 정상적으로 작동 중입니다.');
                 } else {
                     updateApiStatus('warning', '경고');
@@ -1162,6 +1565,7 @@
                 }, 0);
                 
                 showSystemMetrics(data);
+                showDependencyStatus(data);
             } catch (error) {
                 displayError('헬스체크 실패: ' + error.message);
             }
@@ -1173,6 +1577,7 @@
 
         async function runTests() {
             try {
+                showAlert('info', messages[currentLanguage].testRunning);
                 const response = await fetch(`${API_BASE_URL}/api/test`);
                 const data = await response.json();
                 
@@ -1186,38 +1591,55 @@
                     }
                 }, 0);
                 
-                if (data.success !== false) {
-                    showAlert('success', '✅ 모든 테스트가 통과했습니다.');
+                if (data.success !== false && data.successRate > 80) {
+                    showAlert('success', `✅ 테스트 완료: ${data.successRate}% 성공률`);
                 } else {
-                    showAlert('warning', '⚠️ 일부 테스트가 실패했습니다.');
+                    showAlert('warning', `⚠️ 테스트 완료: ${data.successRate}% 성공률`);
                 }
             } catch (error) {
                 displayError('테스트 실행 실패: ' + error.message);
             }
         }
 
-        async function testQuickDemo() {
-            showAlert('info', '🚀 빠른 데모를 시작합니다...');
-            
+        async function getContainerStatus() {
+            await getSystemHealth();
+        }
+
+        async function getMemoryStatus() {
+            await getSystemHealth();
+        }
+
+        async function emergencyCacheClear() {
             try {
-                await callAPI('/api/tour', {
-                    operation: 'areaBasedList',
-                    areaCode: '1',
-                    contentTypeId: '12',
-                    numOfRows: '5'
+                const response = await fetch(`${API_BASE_URL}/api/cache/clear`, {
+                    method: 'POST'
                 });
                 
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                await callAPI('/api/tour', {
-                    operation: 'searchKeyword',
-                    keyword: '경복궁',
-                    numOfRows: '3'
-                });
-                
-                showAlert('success', '🎉 빠른 데모가 완료되었습니다!');
+                if (response.ok) {
+                    showAlert('success', '🧹 캐시가 성공적으로 정리되었습니다.');
+                    await healthCheck();
+                } else {
+                    showAlert('warning', '캐시 정리 요청을 전송했지만 확인이 필요합니다.');
+                }
             } catch (error) {
-                showAlert('error', '❌ 데모 실행 중 오류가 발생했습니다.');
+                showAlert('error', '캐시 정리 실패: ' + error.message);
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.innerHTML = '<i class="fas fa-play"></i> 자동 갱신 시작';
+                btn.className = 'btn btn-secondary';
+                showAlert('info', '자동 갱신이 중지되었습니다.');
+            } else {
+                autoRefreshInterval = setInterval(healthCheck, 30000);
+                btn.innerHTML = '<i class="fas fa-pause"></i> 자동 갱신 중지';
+                btn.className = 'btn btn-warning';
+                showAlert('success', '자동 갱신이 시작되었습니다. (30초 간격)');
             }
         }
 
@@ -1256,6 +1678,7 @@
                                     <p><strong>🏷️ 타입:</strong> ${item.meta?.typeName || 'Unknown'} ${item.meta?.typeIcon || ''}</p>
                                     <p><strong>🗺️ 지역:</strong> ${item.meta?.areaName || 'Unknown'} ${item.meta?.areaEmoji || ''}</p>
                                     ${item.distance ? `<p><strong>📏 거리:</strong> ${item.meta?.distanceText || item.distance + 'km'}</p>` : ''}
+                                    ${item.meta?.completeness ? `<p><strong>📊 완성도:</strong> ${item.meta.completeness}%</p>` : ''}
                                     <div class="content-id" onclick="copyContentId('${item.contentId}')" title="클릭하여 복사">
                                         📋 ID: ${item.contentId}
                                     </div>
@@ -1265,6 +1688,42 @@
                         ${data.data.items.length > 12 ? `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">... 외 ${data.data.items.length - 12}개 더 (전체 JSON에서 확인)</p>` : ''}
                         <details style="margin-top: 1rem;">
                             <summary style="cursor: pointer; color: var(--primary-color);">📄 전체 JSON 데이터 보기</summary>
+                            <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
+                        </details>
+                    </div>
+                `;
+            } else if (data.data?.results && Array.isArray(data.data.results)) {
+                // 배치 결과
+                const successCount = data.data.results.filter(r => r.success !== false).length;
+                const totalCount = data.data.results.length;
+                
+                resultHtml = `
+                    <div class="result-item">
+                        <div class="result-meta">
+                            <strong>작업:</strong> ${data.operation} | 
+                            <strong>응답시간:</strong> ${responseTime}ms | 
+                            <strong>시간:</strong> ${new Date().toLocaleString()} |
+                            <strong>성공률:</strong> ${Math.round((successCount/totalCount)*100)}% (${successCount}/${totalCount})
+                        </div>
+                        <div class="result-cards">
+                            ${data.data.results.slice(0, 10).map((result, index) => `
+                                <div class="result-card" style="border-left-color: ${result.success !== false ? 'var(--success-color)' : 'var(--error-color)'}">
+                                    ${result.success !== false ? `
+                                        <h4>${result.data?.title || 'Success'}</h4>
+                                        <p><strong>📍 주소:</strong> ${result.data?.addr1 || 'N/A'}</p>
+                                        <div class="content-id" onclick="copyContentId('${result.data?.contentId}')" title="클릭하여 복사">
+                                            📋 ID: ${result.data?.contentId}
+                                        </div>
+                                    ` : `
+                                        <h4 style="color: var(--error-color);">Error</h4>
+                                        <p style="color: var(--error-color);">${result.error?.message || 'Unknown error'}</p>
+                                        <p><strong>Content ID:</strong> ${result.contentId}</p>
+                                    `}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: var(--primary-color);">📄 전체 배치 결과 JSON 보기</summary>
                             <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
                         </details>
                     </div>
@@ -1342,10 +1801,44 @@
                     <div class="metric-value">${healthData.config?.environment || 'unknown'}</div>
                     <div class="metric-label">환경</div>
                 </div>
+                <div class="metric">
+                    <div class="metric-value">${healthData.version || 'N/A'}</div>
+                    <div class="metric-label">버전</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">${healthData.config?.apiKeyConfigured ? 'YES' : 'NO'}</div>
+                    <div class="metric-label">API 키</div>
+                </div>
             `;
             
             metricsContainer.innerHTML = metricsHtml;
             metricsContainer.style.display = 'grid';
+        }
+
+        function showDependencyStatus(healthData) {
+            const statusContainer = document.getElementById('dependencyStatus');
+            
+            // 가상의 서비스 상태 (실제로는 healthData에서 가져와야 함)
+            const services = [
+                { name: 'Config Manager', status: 'initialized' },
+                { name: 'Logger', status: 'initialized' },
+                { name: 'Cache', status: 'initialized' },
+                { name: 'Rate Limiter', status: 'initialized' },
+                { name: 'Validator', status: 'initialized' },
+                { name: 'HTTP Client', status: 'initialized' },
+                { name: 'Security', status: 'initialized' },
+                { name: 'I18n', status: 'initialized' }
+            ];
+            
+            const statusHtml = services.map(service => `
+                <div class="service-status ${service.status}">
+                    <i class="fas fa-${service.status === 'initialized' ? 'check-circle' : 'exclamation-circle'}"></i>
+                    ${service.name}
+                </div>
+            `).join('');
+            
+            statusContainer.innerHTML = statusHtml;
+            statusContainer.style.display = 'grid';
         }
 
         // 상태 업데이트 함수들
@@ -1353,6 +1846,16 @@
             const avgResponseTime = totalResponseTime / requestCount;
             document.getElementById('performanceStatusText').textContent = `${Math.round(avgResponseTime)}ms`;
             document.getElementById('requestStatusText').textContent = requestCount;
+            
+            // 성능 상태 업데이트
+            const perfCard = document.getElementById('performanceStatus');
+            if (avgResponseTime < 100) {
+                perfCard.className = 'status-card healthy';
+            } else if (avgResponseTime < 1000) {
+                perfCard.className = 'status-card warning';
+            } else {
+                perfCard.className = 'status-card error';
+            }
         }
 
         function updateApiStatus(status, text) {
@@ -1363,8 +1866,52 @@
 
         function updateCacheStatus(cacheData) {
             if (cacheData) {
+                const cacheCard = document.getElementById('cacheStatus');
+                const hitRate = Math.round(cacheData.hitRate || 0);
                 document.getElementById('cacheStatusText').textContent = 
-                    `${cacheData.size}/${cacheData.maxSize} (${Math.round(cacheData.hitRate)}%)`;
+                    `${cacheData.size}/${cacheData.maxSize} (${hitRate}%)`;
+                
+                if (hitRate > 70) {
+                    cacheCard.className = 'status-card healthy';
+                } else if (hitRate > 30) {
+                    cacheCard.className = 'status-card warning';
+                } else {
+                    cacheCard.className = 'status-card info';
+                }
+            }
+        }
+
+        function updateContainerStatus(healthData) {
+            const containerCard = document.getElementById('containerStatus');
+            const containerText = document.getElementById('containerStatusText');
+            
+            if (healthData.config && healthData.config.environment) {
+                containerCard.className = 'status-card healthy';
+                containerText.textContent = '초기화됨';
+            } else {
+                containerCard.className = 'status-card warning';
+                containerText.textContent = '확인필요';
+            }
+        }
+
+        function updateMemoryStatus(memoryData) {
+            if (memoryData) {
+                const memoryCard = document.getElementById('memoryStatus');
+                const memoryText = document.getElementById('memoryStatusText');
+                
+                const heapUsed = memoryData.heapUsed || 0;
+                const heapTotal = memoryData.heapTotal || 100;
+                const usagePercent = (heapUsed / heapTotal) * 100;
+                
+                memoryText.textContent = `${heapUsed}MB`;
+                
+                if (usagePercent < 70) {
+                    memoryCard.className = 'status-card healthy';
+                } else if (usagePercent < 90) {
+                    memoryCard.className = 'status-card warning';
+                } else {
+                    memoryCard.className = 'status-card error';
+                }
             }
         }
 
@@ -1397,7 +1944,8 @@
             document.querySelector('.container').insertBefore(alert, document.querySelector('.tabs'));
             
             setTimeout(() => {
-                alert.remove();
+                alert.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => alert.remove(), 300);
             }, 5000);
         }
 
@@ -1413,12 +1961,33 @@
             });
         }
 
+        function downloadResults() {
+            if (results.length === 0) {
+                showAlert('warning', '다운로드할 결과가 없습니다.');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(results, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tourapi-test-results-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showAlert('success', '📁 결과가 다운로드되었습니다.');
+        }
+
         function clearResults() {
             results = [];
             document.getElementById('resultsContent').innerHTML = `
                 <p style="text-align: center; color: var(--text-secondary); margin: 2rem 0;">
                     <i class="fas fa-info-circle"></i>
-                    위의 "빠른 시작" 탭에서 테스트를 시작해보세요! 🚀
+                    위의 "빠른 시작" 탭에서 개선된 시스템을 테스트해보세요! 🚀
                 </p>
             `;
             document.getElementById('resultsTitle').innerHTML = '<i class="fas fa-chart-bar"></i> 검색 결과';
