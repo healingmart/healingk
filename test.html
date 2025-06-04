@@ -437,11 +437,25 @@
             font-size: 0.875rem;
             color: var(--text-secondary);
             cursor: pointer;
+            display: inline-block;
+            margin-top: 0.5rem;
         }
 
         .result-card .content-id:hover {
             background: var(--primary-color);
             color: white;
+        }
+
+        .quick-test-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-test-buttons .btn {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
         }
     </style>
 </head>
@@ -453,14 +467,14 @@
                 <i class="fas fa-map-marked-alt"></i>
                 TourAPI 4.3 Enterprise Test Dashboard
             </h1>
-            <p>한국관광공사 TourAPI 4.0 v4.3 완전 구현 시스템 테스트</p>
+            <p>한국관광공사 TourAPI 4.0 v4.3 완전 구현 시스템 테스트 🚀</p>
             <div class="header-controls">
                 <span class="deployment-badge">
                     <i class="fas fa-cloud"></i> VERCEL DEPLOYED
                 </span>
                 <select class="language-selector" id="languageSelector">
-                    <option value="ko">한국어</option>
-                    <option value="en">English</option>
+                    <option value="ko">한국어 🇰🇷</option>
+                    <option value="en">English 🇺🇸</option>
                 </select>
                 <input type="url" class="api-url-input" id="apiUrl" placeholder="API 서버 URL" value="https://healingk.vercel.app" readonly>
                 <button class="btn btn-secondary" onclick="healthCheck()">
@@ -472,8 +486,8 @@
         <!-- 연결 상태 알림 -->
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
-            배포된 서버 <strong>https://healingk.vercel.app</strong>에 연결됩니다. 
-            첫 요청 시 콜드 스타트로 인해 응답이 느릴 수 있습니다.
+            <strong>API 키 정보:</strong> 서버에서 <code>TOURISM_API_KEY</code> 환경변수를 사용합니다. 
+            첫 요청 시 Vercel 콜드 스타트로 10-15초 소요될 수 있습니다.
         </div>
 
         <!-- 시스템 상태 -->
@@ -502,7 +516,10 @@
 
         <!-- 탭 네비게이션 -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('areaBasedList')">
+            <button class="tab active" onclick="showTab('quickStart')">
+                <i class="fas fa-rocket"></i> 빠른 시작
+            </button>
+            <button class="tab" onclick="showTab('areaBasedList')">
                 <i class="fas fa-list"></i> 지역별 관광정보
             </button>
             <button class="tab" onclick="showTab('searchKeyword')">
@@ -514,16 +531,59 @@
             <button class="tab" onclick="showTab('locationBased')">
                 <i class="fas fa-map-marker-alt"></i> 위치기반 검색
             </button>
-            <button class="tab" onclick="showTab('batchDetail')">
-                <i class="fas fa-layer-group"></i> 배치 처리
-            </button>
             <button class="tab" onclick="showTab('systemMonitor')">
                 <i class="fas fa-monitor-waveform"></i> 시스템 모니터
             </button>
         </div>
 
+        <!-- 빠른 시작 탭 -->
+        <div id="quickStart" class="tab-content active">
+            <h2><i class="fas fa-rocket"></i> 빠른 시작 가이드</h2>
+            <div class="alert alert-success">
+                <i class="fas fa-lightbulb"></i>
+                <strong>권장 테스트 순서:</strong> 아래 버튼들을 순서대로 클릭해서 시스템을 테스트해보세요!
+            </div>
+            
+            <div class="quick-test-buttons">
+                <button class="btn" onclick="quickTestSeoul()">
+                    <i class="fas fa-city"></i> 1. 서울 관광지 검색
+                </button>
+                <button class="btn btn-secondary" onclick="quickTestKeyword()">
+                    <i class="fas fa-search"></i> 2. 경복궁 검색
+                </button>
+                <button class="btn btn-success" onclick="quickTestDetail()">
+                    <i class="fas fa-info"></i> 3. 상세정보 조회
+                </button>
+                <button class="btn btn-warning" onclick="quickTestLocation()">
+                    <i class="fas fa-map"></i> 4. 위치기반 검색
+                </button>
+                <button class="btn btn-danger" onclick="runSystemTest()">
+                    <i class="fas fa-cogs"></i> 5. 시스템 전체 테스트
+                </button>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <h3>🎯 테스트 포인트</h3>
+                <ul style="margin-left: 2rem; margin-top: 1rem;">
+                    <li><strong>첫 요청:</strong> 콜드 스타트로 10-15초 소요 (정상)</li>
+                    <li><strong>캐시 효과:</strong> 같은 요청 반복 시 100ms 이하로 단축</li>
+                    <li><strong>데이터 정확성:</strong> 한국관광공사 공식 데이터 반환</li>
+                    <li><strong>에러 처리:</strong> 적절한 오류 메시지 표시</li>
+                    <li><strong>다국어:</strong> 한국어/영어 지원</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <h3>🔧 문제 해결</h3>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>연결 실패 시:</strong> 브라우저 개발자 도구(F12) → Console 탭에서 오류 메시지 확인
+                </div>
+            </div>
+        </div>
+
         <!-- 지역별 관광정보 탭 -->
-        <div id="areaBasedList" class="tab-content active">
+        <div id="areaBasedList" class="tab-content">
             <h2><i class="fas fa-list"></i> 지역별 관광정보 조회</h2>
             <form onsubmit="searchAreaBased(event)">
                 <div class="form-row">
@@ -531,37 +591,37 @@
                         <label for="areaCode">지역코드</label>
                         <select id="areaCode">
                             <option value="">전체</option>
-                            <option value="1">서울</option>
-                            <option value="6">부산</option>
-                            <option value="4">대구</option>
-                            <option value="2">인천</option>
-                            <option value="5">광주</option>
-                            <option value="3">대전</option>
-                            <option value="7">울산</option>
-                            <option value="8">세종</option>
-                            <option value="31">경기</option>
-                            <option value="32">강원</option>
-                            <option value="33">충북</option>
-                            <option value="34">충남</option>
-                            <option value="35">경북</option>
-                            <option value="36">경남</option>
-                            <option value="37">전북</option>
-                            <option value="38">전남</option>
-                            <option value="39">제주</option>
+                            <option value="1">서울 🏙️</option>
+                            <option value="6">부산 🌊</option>
+                            <option value="4">대구 🌆</option>
+                            <option value="2">인천 ✈️</option>
+                            <option value="5">광주 🌸</option>
+                            <option value="3">대전 🏢</option>
+                            <option value="7">울산 🏭</option>
+                            <option value="8">세종 🏛️</option>
+                            <option value="31">경기 🏘️</option>
+                            <option value="32">강원 ⛰️</option>
+                            <option value="33">충북 🏔️</option>
+                            <option value="34">충남 🌾</option>
+                            <option value="35">경북 🏯</option>
+                            <option value="36">경남 🏞️</option>
+                            <option value="37">전북 🌿</option>
+                            <option value="38">전남 🍃</option>
+                            <option value="39">제주 🌺</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="contentTypeId">콘텐츠 타입</label>
                         <select id="contentTypeId">
                             <option value="">전체</option>
-                            <option value="12">관광지</option>
-                            <option value="14">문화시설</option>
-                            <option value="15">축제/공연/행사</option>
-                            <option value="25">여행코스</option>
-                            <option value="28">레포츠</option>
-                            <option value="32">숙박</option>
-                            <option value="38">쇼핑</option>
-                            <option value="39">음식점</option>
+                            <option value="12">🏛️ 관광지</option>
+                            <option value="14">🎭 문화시설</option>
+                            <option value="15">🎪 축제/공연/행사</option>
+                            <option value="25">🗺️ 여행코스</option>
+                            <option value="28">⛷️ 레포츠</option>
+                            <option value="32">🏨 숙박</option>
+                            <option value="38">🛍️ 쇼핑</option>
+                            <option value="39">🍽️ 음식점</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -636,6 +696,12 @@
                         </select>
                     </div>
                 </div>
+                <div class="quick-test-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="setKeyword('경복궁')">경복궁</button>
+                    <button type="button" class="btn btn-secondary" onclick="setKeyword('해운대')">해운대</button>
+                    <button type="button" class="btn btn-secondary" onclick="setKeyword('제주도')">제주도</button>
+                    <button type="button" class="btn btn-secondary" onclick="setKeyword('롯데월드')">롯데월드</button>
+                </div>
                 <button type="submit" class="btn">
                     <i class="fas fa-search"></i> 검색하기
                 </button>
@@ -661,7 +727,12 @@
             </form>
             <div class="alert alert-success">
                 <i class="fas fa-lightbulb"></i>
-                팁: 위의 지역별 검색이나 키워드 검색 결과에서 콘텐츠 ID를 클릭해서 복사하세요.
+                <strong>팁:</strong> 위의 검색 결과에서 콘텐츠 ID를 클릭하면 자동으로 복사됩니다.
+            </div>
+            <div class="quick-test-buttons">
+                <button type="button" class="btn btn-secondary" onclick="setContentId('126508')">경복궁</button>
+                <button type="button" class="btn btn-secondary" onclick="setContentId('126509')">창덕궁</button>
+                <button type="button" class="btn btn-secondary" onclick="setContentId('264308')">해운대해수욕장</button>
             </div>
         </div>
 
@@ -691,33 +762,17 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
+                <div class="quick-test-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="setLocation(126.9780, 37.5665)">명동</button>
+                    <button type="button" class="btn btn-secondary" onclick="setLocation(129.1603, 35.1595)">해운대</button>
                     <button type="button" class="btn btn-secondary" onclick="getMyLocationForSearch()">
-                        <i class="fas fa-crosshairs"></i> 내 위치 사용
+                        <i class="fas fa-crosshairs"></i> 내 위치
                     </button>
-                    <button type="submit" class="btn">
-                        <i class="fas fa-search"></i> 검색하기
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- 배치 처리 탭 -->
-        <div id="batchDetail" class="tab-content">
-            <h2><i class="fas fa-layer-group"></i> 배치 상세정보 조회</h2>
-            <form onsubmit="getBatchDetail(event)">
-                <div class="form-group">
-                    <label for="contentIds">콘텐츠 ID 목록 (쉼표로 구분)</label>
-                    <textarea id="contentIds" rows="4" placeholder="예: 126508, 126509, 126510, 126511, 126512" required></textarea>
                 </div>
                 <button type="submit" class="btn">
-                    <i class="fas fa-layer-group"></i> 배치 조회하기
+                    <i class="fas fa-search"></i> 검색하기
                 </button>
             </form>
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                배치 처리는 여러 개의 콘텐츠 ID를 한 번에 조회할 수 있습니다. 성능 및 에러 통계를 확인할 수 있습니다.
-            </div>
         </div>
 
         <!-- 시스템 모니터 탭 -->
@@ -760,7 +815,7 @@
             <div class="results-content" id="resultsContent">
                 <p style="text-align: center; color: var(--text-secondary); margin: 2rem 0;">
                     <i class="fas fa-info-circle"></i>
-                    검색을 시작하면 결과가 여기에 표시됩니다.
+                    위의 "빠른 시작" 탭에서 테스트를 시작해보세요! 🚀
                 </p>
             </div>
         </div>
@@ -773,7 +828,7 @@
         let totalResponseTime = 0;
         let results = [];
 
-        // API 기본 URL (배포 서버)
+        // API 기본 URL
         const API_BASE_URL = 'https://healingk.vercel.app';
 
         // 언어 설정
@@ -807,7 +862,7 @@
             });
 
             // 콜드 스타트 경고
-            showAlert('info', 'Vercel 서버 첫 요청 시 콜드 스타트로 10-15초 소요될 수 있습니다.');
+            showAlert('info', '🚀 Vercel 서버 첫 요청 시 콜드 스타트로 10-15초 소요될 수 있습니다.');
 
             // 초기 헬스체크 (조금 지연해서 실행)
             setTimeout(healthCheck, 2000);
@@ -823,11 +878,85 @@
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-            event.target.classList.add('active');
+            // 클릭된 탭 찾기
+            const clickedTab = Array.from(document.querySelectorAll('.tab')).find(tab => 
+                tab.onclick && tab.onclick.toString().includes(tabName)
+            );
+            if (clickedTab) clickedTab.classList.add('active');
+
             document.getElementById(tabName).classList.add('active');
         }
 
-        // API 호출 함수 (배포 서버용 수정)
+        // 빠른 테스트 함수들
+        async function quickTestSeoul() {
+            showTab('areaBasedList');
+            document.getElementById('areaCode').value = '1';
+            document.getElementById('contentTypeId').value = '12';
+            document.getElementById('numOfRows').value = '10';
+            
+            const params = {
+                operation: 'areaBasedList',
+                areaCode: '1',
+                contentTypeId: '12',
+                numOfRows: '10'
+            };
+            await callAPI('/api/tour', params);
+        }
+
+        async function quickTestKeyword() {
+            showTab('searchKeyword');
+            document.getElementById('keyword').value = '경복궁';
+            
+            const params = {
+                operation: 'searchKeyword',
+                keyword: '경복궁',
+                numOfRows: '5'
+            };
+            await callAPI('/api/tour', params);
+        }
+
+        async function quickTestDetail() {
+            showTab('detailCommon');
+            document.getElementById('contentId').value = '126508';
+            
+            const params = {
+                operation: 'detailCommon',
+                contentId: '126508'
+            };
+            await callAPI('/api/tour', params);
+        }
+
+        async function quickTestLocation() {
+            showTab('locationBased');
+            document.getElementById('mapX').value = '126.9780';
+            document.getElementById('mapY').value = '37.5665';
+            document.getElementById('locationRadius').value = '1000';
+            
+            const params = {
+                operation: 'locationBasedList',
+                mapX: '126.9780',
+                mapY: '37.5665',
+                radius: '1000',
+                numOfRows: '5'
+            };
+            await callAPI('/api/tour', params);
+        }
+
+        async function runSystemTest() {
+            showAlert('info', '시스템 전체 테스트를 시작합니다...');
+            try {
+                await quickTestSeoul();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await quickTestKeyword();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await quickTestDetail();
+                showAlert('success', '🎉 시스템 전체 테스트가 성공적으로 완료되었습니다!');
+            } catch (error) {
+                showAlert('error', '시스템 테스트 중 오류가 발생했습니다.');
+            }
+        }
+
+        // API 호출 함수
         async function callAPI(endpoint, params = {}, method = 'GET') {
             const startTime = Date.now();
             
@@ -890,7 +1019,7 @@
             }
         }
 
-        // 각 API 호출 함수들 (엔드포인트 수정)
+        // 개별 API 함수들
         async function searchAreaBased(event) {
             event.preventDefault();
             
@@ -946,28 +1075,27 @@
             await callAPI('/api/tour', params);
         }
 
-        async function getBatchDetail(event) {
-            event.preventDefault();
-            
-            const contentIdsText = document.getElementById('contentIds').value;
-            const contentIds = contentIdsText.split(',').map(id => id.trim()).filter(id => id);
-            
-            const params = {
-                operation: 'batchDetail',
-                contentIds: contentIds
-            };
-
-            await callAPI('/api/tour', params, 'POST');
+        // 유틸리티 함수들
+        function setKeyword(keyword) {
+            document.getElementById('keyword').value = keyword;
         }
 
-        // 내 위치 가져오기
+        function setContentId(contentId) {
+            document.getElementById('contentId').value = contentId;
+        }
+
+        function setLocation(lng, lat) {
+            document.getElementById('mapX').value = lng;
+            document.getElementById('mapY').value = lat;
+        }
+
         function getMyLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
                         document.getElementById('userLat').value = position.coords.latitude.toFixed(6);
                         document.getElementById('userLng').value = position.coords.longitude.toFixed(6);
-                        showAlert('success', '위치 정보를 가져왔습니다.');
+                        showAlert('success', '📍 위치 정보를 가져왔습니다.');
                     },
                     function(error) {
                         showAlert('error', messages[currentLanguage].locationError);
@@ -984,7 +1112,7 @@
                     function(position) {
                         document.getElementById('mapX').value = position.coords.longitude.toFixed(6);
                         document.getElementById('mapY').value = position.coords.latitude.toFixed(6);
-                        showAlert('success', '위치 정보를 가져왔습니다.');
+                        showAlert('success', '📍 위치 정보를 가져왔습니다.');
                     },
                     function(error) {
                         showAlert('error', messages[currentLanguage].locationError);
@@ -993,7 +1121,7 @@
             }
         }
 
-        // 헬스체크
+        // 헬스체크 및 시스템 모니터링
         async function healthCheck() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/health`, {
@@ -1008,13 +1136,13 @@
                 if (data.status === 'healthy') {
                     updateApiStatus('healthy', '정상');
                     updateCacheStatus(data.cache);
-                    showAlert('success', '시스템이 정상적으로 작동 중입니다.');
+                    showAlert('success', '✅ 시스템이 정상적으로 작동 중입니다.');
                 } else {
                     updateApiStatus('warning', '경고');
                 }
             } catch (error) {
                 updateApiStatus('error', '연결 실패');
-                showAlert('error', 'API 서버에 연결할 수 없습니다. 서버가 콜드 스타트 중일 수 있습니다.');
+                showAlert('error', '🔴 API 서버에 연결할 수 없습니다. 서버가 콜드 스타트 중일 수 있습니다.');
             }
         }
 
@@ -1059,21 +1187,19 @@
                 }, 0);
                 
                 if (data.success !== false) {
-                    showAlert('success', '모든 테스트가 통과했습니다.');
+                    showAlert('success', '✅ 모든 테스트가 통과했습니다.');
                 } else {
-                    showAlert('warning', '일부 테스트가 실패했습니다.');
+                    showAlert('warning', '⚠️ 일부 테스트가 실패했습니다.');
                 }
             } catch (error) {
                 displayError('테스트 실행 실패: ' + error.message);
             }
         }
 
-        // 빠른 데모 함수
         async function testQuickDemo() {
-            showAlert('info', '빠른 데모를 시작합니다...');
+            showAlert('info', '🚀 빠른 데모를 시작합니다...');
             
             try {
-                // 1. 서울 관광지 검색
                 await callAPI('/api/tour', {
                     operation: 'areaBasedList',
                     areaCode: '1',
@@ -1083,20 +1209,19 @@
                 
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                // 2. 키워드 검색
                 await callAPI('/api/tour', {
                     operation: 'searchKeyword',
                     keyword: '경복궁',
                     numOfRows: '3'
                 });
                 
-                showAlert('success', '빠른 데모가 완료되었습니다!');
+                showAlert('success', '🎉 빠른 데모가 완료되었습니다!');
             } catch (error) {
-                showAlert('error', '데모 실행 중 오류가 발생했습니다.');
+                showAlert('error', '❌ 데모 실행 중 오류가 발생했습니다.');
             }
         }
 
-        // 결과 표시 (카드 형태로 개선)
+        // 결과 표시 함수
         function displayResults(data, responseTime) {
             results.push({
                 timestamp: new Date().toISOString(),
@@ -1121,25 +1246,25 @@
                             <strong>응답시간:</strong> ${responseTime}ms | 
                             <strong>시간:</strong> ${new Date().toLocaleString()} |
                             <strong>결과:</strong> ${data.data.items.length}개
-                            ${data.metadata?.cache?.fromCache ? ' | <span style="color: var(--success-color)">캐시됨</span>' : ''}
+                            ${data.metadata?.cache?.fromCache ? ' | <span style="color: var(--success-color)">🚀 캐시됨</span>' : ''}
                         </div>
                         <div class="result-cards">
-                            ${data.data.items.slice(0, 10).map(item => `
+                            ${data.data.items.slice(0, 12).map(item => `
                                 <div class="result-card">
                                     <h4>${item.title || 'No Title'}</h4>
-                                    <p><strong>주소:</strong> ${item.addr1 || 'No Address'}</p>
-                                    <p><strong>타입:</strong> ${item.meta?.typeName || 'Unknown'} ${item.meta?.typeIcon || ''}</p>
-                                    <p><strong>지역:</strong> ${item.meta?.areaName || 'Unknown'} ${item.meta?.areaEmoji || ''}</p>
-                                    ${item.distance ? `<p><strong>거리:</strong> ${item.meta?.distanceText || item.distance + 'km'}</p>` : ''}
+                                    <p><strong>📍 주소:</strong> ${item.addr1 || 'No Address'}</p>
+                                    <p><strong>🏷️ 타입:</strong> ${item.meta?.typeName || 'Unknown'} ${item.meta?.typeIcon || ''}</p>
+                                    <p><strong>🗺️ 지역:</strong> ${item.meta?.areaName || 'Unknown'} ${item.meta?.areaEmoji || ''}</p>
+                                    ${item.distance ? `<p><strong>📏 거리:</strong> ${item.meta?.distanceText || item.distance + 'km'}</p>` : ''}
                                     <div class="content-id" onclick="copyContentId('${item.contentId}')" title="클릭하여 복사">
-                                        ID: ${item.contentId}
+                                        📋 ID: ${item.contentId}
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
-                        ${data.data.items.length > 10 ? `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">... 외 ${data.data.items.length - 10}개 더 (전체 JSON에서 확인)</p>` : ''}
+                        ${data.data.items.length > 12 ? `<p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">... 외 ${data.data.items.length - 12}개 더 (전체 JSON에서 확인)</p>` : ''}
                         <details style="margin-top: 1rem;">
-                            <summary style="cursor: pointer; color: var(--primary-color);">전체 JSON 데이터 보기</summary>
+                            <summary style="cursor: pointer; color: var(--primary-color);">📄 전체 JSON 데이터 보기</summary>
                             <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
                         </details>
                     </div>
@@ -1152,7 +1277,7 @@
                             <strong>작업:</strong> ${data.operation} | 
                             <strong>응답시간:</strong> ${responseTime}ms | 
                             <strong>시간:</strong> ${new Date().toLocaleString()}
-                            ${data.metadata?.cache?.fromCache ? ' | <span style="color: var(--success-color)">캐시됨</span>' : ''}
+                            ${data.metadata?.cache?.fromCache ? ' | <span style="color: var(--success-color)">🚀 캐시됨</span>' : ''}
                         </div>
                         <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
                     </div>
@@ -1162,15 +1287,13 @@
             resultsContent.innerHTML = resultHtml + resultsContent.innerHTML;
         }
 
-        // 콘텐츠 ID 복사 함수
         function copyContentId(contentId) {
             navigator.clipboard.writeText(contentId).then(() => {
-                showAlert('success', `콘텐츠 ID ${contentId}가 복사되었습니다.`);
+                showAlert('success', `📋 콘텐츠 ID ${contentId}가 복사되었습니다.`);
                 document.getElementById('contentId').value = contentId;
             });
         }
 
-        // 에러 표시
         function displayError(message) {
             const resultsContent = document.getElementById('resultsContent');
             const resultsTitle = document.getElementById('resultsTitle');
@@ -1191,7 +1314,6 @@
             resultsContent.innerHTML = errorHtml + resultsContent.innerHTML;
         }
 
-        // 시스템 메트릭 표시
         function showSystemMetrics(healthData) {
             const metricsContainer = document.getElementById('systemMetrics');
             
@@ -1246,7 +1368,6 @@
             }
         }
 
-        // 유틸리티 함수들
         function showLoading(show) {
             const buttons = document.querySelectorAll('button[type="submit"], .btn');
             buttons.forEach(button => {
@@ -1297,7 +1418,7 @@
             document.getElementById('resultsContent').innerHTML = `
                 <p style="text-align: center; color: var(--text-secondary); margin: 2rem 0;">
                     <i class="fas fa-info-circle"></i>
-                    검색을 시작하면 결과가 여기에 표시됩니다.
+                    위의 "빠른 시작" 탭에서 테스트를 시작해보세요! 🚀
                 </p>
             `;
             document.getElementById('resultsTitle').innerHTML = '<i class="fas fa-chart-bar"></i> 검색 결과';
