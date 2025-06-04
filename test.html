@@ -3,306 +3,447 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 AllTourism Enterprise Test Dashboard v2.0</title>
+    <title>🚀 Emergency Diagnostic Tool v3.0</title>
     <style>
-        /* 기존 스타일 유지 */
         :root {
             --primary-color: #2563eb;
             --success-color: #10b981;
             --error-color: #ef4444;
             --warning-color: #f59e0b;
+            --bg-color: #f8fafc;
         }
         
-        .diagnostic-panel {
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .emergency-panel {
             background: linear-gradient(135deg, #fee2e2, #fef3c7);
-            border: 2px solid #f59e0b;
+            border: 3px solid #ef4444;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .diagnostic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .diagnostic-card {
+            background: white;
             border-radius: 8px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--primary-color);
         }
         
-        .version-check {
-            background: #1f2937;
-            color: white;
+        .result-box {
+            background: #1a1a1a;
+            color: #00ff00;
             padding: 1rem;
             border-radius: 6px;
             font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
             margin: 1rem 0;
+            white-space: pre-wrap;
         }
         
-        .api-endpoint-display {
-            background: rgba(37, 99, 235, 0.1);
-            padding: 1rem;
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
             border-radius: 6px;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
         }
+        
+        .btn:hover { background: #1d4ed8; }
+        .btn-danger { background: var(--error-color); }
+        .btn-warning { background: var(--warning-color); }
+        .btn-success { background: var(--success-color); }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online { background: var(--success-color); }
+        .status-offline { background: var(--error-color); }
+        .status-unknown { background: var(--warning-color); }
+        
+        .log-entry {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        
+        .log-success { background: rgba(16, 185, 129, 0.1); color: #059669; }
+        .log-error { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+        .log-warning { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+        .log-info { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 🚨 긴급 진단 패널 -->
-        <div class="diagnostic-panel">
-            <h2>🔧 버전 진단 패널</h2>
-            <div class="alert alert-warning">
-                <strong>⚠️ 중요:</strong> 로그에서 구버전 API (KorService1) 호출이 감지되었습니다!
-            </div>
+        <div class="emergency-panel">
+            <h1>🚨 EMERGENCY DIAGNOSTIC TOOL v3.0</h1>
+            <h2>🔍 API 서버 상태 완전 진단</h2>
+            <p><strong>현재 상황:</strong> JSON 파싱 오류 - HTML 페이지가 반환되고 있음</p>
             
-            <div class="version-check">
-                <h4>현재 배포된 버전 확인:</h4>
-                <div id="versionInfo">확인 중...</div>
-            </div>
-            
-            <div class="api-endpoint-display">
-                <h4>올바른 API 엔드포인트:</h4>
-                <code>https://apis.data.go.kr/B551011/KorService2/areaBasedList2</code>
-            </div>
-            
-            <button class="btn btn-danger" onclick="diagnoseVersion()">
-                🔍 긴급 버전 진단
-            </button>
-            <button class="btn btn-warning" onclick="forceRefresh()">
-                🔄 강제 새로고침
-            </button>
-        </div>
-
-        <!-- 기존 헤더 수정 -->
-        <header class="header">
-            <h1>🚀 AllTourism Enterprise Test Dashboard v2.0</h1>
-            <p>한국관광공사 TourAPI 4.0 Enterprise - 버전 확인 및 진단</p>
-            <div class="header-controls">
-                <input type="url" class="api-url-input" id="apiUrl" 
-                       placeholder="API 서버 URL 입력" 
-                       value="">
-                <button class="btn btn-secondary" onclick="setApiUrl()">
-                    🔗 URL 설정
+            <div style="margin: 1rem 0;">
+                <button class="btn btn-danger" onclick="startEmergencyDiag()">
+                    🚨 응급 진단 시작
+                </button>
+                <button class="btn btn-warning" onclick="scanAllEndpoints()">
+                    🔍 모든 엔드포인트 스캔
+                </button>
+                <button class="btn btn-success" onclick="testOriginalApi()">
+                    🧪 원본 API 직접 테스트
+                </button>
+                <button class="btn" onclick="clearLogs()">
+                    🧹 로그 지우기
                 </button>
             </div>
-        </header>
+        </div>
 
-        <!-- 나머지 기존 코드... -->
+        <div class="diagnostic-grid">
+            <div class="diagnostic-card">
+                <h3>🎯 서버 연결 상태</h3>
+                <div id="serverStatus">
+                    <div><span class="status-indicator status-unknown"></span> 확인 중...</div>
+                </div>
+            </div>
+            
+            <div class="diagnostic-card">
+                <h3>🗺️ 발견된 엔드포인트</h3>
+                <div id="endpointList">
+                    <div>스캔하지 않음</div>
+                </div>
+            </div>
+            
+            <div class="diagnostic-card">
+                <h3>🔑 API 키 테스트</h3>
+                <div id="apiKeyStatus">
+                    <div>테스트하지 않음</div>
+                </div>
+            </div>
+            
+            <div class="diagnostic-card">
+                <h3>📊 응답 분석</h3>
+                <div id="responseAnalysis">
+                    <div>분석하지 않음</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="diagnostic-card" style="margin-top: 2rem;">
+            <h3>📝 실시간 진단 로그</h3>
+            <div class="result-box" id="diagnosticLog">
+진단 도구 준비 완료.
+'응급 진단 시작' 버튼을 클릭하세요.
+            </div>
+        </div>
+
+        <div class="diagnostic-card" style="margin-top: 1rem;">
+            <h3>🔧 수동 테스트</h3>
+            <div>
+                <input type="url" id="manualUrl" placeholder="테스트할 URL 입력" style="width: 70%; padding: 0.5rem; margin-right: 1rem;">
+                <button class="btn" onclick="testManualUrl()">🧪 테스트</button>
+            </div>
+            <div style="margin-top: 1rem;">
+                <label>테스트 파라미터:</label>
+                <textarea id="testParams" rows="3" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;" placeholder='{"operation": "areaBasedList", "areaCode": "1", "numOfRows": "1"}'></textarea>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 🔧 개선된 JavaScript
-        let API_BASE_URL = '';
+        let logCount = 0;
 
-        // 초기화 시 API URL 감지
-        document.addEventListener('DOMContentLoaded', function() {
-            detectApiUrl();
-            diagnoseVersion();
-        });
+        function log(level, message) {
+            const logDiv = document.getElementById('diagnosticLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${level}`;
+            logEntry.textContent = entry;
+            
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(entry);
+            logCount++;
+            
+            if (logCount > 100) {
+                logDiv.removeChild(logDiv.firstChild);
+                logCount--;
+            }
+        }
 
-        // API URL 자동 감지
-        function detectApiUrl() {
-            const possibleUrls = [
+        function clearLogs() {
+            document.getElementById('diagnosticLog').innerHTML = '로그가 지워졌습니다.\n';
+            logCount = 0;
+        }
+
+        async function startEmergencyDiag() {
+            log('info', '🚨 응급 진단 시작');
+            
+            const urlsToTest = [
                 'https://healingk.vercel.app',
-                window.location.origin,
-                'http://localhost:3000',
-                'http://localhost:8080'
+                'https://healingk.vercel.app/api',
+                'https://healingk.vercel.app/api/health',
+                'https://healingk.vercel.app/api/tour',
+                'https://your-blog.com',
+                'https://www.your-blog.com'
             ];
 
-            // 첫 번째로 응답하는 URL 사용
-            Promise.race(
-                possibleUrls.map(url => 
-                    fetch(`${url}/api/health`)
-                        .then(res => res.ok ? url : Promise.reject())
-                        .catch(() => Promise.reject())
-                )
-            ).then(workingUrl => {
-                API_BASE_URL = workingUrl;
-                document.getElementById('apiUrl').value = workingUrl;
-                showAlert('success', `✅ API 서버 발견: ${workingUrl}`);
-            }).catch(() => {
-                showAlert('error', '❌ 사용 가능한 API 서버를 찾을 수 없습니다.');
-            });
-        }
-
-        // 🔍 버전 진단 함수
-        async function diagnoseVersion() {
-            try {
-                showAlert('info', '🔍 시스템 버전을 확인 중...');
-                
-                const response = await fetch(`${API_BASE_URL}/api/health`);
-                const data = await response.json();
-                
-                const versionInfo = document.getElementById('versionInfo');
-                versionInfo.innerHTML = `
-                    <div>✅ 서버 응답: ${response.status}</div>
-                    <div>📦 버전: ${data.version || 'Unknown'}</div>
-                    <div>🏗️ 환경: ${data.config?.environment || 'Unknown'}</div>
-                    <div>🔑 API 키: ${data.config?.apiKeyConfigured ? 'YES' : 'NO'}</div>
-                    <div>🏛️ 컨테이너: ${data.config ? 'Initialized' : 'Error'}</div>
-                `;
-
-                // 실제 API 테스트
-                await testActualApi();
-                
-            } catch (error) {
-                document.getElementById('versionInfo').innerHTML = `
-                    <div style="color: var(--error-color);">❌ 버전 확인 실패: ${error.message}</div>
-                `;
+            for (const url of urlsToTest) {
+                await testUrl(url);
+                await delay(500);
             }
+            
+            log('success', '✅ 응급 진단 완료');
         }
 
-        // 🧪 실제 API 엔드포인트 테스트
-        async function testActualApi() {
+        async function testUrl(url) {
+            log('info', `🔍 테스트 중: ${url}`);
+            
             try {
-                const testParams = {
-                    operation: 'areaBasedList',
-                    areaCode: '1',
-                    numOfRows: '1'
-                };
-
-                const response = await fetch(`${API_BASE_URL}/api/tour?` + new URLSearchParams(testParams));
-                const data = await response.json();
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
-                if (data.success) {
-                    showAlert('success', '🎉 새로운 API (KorService2) 확인됨!');
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json, text/html, */*',
+                        'Cache-Control': 'no-cache'
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const contentType = response.headers.get('content-type') || 'unknown';
+                log('success', `✅ ${url} - Status: ${response.status}, Type: ${contentType}`);
+                
+                // 응답 내용 확인
+                const text = await response.text();
+                
+                if (contentType.includes('application/json')) {
+                    try {
+                        const data = JSON.parse(text);
+                        log('success', `📊 JSON 응답: ${JSON.stringify(data, null, 2).substring(0, 200)}...`);
+                        updateServerStatus(url, 'online', data);
+                    } catch (e) {
+                        log('error', `❌ JSON 파싱 실패: ${e.message}`);
+                    }
                 } else {
-                    showAlert('error', `❌ API 테스트 실패: ${data.error?.message}`);
+                    log('warning', `⚠️ HTML 응답 감지: ${text.substring(0, 100)}...`);
+                    updateServerStatus(url, 'html', text.substring(0, 200));
                 }
                 
-                // 결과에 API 엔드포인트 정보 표시
-                displayApiDiagnostic(data);
-                
             } catch (error) {
-                showAlert('error', `🚨 API 테스트 중 오류: ${error.message}`);
+                if (error.name === 'AbortError') {
+                    log('error', `⏱️ ${url} - 타임아웃 (10초)`);
+                } else {
+                    log('error', `❌ ${url} - 오류: ${error.message}`);
+                }
+                updateServerStatus(url, 'offline', error.message);
             }
         }
 
-        function displayApiDiagnostic(data) {
-            const diagnostic = `
-                <div class="result-item" style="border-left-color: var(--info-color);">
-                    <h4>🔍 API 엔드포인트 진단 결과</h4>
-                    <div class="json-viewer">
-{
-  "diagnosis": {
-    "expectedEndpoint": "https://apis.data.go.kr/B551011/KorService2/areaBasedList2",
-    "apiResponse": ${data.success ? '"SUCCESS"' : '"FAILED"'},
-    "timestamp": "${new Date().toISOString()}",
-    "version": "${data.metadata?.version || 'Unknown'}",
-    "serverType": "${data.success ? 'AllTourism Enterprise v2.0' : 'Legacy or Error'}"
-  },
-  "serverResponse": ${JSON.stringify(data, null, 2)}
-}
-                    </div>
-                </div>
-            `;
+        async function scanAllEndpoints() {
+            log('info', '🔍 모든 가능한 엔드포인트 스캔 시작');
             
-            document.getElementById('resultsContent').innerHTML = diagnostic + document.getElementById('resultsContent').innerHTML;
-        }
-
-        function setApiUrl() {
-            const newUrl = document.getElementById('apiUrl').value;
-            if (newUrl) {
-                API_BASE_URL = newUrl;
-                showAlert('info', `🔗 API URL 변경: ${newUrl}`);
-                diagnoseVersion();
+            const baseUrls = [
+                'https://healingk.vercel.app',
+                'https://your-blog.com'
+            ];
+            
+            const endpoints = [
+                '/api/health',
+                '/api/tour',
+                '/api/test',
+                '/health',
+                '/tour',
+                '/api',
+                '/'
+            ];
+            
+            const foundEndpoints = [];
+            
+            for (const baseUrl of baseUrls) {
+                for (const endpoint of endpoints) {
+                    const fullUrl = baseUrl + endpoint;
+                    try {
+                        const response = await fetch(fullUrl, { 
+                            method: 'HEAD',
+                            headers: { 'Cache-Control': 'no-cache' }
+                        });
+                        
+                        if (response.ok) {
+                            foundEndpoints.push(fullUrl);
+                            log('success', `✅ 발견: ${fullUrl} (${response.status})`);
+                        }
+                    } catch (e) {
+                        // 조용히 실패
+                    }
+                    await delay(100);
+                }
             }
+            
+            updateEndpointList(foundEndpoints);
+            log('info', `📋 스캔 완료: ${foundEndpoints.length}개 엔드포인트 발견`);
         }
 
-        function forceRefresh() {
-            // 캐시 무시하고 페이지 새로고침
-            window.location.reload(true);
-        }
-
-        // 🔧 개선된 에러 처리
-        async function callAPI(endpoint, params = {}, method = 'GET') {
-            if (!API_BASE_URL) {
-                throw new Error('API 서버 URL이 설정되지 않았습니다.');
-            }
-
-            const startTime = Date.now();
+        async function testOriginalApi() {
+            log('info', '🧪 한국관광공사 원본 API 직접 테스트');
+            
+            // 실제 한국관광공사 API 테스트 (API 키 없이)
+            const testUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2?serviceKey=test&MobileOS=ETC&MobileApp=TestApp&_type=json&numOfRows=1';
             
             try {
-                showLoading(true);
+                const response = await fetch(testUrl);
+                const text = await response.text();
                 
-                let url = `${API_BASE_URL}${endpoint}`;
+                log('info', `🏛️ 원본 API 응답 상태: ${response.status}`);
+                log('info', `📄 응답 내용: ${text.substring(0, 300)}...`);
+                
+                if (text.includes('SERVICE_ACCESS_DENIED_ERROR')) {
+                    log('warning', '⚠️ API 키 문제로 접근 거부 (정상적인 API 엔드포인트)');
+                } else if (text.includes('KorService2')) {
+                    log('success', '✅ KorService2 엔드포인트 확인됨');
+                } else {
+                    log('error', '❌ 예상치 못한 응답');
+                }
+                
+            } catch (error) {
+                log('error', `❌ 원본 API 테스트 실패: ${error.message}`);
+            }
+        }
+
+        async function testManualUrl() {
+            const url = document.getElementById('manualUrl').value;
+            const paramsText = document.getElementById('testParams').value;
+            
+            if (!url) {
+                log('error', '❌ URL을 입력하세요');
+                return;
+            }
+            
+            log('info', `🔧 수동 테스트: ${url}`);
+            
+            try {
                 let options = {
-                    method: method,
+                    method: 'GET',
                     headers: {
                         'Accept': 'application/json',
-                        'Accept-Language': currentLanguage,
                         'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'  // 캐시 방지
+                        'Cache-Control': 'no-cache'
                     }
                 };
-
-                // GET 요청 처리
-                if (method === 'GET') {
-                    const urlObj = new URL(url);
-                    Object.entries(params).forEach(([key, value]) => {
-                        if (value !== null && value !== '' && value !== undefined) {
+                
+                if (paramsText.trim()) {
+                    try {
+                        const params = JSON.parse(paramsText);
+                        options.method = 'POST';
+                        options.body = JSON.stringify(params);
+                        log('info', `📝 POST 파라미터: ${JSON.stringify(params)}`);
+                    } catch (e) {
+                        log('warning', '⚠️ 파라미터를 GET 쿼리로 처리');
+                        const urlObj = new URL(url);
+                        const params = new URLSearchParams(paramsText);
+                        params.forEach((value, key) => {
                             urlObj.searchParams.append(key, value);
-                        }
-                    });
-                    url = urlObj.toString();
-                } else {
-                    options.body = JSON.stringify(params);
+                        });
+                        url = urlObj.toString();
+                    }
                 }
-
-                console.log('🚀 API 호출:', { url, method, params });
-
+                
                 const response = await fetch(url, options);
-                const data = await response.json();
-                const responseTime = Date.now() - startTime;
+                const text = await response.text();
                 
-                // 상세 로깅
-                console.log('📡 API 응답:', { status: response.status, data, responseTime });
-
-                if (data.success) {
-                    displayResults(data, responseTime);
-                    showAlert('success', `✅ API 호출 성공 (${responseTime}ms)`);
-                } else {
-                    throw new Error(data.error?.message || 'Unknown API error');
+                log('success', `✅ 응답 상태: ${response.status}`);
+                log('info', `📄 응답: ${text.substring(0, 500)}...`);
+                
+                try {
+                    const data = JSON.parse(text);
+                    updateResponseAnalysis(data);
+                } catch (e) {
+                    log('warning', '⚠️ JSON이 아닌 응답 받음');
+                    updateResponseAnalysis({ type: 'html', content: text.substring(0, 200) });
                 }
-
-                return data;
+                
             } catch (error) {
-                console.error('❌ API 오류:', error);
-                
-                // 더 정확한 에러 분류
-                if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
-                    showAlert('error', '🔌 네트워크 연결 오류: 서버가 응답하지 않습니다.');
-                } else if (error.message.includes('timeout')) {
-                    showAlert('warning', '⏱️ 요청 시간 초과: 서버가 느리게 응답합니다.');
-                } else {
-                    showAlert('error', `❌ API 오류: ${error.message}`);
-                }
-                
-                displayError(error.message);
-                throw error;
-            } finally {
-                showLoading(false);
+                log('error', `❌ 수동 테스트 실패: ${error.message}`);
             }
         }
 
-        // 나머지 기존 함수들...
-        function showAlert(type, message) {
-            console.log(`📢 Alert [${type}]:`, message);
+        function updateServerStatus(url, status, data) {
+            const statusDiv = document.getElementById('serverStatus');
+            const indicator = status === 'online' ? 'status-online' : 
+                            status === 'html' ? 'status-unknown' : 'status-offline';
             
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.style.position = 'fixed';
-            alert.style.top = '20px';
-            alert.style.right = '20px';
-            alert.style.zIndex = '9999';
-            alert.style.maxWidth = '400px';
-            alert.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                ${message}
-                <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: inherit; cursor: pointer;">×</button>
+            statusDiv.innerHTML += `
+                <div style="margin: 0.5rem 0;">
+                    <span class="status-indicator ${indicator}"></span>
+                    ${url} - ${status}
+                </div>
             `;
-            
-            document.body.appendChild(alert);
-            
-            setTimeout(() => {
-                if (alert.parentElement) {
-                    alert.remove();
-                }
-            }, 7000);
         }
+
+        function updateEndpointList(endpoints) {
+            const listDiv = document.getElementById('endpointList');
+            listDiv.innerHTML = endpoints.length > 0 ? 
+                endpoints.map(ep => `<div>✅ ${ep}</div>`).join('') :
+                '<div>❌ 사용 가능한 엔드포인트 없음</div>';
+        }
+
+        function updateResponseAnalysis(data) {
+            const analysisDiv = document.getElementById('responseAnalysis');
+            analysisDiv.innerHTML = `
+                <div>📊 응답 분석:</div>
+                <div style="font-family: monospace; font-size: 11px; margin-top: 0.5rem;">
+                    ${JSON.stringify(data, null, 2).substring(0, 300)}...
+                </div>
+            `;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 초기화
+        log('info', '🚀 Emergency Diagnostic Tool v3.0 초기화 완료');
+        log('info', '📋 사용법: 응급 진단 시작 → 모든 엔드포인트 스캔 → 원본 API 테스트');
     </script>
 </body>
 </html>
