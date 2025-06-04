@@ -1,1652 +1,13 @@
-// api/tourism-v4.js - 완벽한 TourAPI 4.0 통합 서버리스 백엔드
+// alltourism.js - 관광JS 통합 완성판
+// 모든 기능이 하나의 파일에 통합되어 있습니다.
 
-module.exports = async function handler(req, res) {
-    // CORS 설정
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+const API_KEY = process.env.TOURISM_API_KEY; // 환경변수에서 API 키 가져오기
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+// ========================================
+// 1. 기본 유틸리티 클래스들
+// ========================================
 
-    try {
-        const { operation = 'search', ...params } = req.method === 'GET' ? req.query : req.body;
-        
-        const apiKey = process.env.TOURISM_API_KEY || process.env.TOUR_API_KEY;
-        if (!apiKey) {
-            return res.status(500).json({ 
-                success: false, 
-                message: 'API 키가 설정되지 않았습니다',
-                code: 'MISSING_API_KEY'
-            });
-        }
-
-        console.log(`🚀 TourAPI 요청: ${operation}`, { 
-            params: Object.keys(params),
-            timestamp: new Date().toISOString()
-        });
-
-        const startTime = Date.now();
-        let result;
-
-        // 오퍼레이션별 라우팅
-        switch (operation) {
-            case 'search':
-            case 'areaBasedList':
-                result = await handleAreaBasedSearch(apiKey, params);
-                break;
-            case 'locationBasedList':
-                result = await handleLocationBasedSearch(apiKey, params);
-                break;
-            case 'searchKeyword':
-                result = await handleKeywordSearch(apiKey, params);
-                break;
-            case 'searchFestival':
-                result = await handleFestivalSearch(apiKey, params);
-                break;
-            case 'searchStay':
-                result = await handleStaySearch(apiKey, params);
-                break;
-            case 'detailCommon':
-                result = await handleDetailCommon(apiKey, params);
-                break;
-            case 'detailIntro':
-                result = await handleDetailIntro(apiKey, params);
-                break;
-            case 'detailInfo':
-                result = await handleDetailInfo(apiKey, params);
-                break;
-            case 'detailImage':
-                result = await handleDetailImage(apiKey, params);
-                break;
-            case 'detailPetTour':
-                result = await handleDetailPetTour(apiKey, params);
-                break;
-            case 'areaCode':
-                result = await handleAreaCode(apiKey, params);
-                break;
-            case 'categoryCode':
-                result = await handleCategoryCode(apiKey, params);
-                break;
-            case 'ldongCode':
-                result = await handleLdongCode(apiKey, params);
-                break;
-            case 'lclsSystmCode':
-                result = await handleLclsSystmCode(apiKey, params);
-                break;
-            case 'areaBasedSyncList':
-                result = await handleAreaBasedSyncList(apiKey, params);
-                break;
-            case 'getAllData':
-                result = await handleGetAllData(apiKey, params);
-                break;
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: `지원하지 않는 오퍼레이션: ${operation}`,
-                    supportedOperations: SUPPORTED_OPERATIONS,
-                    code: 'UNSUPPORTED_OPERATION'
-                });
-        }
-
-        const totalTime = Date.now() - startTime;
-        
-        return res.status(200).json({
-            success: true,
-            operation,
-            data: result.data,
-            metadata: {
-                ...result.metadata,
-                performance: {
-                    ...result.metadata?.performance,
-                    totalTime,
-                    timestamp: new Date().toISOString()
-                },
-                version: '4.3.0',
-                apiVersion: 'TourAPI 4.0'
-            }
-        });
-
-    } catch (error) {
-        console.error('🚨 TourAPI 오류:', error);
-        
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-            code: error.code || 'INTERNAL_SERVER_ERROR',
-            operation: req.query.operation || req.body?.operation,
-            timestamp: new Date().toISOString(),
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
-    }
-};
-
-// 지원하는 오퍼레이션 목록
-const SUPPORTED_OPERATIONS = [
-    'search', 'areaBasedList', 'locationBasedList', 'searchKeyword',
-    'searchFestival', 'searchStay', 'detailCommon', 'detailIntro',
-    'detailInfo', 'detailImage', 'detailPetTour', 'areaCode',
-    'categoryCode', 'ldongCode', 'lclsSystmCode', 'areaBasedSyncList',
-    'getAllData'
-];
-
-// **지역기반 관광정보 조회**
-async function handleAreaBasedSearch(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        arrange = 'C',
-        contentTypeId = '',
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        modifiedtime = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        detailed = 'false',
-        includeImages = 'false',
-        userLat = '',
-        userLng = '',
-        radius = '',
-        debug = 'false'
-    } = params;
-
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2';
-    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}`;
-    
-    // 매뉴얼 v4.3 기준 파라미터 추가
-    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    // 응답 검증
-    validateApiResponse(data, 'areaBasedList');
-
-    const items = extractItems(data);
-    let processedItems = await processBasicItems(items, userLat, userLng, radius, debug);
-
-    // 상세 정보 추가
-    if (detailed === 'true' && processedItems.length > 0) {
-        processedItems = await addDetailedInfo(apiKey, processedItems, {
-            includeImages: includeImages === 'true',
-            maxItems: Math.min(processedItems.length, 10)
-        });
-    }
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            }
-        },
-        metadata: {
-            operation: 'areaBasedList',
-            searchParams: params,
-            performance: {
-                searchTime,
-                itemCount: processedItems.length,
-                detailedCount: processedItems.filter(item => item.detailed).length
-            }
-        }
-    };
-}
-
-// **위치기반 관광정보 조회**
-async function handleLocationBasedSearch(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        arrange = 'E', // 거리순 기본
-        contentTypeId = '',
-        mapX, // 필수
-        mapY, // 필수
-        radius, // 필수
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        modifiedtime = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        detailed = 'false',
-        includeImages = 'false'
-    } = params;
-
-    // 필수 파라미터 검증
-    if (!mapX || !mapY || !radius) {
-        throw new ValidationError('위치기반 검색에는 mapX, mapY, radius가 필수입니다');
-    }
-
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/locationBasedList2';
-    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&mapX=${mapX}&mapY=${mapY}&radius=${radius}`;
-    
-    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'locationBasedList');
-
-    const items = extractItems(data);
-    let processedItems = items.map(item => ({
-        ...processBasicItem(item),
-        dist: parseFloat(item.dist) || null // API에서 제공하는 거리 정보
-    }));
-
-    // 상세 정보 추가
-    if (detailed === 'true' && processedItems.length > 0) {
-        processedItems = await addDetailedInfo(apiKey, processedItems, {
-            includeImages: includeImages === 'true',
-            maxItems: Math.min(processedItems.length, 10)
-        });
-    }
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            },
-            searchCenter: {
-                lat: parseFloat(mapY),
-                lng: parseFloat(mapX),
-                radius: parseFloat(radius)
-            }
-        },
-        metadata: {
-            operation: 'locationBasedList',
-            searchParams: params,
-            performance: { searchTime, itemCount: processedItems.length }
-        }
-    };
-}
-
-// **키워드 검색 조회**
-async function handleKeywordSearch(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        arrange = 'C',
-        keyword, // 필수
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        detailed = 'false',
-        includeImages = 'false',
-        userLat = '',
-        userLng = '',
-        radius = ''
-    } = params;
-
-    if (!keyword || keyword.trim() === '') {
-        throw new ValidationError('키워드 검색에는 keyword가 필수입니다');
-    }
-
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchKeyword2';
-    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&keyword=${encodeURIComponent(keyword)}`;
-    
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'searchKeyword');
-
-    const items = extractItems(data);
-    let processedItems = await processBasicItems(items, userLat, userLng, radius);
-
-    // 상세 정보 추가
-    if (detailed === 'true' && processedItems.length > 0) {
-        processedItems = await addDetailedInfo(apiKey, processedItems, {
-            includeImages: includeImages === 'true',
-            maxItems: Math.min(processedItems.length, 10)
-        });
-    }
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            },
-            searchKeyword: keyword
-        },
-        metadata: {
-            operation: 'searchKeyword',
-            searchParams: params,
-            performance: { searchTime, itemCount: processedItems.length }
-        }
-    };
-}
-
-// **행사정보 조회**
-async function handleFestivalSearch(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        arrange = 'C',
-        eventStartDate, // 필수
-        eventEndDate = '',
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        modifiedtime = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        detailed = 'false',
-        includeImages = 'false'
-    } = params;
-
-    if (!eventStartDate) {
-        throw new ValidationError('행사정보 조회에는 eventStartDate가 필수입니다');
-    }
-
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchFestival2';
-    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}&eventStartDate=${eventStartDate}`;
-    
-    if (eventEndDate) url += `&eventEndDate=${eventEndDate}`;
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'searchFestival');
-
-    const items = extractItems(data);
-    let processedItems = items.map(item => ({
-        ...processBasicItem(item),
-        eventstartdate: item.eventstartdate,
-        eventenddate: item.eventenddate,
-        progresstype: item.progresstype || null,
-        festivaltype: item.festivaltype || null
-    }));
-
-    // 상세 정보 추가
-    if (detailed === 'true' && processedItems.length > 0) {
-        processedItems = await addDetailedInfo(apiKey, processedItems, {
-            includeImages: includeImages === 'true',
-            maxItems: Math.min(processedItems.length, 10)
-        });
-    }
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            },
-            eventPeriod: {
-                startDate: eventStartDate,
-                endDate: eventEndDate || null
-            }
-        },
-        metadata: {
-            operation: 'searchFestival',
-            searchParams: params,
-            performance: { searchTime, itemCount: processedItems.length }
-        }
-    };
-}
-
-// **숙박정보 조회**
-async function handleStaySearch(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        arrange = 'C',
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        modifiedtime = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        detailed = 'false',
-        includeImages = 'false'
-    } = params;
-
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchStay2';
-    let url = `${baseUrl}?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=${arrange}`;
-    
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'searchStay');
-
-    const items = extractItems(data);
-    let processedItems = items.map(item => processBasicItem(item));
-
-    // 상세 정보 추가
-    if (detailed === 'true' && processedItems.length > 0) {
-        processedItems = await addDetailedInfo(apiKey, processedItems, {
-            includeImages: includeImages === 'true',
-            maxItems: Math.min(processedItems.length, 10)
-        });
-    }
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            }
-        },
-        metadata: {
-            operation: 'searchStay',
-            searchParams: params,
-            performance: { searchTime, itemCount: processedItems.length }
-        }
-    };
-}
-
-// **공통정보 조회**
-async function handleDetailCommon(apiKey, params) {
-    const { contentId } = params;
-
-    if (!contentId) {
-        throw new ValidationError('공통정보 조회에는 contentId가 필수입니다');
-    }
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/detailCommon2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'detailCommon');
-
-    const item = extractSingleItem(data);
-    const processedItem = {
-        contentId: item.contentid,
-        contentTypeId: item.contenttypeid,
-        title: item.title,
-        createdtime: item.createdtime,
-        modifiedtime: item.modifiedtime,
-        tel: item.tel || null,
-        telname: item.telname || null,
-        homepage: item.homepage?.replace(/<[^>]*>/g, '') || null,
-        firstimage: item.firstimage || null,
-        firstimage2: item.firstimage2 || null,
-        cpyrhtDivCd: item.cpyrhtDivCd || null,
-        areacode: item.areacode,
-        sigungucode: item.sigungucode,
-        cat1: item.cat1,
-        cat2: item.cat2,
-        cat3: item.cat3,
-        addr1: item.addr1,
-        addr2: item.addr2 || null,
-        zipcode: item.zipcode || null,
-        mapx: parseFloat(item.mapx) || null,
-        mapy: parseFloat(item.mapy) || null,
-        mlevel: item.mlevel || null,
-        overview: item.overview || null,
-        // v4.3 신규 필드
-        lDongRegnCd: item.lDongRegnCd || null,
-        lDongSignguCd: item.lDongSignguCd || null,
-        lclsSystm1: item.lclsSystm1 || null,
-        lclsSystm2: item.lclsSystm2 || null,
-        lclsSystm3: item.lclsSystm3 || null
-    };
-
-    return {
-        data: processedItem,
-        metadata: {
-            operation: 'detailCommon',
-            contentId,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **소개정보 조회**
-async function handleDetailIntro(apiKey, params) {
-    const { contentId, contentTypeId } = params;
-
-    if (!contentId || !contentTypeId) {
-        throw new ValidationError('소개정보 조회에는 contentId와 contentTypeId가 필수입니다');
-    }
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/detailIntro2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&contentTypeId=${contentTypeId}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'detailIntro');
-
-    const item = extractSingleItem(data);
-    const processedItem = processDetailIntroItem(contentTypeId, item);
-
-    return {
-        data: processedItem,
-        metadata: {
-            operation: 'detailIntro',
-            contentId,
-            contentTypeId,
-            typeName: getContentTypeName(contentTypeId),
-            performance: { searchTime }
-        }
-    };
-}
-
-// **반복정보 조회**
-async function handleDetailInfo(apiKey, params) {
-    const { contentId, contentTypeId } = params;
-
-    if (!contentId || !contentTypeId) {
-        throw new ValidationError('반복정보 조회에는 contentId와 contentTypeId가 필수입니다');
-    }
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/detailInfo2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&contentTypeId=${contentTypeId}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'detailInfo');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => processDetailInfoItem(contentTypeId, item));
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'detailInfo',
-            contentId,
-            contentTypeId,
-            typeName: getContentTypeName(contentTypeId),
-            itemCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **이미지정보 조회**
-async function handleDetailImage(apiKey, params) {
-    const { contentId, imageYN = 'Y' } = params;
-
-    if (!contentId) {
-        throw new ValidationError('이미지정보 조회에는 contentId가 필수입니다');
-    }
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/detailImage2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&contentId=${contentId}&imageYN=${imageYN}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'detailImage');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => ({
-        contentId: item.contentid,
-        originimgurl: item.originimgurl,
-        smallimageurl: item.smallimageurl,
-        cpyrhtDivCd: item.cpyrhtDivCd || null,
-        imgname: item.imgname || null,
-        serialnum: item.serialnum || null
-    }));
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'detailImage',
-            contentId,
-            imageYN,
-            imageCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **반려동물 여행정보 조회** (v4.1 신규)
-async function handleDetailPetTour(apiKey, params) {
-    const { contentId = '' } = params;
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/detailPetTour2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json${contentId ? `&contentId=${contentId}` : ''}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'detailPetTour');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => ({
-        contentId: item.contentid,
-        petTursmInfo: item.petTursmInfo || null,
-        relaAcdntRiskMtr: item.relaAcdntRiskMtr || null,
-        acmpyTypeCd: item.acmpyTypeCd || null,
-        relaPosesFclty: item.relaPosesFclty || null,
-        relaFrnshPrdlst: item.relaFrnshPrdlst || null,
-        etcAcmpyInfo: item.etcAcmpyInfo || null,
-        relaPurcPrdlst: item.relaPurcPrdlst || null,
-        acmpyPsblCpam: item.acmpyPsblCpam || null,
-        relaRntlPrdlst: item.relaRntlPrdlst || null,
-        acmpyNeedMtr: item.acmpyNeedMtr || null
-    }));
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'detailPetTour',
-            contentId: contentId || 'all',
-            petInfoCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **지역코드 조회**
-async function handleAreaCode(apiKey, params) {
-    const { areaCode = '', numOfRows = '100', pageNo = '1' } = params;
-
-    const url = `https://apis.data.go.kr/B551011/KorService2/areaCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}${areaCode ? `&areaCode=${areaCode}` : ''}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'areaCode');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => ({
-        code: item.code,
-        name: item.name,
-        rnum: item.rnum
-    }));
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'areaCode',
-            areaCode: areaCode || 'all',
-            codeCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **서비스분류코드 조회**
-async function handleCategoryCode(apiKey, params) {
-    const { 
-        contentTypeId = '', 
-        cat1 = '', 
-        cat2 = '', 
-        cat3 = '',
-        numOfRows = '100', 
-        pageNo = '1' 
-    } = params;
-
-    let url = `https://apis.data.go.kr/B551011/KorService2/categoryCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}`;
-    
-    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'categoryCode');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => ({
-        code: item.code,
-        name: item.name,
-        rnum: item.rnum
-    }));
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'categoryCode',
-            searchParams: { contentTypeId, cat1, cat2, cat3 },
-            codeCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **법정동코드 조회** (v4.3 신규)
-async function handleLdongCode(apiKey, params) {
-    const { 
-        lDongRegnCd = '', 
-        lDongListYn = 'N',
-        numOfRows = '1000', 
-        pageNo = '1' 
-    } = params;
-
-    let url = `https://apis.data.go.kr/B551011/KorService2/ldongCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&lDongListYn=${lDongListYn}`;
-    
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'ldongCode');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => {
-        if (lDongListYn === 'Y') {
-            return {
-                lDongRegnCd: item.lDongRegnCd,
-                lDongRegnNm: item.lDongRegnNm,
-                lDongSignguCd: item.lDongSignguCd,
-                lDongSignguNm: item.lDongSignguNm,
-                rnum: item.rnum
-            };
-        } else {
-            return {
-                code: item.code,
-                name: item.name,
-                rnum: item.rnum
-            };
-        }
-    });
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'ldongCode',
-            lDongRegnCd: lDongRegnCd || 'all',
-            listMode: lDongListYn === 'Y',
-            codeCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **분류체계코드 조회** (v4.3 신규)
-async function handleLclsSystmCode(apiKey, params) {
-    const { 
-        lclsSystm1 = '', 
-        lclsSystm2 = '', 
-        lclsSystm3 = '',
-        lclsSystmListYn = 'N',
-        numOfRows = '1000', 
-        pageNo = '1' 
-    } = params;
-
-    let url = `https://apis.data.go.kr/B551011/KorService2/lclsSystmCode2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&lclsSystmListYn=${lclsSystmListYn}`;
-    
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'lclsSystmCode');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => {
-        if (lclsSystmListYn === 'Y') {
-            return {
-                lclsSystm1Cd: item.lclsSystm1Cd,
-                lclsSystm1Nm: item.lclsSystm1Nm,
-                lclsSystm2Cd: item.lclsSystm2Cd,
-                lclsSystm2Nm: item.lclsSystm2Nm,
-                lclsSystm3Cd: item.lclsSystm3Cd,
-                lclsSystm3Nm: item.lclsSystm3Nm,
-                rnum: item.rnum
-            };
-        } else {
-            return {
-                code: item.code,
-                name: item.name,
-                rnum: item.rnum
-            };
-        }
-    });
-
-    return {
-        data: processedItems,
-        metadata: {
-            operation: 'lclsSystmCode',
-            searchParams: { lclsSystm1, lclsSystm2, lclsSystm3 },
-            listMode: lclsSystmListYn === 'Y',
-            codeCount: processedItems.length,
-            performance: { searchTime }
-        }
-    };
-}
-
-// **동기화 목록 조회**
-async function handleAreaBasedSyncList(apiKey, params) {
-    const {
-        numOfRows = '10',
-        pageNo = '1',
-        showflag = '1',
-        modifiedtime = '',
-        arrange = 'C',
-        contentTypeId = '',
-        areaCode = '',
-        sigunguCode = '',
-        cat1 = '',
-        cat2 = '',
-        cat3 = '',
-        lDongRegnCd = '',
-        lDongSignguCd = '',
-        lclsSystm1 = '',
-        lclsSystm2 = '',
-        lclsSystm3 = '',
-        oldContentid = ''
-    } = params;
-
-    let url = `https://apis.data.go.kr/B551011/KorService2/areaBasedSyncList2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=HealingK&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&showflag=${showflag}&arrange=${arrange}`;
-    
-    if (modifiedtime) url += `&modifiedtime=${modifiedtime}`;
-    if (contentTypeId) url += `&contentTypeId=${contentTypeId}`;
-    if (areaCode) url += `&areaCode=${areaCode}`;
-    if (sigunguCode) url += `&sigunguCode=${sigunguCode}`;
-    if (cat1) url += `&cat1=${cat1}`;
-    if (cat2) url += `&cat2=${cat2}`;
-    if (cat3) url += `&cat3=${cat3}`;
-    if (lDongRegnCd) url += `&lDongRegnCd=${lDongRegnCd}`;
-    if (lDongSignguCd) url += `&lDongSignguCd=${lDongSignguCd}`;
-    if (lclsSystm1) url += `&lclsSystm1=${lclsSystm1}`;
-    if (lclsSystm2) url += `&lclsSystm2=${lclsSystm2}`;
-    if (lclsSystm3) url += `&lclsSystm3=${lclsSystm3}`;
-    if (oldContentid) url += `&oldContentid=${oldContentid}`;
-
-    const startTime = Date.now();
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
-    const searchTime = Date.now() - startTime;
-
-    validateApiResponse(data, 'areaBasedSyncList');
-
-    const items = extractItems(data);
-    const processedItems = items.map(item => ({
-        ...processBasicItem(item),
-        showflag: item.showflag,
-        lDongRegnCd: item.lDongRegnCd || null,
-        lDongSignguCd: item.lDongSignguCd || null,
-        lclsSystm1: item.lclsSystm1 || null,
-        lclsSystm2: item.lclsSystm2 || null,
-        lclsSystm3: item.lclsSystm3 || null
-    }));
-
-    return {
-        data: {
-            items: processedItems,
-            pagination: {
-                totalCount: data.response?.body?.totalCount || processedItems.length,
-                pageNo: parseInt(pageNo),
-                numOfRows: parseInt(numOfRows),
-                hasNext: (parseInt(pageNo) * parseInt(numOfRows)) < (data.response?.body?.totalCount || 0)
-            },
-            syncInfo: {
-                showflag: showflag === '1' ? '표출' : '비표출',
-                modifiedtime: modifiedtime || 'all'
-            }
-        },
-        metadata: {
-            operation: 'areaBasedSyncList',
-            searchParams: params,
-            performance: { searchTime, itemCount: processedItems.length }
-        }
-    };
-}
-
-// **통합 데이터 조회** (모든 정보를 한번에)
-async function handleGetAllData(apiKey, params) {
-    const { contentId, includeImages = 'true' } = params;
-
-    if (!contentId) {
-        throw new ValidationError('통합 데이터 조회에는 contentId가 필수입니다');
-    }
-
-    const startTime = Date.now();
-
-    try {
-        // 기본 정보 조회
-        const commonResult = await handleDetailCommon(apiKey, { contentId });
-        const commonData = commonResult.data;
-        
-        const contentTypeId = commonData.contentTypeId;
-
-        // 병렬로 상세 정보들 조회
-        const [introResult, infoResult, imageResult, petResult] = await Promise.allSettled([
-            handleDetailIntro(apiKey, { contentId, contentTypeId }),
-            handleDetailInfo(apiKey, { contentId, contentTypeId }),
-            includeImages === 'true' ? handleDetailImage(apiKey, { contentId }) : Promise.resolve(null),
-            handleDetailPetTour(apiKey, { contentId }).catch(() => null) // 반려동물 정보는 선택적
-        ]);
-
-        const allData = {
-            common: commonData,
-            intro: introResult.status === 'fulfilled' ? introResult.value.data : null,
-            info: infoResult.status === 'fulfilled' ? infoResult.value.data : null,
-            images: imageResult.status === 'fulfilled' && imageResult.value ? imageResult.value.data : null,
-            petTour: petResult.status === 'fulfilled' && petResult.value ? petResult.value.data : null,
-            completeness: calculateCompleteness({
-                common: commonData,
-                intro: introResult.status === 'fulfilled' ? introResult.value.data : null,
-                info: infoResult.status === 'fulfilled' ? infoResult.value.data : null,
-                images: imageResult.status === 'fulfilled' && imageResult.value ? imageResult.value.data : null
-            })
-        };
-
-        const totalTime = Date.now() - startTime;
-
-        return {
-            data: allData,
-            metadata: {
-                operation: 'getAllData',
-                contentId,
-                contentTypeId,
-                typeName: getContentTypeName(contentTypeId),
-                performance: {
-                    totalTime,
-                    apiCalls: 4 + (includeImages === 'true' ? 1 : 0)
-                },
-                errors: [
-                    introResult.status === 'rejected' ? `intro: ${introResult.reason?.message}` : null,
-                    infoResult.status === 'rejected' ? `info: ${infoResult.reason?.message}` : null,
-                    imageResult.status === 'rejected' ? `images: ${imageResult.reason?.message}` : null,
-                    petResult.status === 'rejected' ? `petTour: ${petResult.reason?.message}` : null
-                ].filter(Boolean)
-            }
-        };
-
-    } catch (error) {
-        throw new Error(`통합 데이터 조회 실패: ${error.message}`);
-    }
-}
-
-// **유틸리티 함수들**
-
-// API 응답 검증
-function validateApiResponse(data, operation) {
-    const resultCode = data.resultCode || data.response?.header?.resultCode;
-    
-    if (resultCode !== '0' && resultCode !== '0000') {
-        const errorMessage = data.response?.header?.resultMsg || '알 수 없는 오류';
-        throw new ApiError(`${operation} API 오류: ${errorMessage}`, resultCode);
-    }
-}
-
-// 아이템 추출
-function extractItems(data) {
-    const items = data.response?.body?.items?.item || data.items?.item || [];
-    return Array.isArray(items) ? items : items ? [items] : [];
-}
-
-// 단일 아이템 추출
-function extractSingleItem(data) {
-    const items = extractItems(data);
-    if (items.length === 0) {
-        throw new ApiError('데이터를 찾을 수 없습니다', 'NO_DATA');
-    }
-    return items[0];
-}
-
-// 기본 아이템 처리
-function processBasicItem(item) {
-    // 좌표 변환 및 검증
-    let mapx = null;
-    let mapy = null;
-    
-    if (item.mapx && item.mapx !== '' && item.mapx !== '0') {
-        const parsedX = parseFloat(item.mapx);
-        if (!isNaN(parsedX) && parsedX !== 0) {
-            mapx = parsedX;
-        }
-    }
-    
-    if (item.mapy && item.mapy !== '' && item.mapy !== '0') {
-        const parsedY = parseFloat(item.mapy);
-        if (!isNaN(parsedY) && parsedY !== 0) {
-            mapy = parsedY;
-        }
-    }
-
-    return {
-        contentId: item.contentid,
-        contentTypeId: item.contenttypeid,
-        title: item.title,
-        addr1: item.addr1 || null,
-        addr2: item.addr2 || null,
-        tel: item.tel || null,
-        firstimage: item.firstimage || null,
-        firstimage2: item.firstimage2 || null,
-        cpyrhtDivCd: item.cpyrhtDivCd || null,
-        mapx: mapx,
-        mapy: mapy,
-        mlevel: item.mlevel || null,
-        areacode: item.areacode || null,
-        sigungucode: item.sigungucode || null,
-        cat1: item.cat1 || null,
-        cat2: item.cat2 || null,
-        cat3: item.cat3 || null,
-        readcount: parseInt(item.readcount) || 0,
-        modifiedtime: item.modifiedtime || null,
-        zipcode: item.zipcode || null,
-        createdtime: item.createdtime || null,
-        typeName: getContentTypeName(item.contenttypeid),
-        categoryInfo: getCategoryInfo(item.cat1, item.cat2, item.cat3),
-        areaInfo: getAreaInfo(item.areacode, item.sigungucode)
-    };
-}
-
-// 기본 아이템들 처리 (거리 계산 포함)
-async function processBasicItems(items, userLat, userLng, radius, debug = false) {
-    let processedItems = items.map(item => processBasicItem(item));
-
-    // 거리 계산
-    const hasUserLocation = userLat && userLng && 
-        userLat.trim() !== '' && userLng.trim() !== '' &&
-        !isNaN(parseFloat(userLat)) && !isNaN(parseFloat(userLng));
-
-    if (hasUserLocation) {
-        const userLatNum = parseFloat(userLat);
-        const userLngNum = parseFloat(userLng);
-        const radiusKm = radius && !isNaN(parseFloat(radius)) ? parseFloat(radius) : null;
-
-        processedItems = processedItems.map(item => {
-            if (item.mapx && item.mapy) {
-                const distance = calculateDistance(userLatNum, userLngNum, item.mapy, item.mapx);
-                return { ...item, distance: distance !== null ? Math.round(distance * 100) / 100 : null };
-            }
-            return { ...item, distance: null };
-        });
-
-        // 반경 필터링
-        if (radiusKm && radiusKm > 0) {
-            const itemsWithDistance = processedItems.filter(item => 
-                item.distance !== null && item.distance <= radiusKm
-            );
-            
-            if (itemsWithDistance.length > 0) {
-                processedItems = itemsWithDistance;
-            }
-        }
-
-        // 거리순 정렬
-        processedItems.sort((a, b) => {
-            const distA = a.distance !== null ? a.distance : 999999;
-            const distB = b.distance !== null ? b.distance : 999999;
-            return distA - distB;
-        });
-    }
-
-    return processedItems;
-}
-
-// 상세 정보 추가
-async function addDetailedInfo(apiKey, items, options = {}) {
-    const { includeImages = false, maxItems = 5 } = options;
-    const detailedItems = items.slice(0, maxItems);
-    
-    const detailedPromises = detailedItems.map(async (item) => {
-        try {
-            const detailPromises = [
-                handleDetailCommon(apiKey, { contentId: item.contentId }),
-                handleDetailIntro(apiKey, { contentId: item.contentId, contentTypeId: item.contentTypeId })
-            ];
-
-            if (includeImages) {
-                detailPromises.push(
-                    handleDetailImage(apiKey, { contentId: item.contentId }).catch(() => null)
-                );
-            }
-
-            const results = await Promise.allSettled(detailPromises);
-            
-            const detailed = {
-                common: results[0].status === 'fulfilled' ? results[0].value.data : null,
-                intro: results[1].status === 'fulfilled' ? results[1].value.data : null,
-                images: includeImages && results[2] && results[2].status === 'fulfilled' 
-                    ? results[2].value.data : null,
-                completeness: 50, // 기본값
-                hasError: results.some(r => r.status === 'rejected')
-            };
-
-            // Overview가 있으면 업데이트
-            if (detailed.common?.overview && !item.overview) {
-                item.overview = detailed.common.overview;
-            }
-
-            detailed.completeness = calculateCompleteness(detailed);
-
-            return { ...item, detailed };
-        } catch (error) {
-            return { 
-                ...item, 
-                detailed: { 
-                    error: error.message, 
-                    completeness: 20, 
-                    hasError: true 
-                } 
-            };
-        }
-    });
-
-    const detailedResults = await Promise.all(detailedPromises);
-    return [...detailedResults, ...items.slice(maxItems)];
-}
-
-// 상세 소개정보 처리
-function processDetailIntroItem(contentTypeId, item) {
-    const baseInfo = {
-        contentId: item.contentid,
-        contentTypeId: item.contenttypeid,
-        typeName: getContentTypeName(contentTypeId)
-    };
-
-    // 타입별 상세 정보 매핑 (매뉴얼 v4.3 기준)
-    switch (contentTypeId) {
-        case '12': // 관광지
-            return {
-                ...baseInfo,
-                accomcount: item.accomcount || null,
-                chkbabycarriage: item.chkbabycarriage || null,
-                chkcreditcard: item.chkcreditcard || null,
-                chkpet: item.chkpet || null,
-                expagerange: item.expagerange || null,
-                expguide: item.expguide || null,
-                heritage1: item.heritage1 || null,
-                heritage2: item.heritage2 || null,
-                heritage3: item.heritage3 || null,
-                infocenter: item.infocenter || null,
-                opendate: item.opendate || null,
-                parking: item.parking || null,
-                restdate: item.restdate || null,
-                useseason: item.useseason || null,
-                usetime: item.usetime || null
-            };
-
-        case '14': // 문화시설
-            return {
-                ...baseInfo,
-                accomcountculture: item.accomcountculture || null,
-                chkbabycarriageculture: item.chkbabycarriageculture || null,
-                chkcreditcardculture: item.chkcreditcardculture || null,
-                chkpetculture: item.chkpetculture || null,
-                discountinfo: item.discountinfo || null,
-                infocenterculture: item.infocenterculture || null,
-                parkingculture: item.parkingculture || null,
-                parkingfee: item.parkingfee || null,
-                restdateculture: item.restdateculture || null,
-                usefee: item.usefee || null,
-                usetimeculture: item.usetimeculture || null,
-                scale: item.scale || null,
-                spendtime: item.spendtime || null
-            };
-
-        case '15': // 행사/공연/축제
-            return {
-                ...baseInfo,
-                agelimit: item.agelimit || null,
-                bookingplace: item.bookingplace || null,
-                discountinfofestival: item.discountinfofestival || null,
-                eventenddate: item.eventenddate || null,
-                eventhomepage: item.eventhomepage || null,
-                eventplace: item.eventplace || null,
-                eventstartdate: item.eventstartdate || null,
-                festivalgrade: item.festivalgrade || null,
-                placeinfo: item.placeinfo || null,
-                playtime: item.playtime || null,
-                program: item.program || null,
-                spendtimefestival: item.spendtimefestival || null,
-                sponsor1: item.sponsor1 || null,
-                sponsor1tel: item.sponsor1tel || null,
-                sponsor2: item.sponsor2 || null,
-                sponsor2tel: item.sponsor2tel || null,
-                subevent: item.subevent || null,
-                usetimefestival: item.usetimefestival || null
-            };
-
-        case '25': // 여행코스
-            return {
-                ...baseInfo,
-                distance: item.distance || null,
-                infocentertourcourse: item.infocentertourcourse || null,
-                schedule: item.schedule || null,
-                taketime: item.taketime || null,
-                theme: item.theme || null
-            };
-
-        case '28': // 레포츠
-            return {
-                ...baseInfo,
-                accomcountleports: item.accomcountleports || null,
-                chkbabycarriageleports: item.chkbabycarriageleports || null,
-                chkcreditcardleports: item.chkcreditcardleports || null,
-                chkpetleports: item.chkpetleports || null,
-                expagerangeleports: item.expagerangeleports || null,
-                infocenterleports: item.infocenterleports || null,
-                openperiod: item.openperiod || null,
-                parkingfeeleports: item.parkingfeeleports || null,
-                parkingleports: item.parkingleports || null,
-                reservation: item.reservation || null,
-                restdateleports: item.restdateleports || null,
-                scaleleports: item.scaleleports || null,
-                usefeeleports: item.usefeeleports || null,
-                usetimeleports: item.usetimeleports || null
-            };
-
-        case '32': // 숙박
-            return {
-                ...baseInfo,
-                accomcountlodging: item.accomcountlodging || null,
-                checkintime: item.checkintime || null,
-                checkouttime: item.checkouttime || null,
-                chkcooking: item.chkcooking || null,
-                foodplace: item.foodplace || null,
-                infocenterlodging: item.infocenterlodging || null,
-                parkinglodging: item.parkinglodging || null,
-                pickup: item.pickup || null,
-                roomcount: item.roomcount || null,
-                reservationlodging: item.reservationlodging || null,
-                reservationurl: item.reservationurl || null,
-                roomtype: item.roomtype || null,
-                scalelodging: item.scalelodging || null,
-                subfacility: item.subfacility || null,
-                barbecue: item.barbecue || null,
-                beauty: item.beauty || null,
-                beverage: item.beverage || null,
-                bicycle: item.bicycle || null,
-                campfire: item.campfire || null,
-                fitness: item.fitness || null,
-                karaoke: item.karaoke || null,
-                publicbath: item.publicbath || null,
-                publicpc: item.publicpc || null,
-                sauna: item.sauna || null,
-                seminar: item.seminar || null,
-                sports: item.sports || null,
-                refundregulation: item.refundregulation || null
-            };
-
-        case '38': // 쇼핑
-            return {
-                ...baseInfo,
-                chkbabycarriageshopping: item.chkbabycarriageshopping || null,
-                chkcreditcardshopping: item.chkcreditcardshopping || null,
-                chkpetshopping: item.chkpetshopping || null,
-                culturecenter: item.culturecenter || null,
-                fairday: item.fairday || null,
-                infocentershopping: item.infocentershopping || null,
-                opendateshopping: item.opendateshopping || null,
-                opentime: item.opentime || null,
-                parkingshopping: item.parkingshopping || null,
-                restdateshopping: item.restdateshopping || null,
-                restroom: item.restroom || null,
-                saleitem: item.saleitem || null,
-                saleitemcost: item.saleitemcost || null,
-                scaleshopping: item.scaleshopping || null,
-                shopguide: item.shopguide || null
-            };
-
-        case '39': // 음식점
-            return {
-                ...baseInfo,
-                chkcreditcardfood: item.chkcreditcardfood || null,
-                discountinfofood: item.discountinfofood || null,
-                firstmenu: item.firstmenu || null,
-                infocenterfood: item.infocenterfood || null,
-                kidsfacility: item.kidsfacility || null,
-                lcnsno: item.lcnsno || null,
-                opendatefood: item.opendatefood || null,
-                opentimefood: item.opentimefood || null,
-                packing: item.packing || null,
-                parkingfood: item.parkingfood || null,
-                reservationfood: item.reservationfood || null,
-                restdatefood: item.restdatefood || null,
-                scalefood: item.scalefood || null,
-                seat: item.seat || null,
-                smoking: item.smoking || null,
-                treatmenu: item.treatmenu || null
-            };
-
-        default:
-            return baseInfo;
-    }
-}
-
-// 반복정보 처리
-function processDetailInfoItem(contentTypeId, item) {
-    const baseInfo = {
-        contentId: item.contentid,
-        contentTypeId: item.contenttypeid
-    };
-
-    if (contentTypeId === '32') { // 숙박 - 객실정보
-        return {
-            ...baseInfo,
-            type: 'room',
-            roomcode: item.roomcode || null,
-            roomtitle: item.roomtitle || null,
-            roomsize1: item.roomsize1 || null,
-            roomsize2: item.roomsize2 || null,
-            roomcount: item.roomcount || null,
-            roombasecount: item.roombasecount || null,
-            roommaxcount: item.roommaxcount || null,
-            roomoffseasonminfee1: item.roomoffseasonminfee1 || null,
-            roomoffseasonminfee2: item.roomoffseasonminfee2 || null,
-            roompeakseasonminfee1: item.roompeakseasonminfee1 || null,
-            roompeakseasonminfee2: item.roompeakseasonminfee2 || null,
-            roomintro: item.roomintro || null,
-            // 객실 시설
-            roombathfacility: item.roombathfacility || null,
-            roombath: item.roombath || null,
-            roomhometheater: item.roomhometheater || null,
-            roomaircondition: item.roomaircondition || null,
-            roomtv: item.roomtv || null,
-            roompc: item.roompc || null,
-            roomcable: item.roomcable || null,
-            roominternet: item.roominternet || null,
-            roomrefrigerator: item.roomrefrigerator || null,
-            roomtoiletries: item.roomtoiletries || null,
-            roomsofa: item.roomsofa || null,
-            roomcook: item.roomcook || null,
-            roomtable: item.roomtable || null,
-            roomhairdryer: item.roomhairdryer || null,
-            // 객실 이미지
-            roomimg1: item.roomimg1 || null,
-            roomimg1alt: item.roomimg1alt || null,
-            cpyrhtDivCd1: item.cpyrhtDivCd1 || null,
-            roomimg2: item.roomimg2 || null,
-            roomimg2alt: item.roomimg2alt || null,
-            cpyrhtDivCd2: item.cpyrhtDivCd2 || null,
-            roomimg3: item.roomimg3 || null,
-            roomimg3alt: item.roomimg3alt || null,
-            cpyrhtDivCd3: item.cpyrhtDivCd3 || null,
-            roomimg4: item.roomimg4 || null,
-            roomimg4alt: item.roomimg4alt || null,
-            cpyrhtDivCd4: item.cpyrhtDivCd4 || null,
-            roomimg5: item.roomimg5 || null,
-            roomimg5alt: item.roomimg5alt || null,
-            cpyrhtDivCd5: item.cpyrhtDivCd5 || null
-        };
-    } else if (contentTypeId === '25') { // 여행코스 - 코스정보
-        return {
-            ...baseInfo,
-            type: 'course',
-            subcontentid: item.subcontentid || null,
-            subname: item.subname || null,
-            subdetailoverview: item.subdetailoverview || null,
-            subdetailimg: item.subdetailimg || null,
-            subdetailalt: item.subdetailalt || null,
-            subnum: item.subnum || null
-        };
-    } else { // 기타 - 일반 반복정보
-        return {
-            ...baseInfo,
-            type: 'general',
-            fldgubun: item.fldgubun || null,
-            infoname: item.infoname || null,
-            infotext: item.infotext || null,
-            serialnum: item.serialnum || null
-        };
-    }
-}
-
-// 거리 계산 함수 (Haversine formula)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    try {
-        const latitude1 = Number(lat1);
-        const longitude1 = Number(lon1);
-        const latitude2 = Number(lat2);
-        const longitude2 = Number(lon2);
-        
-        if (isNaN(latitude1) || isNaN(longitude1) || isNaN(latitude2) || isNaN(longitude2)) {
-            return null;
-        }
-        
-        if (latitude1 < -90 || latitude1 > 90 || latitude2 < -90 || latitude2 > 90) {
-            return null;
-        }
-        
-        if (longitude1 < -180 || longitude1 > 180 || longitude2 < -180 || longitude2 > 180) {
-            return null;
-        }
-        
-        const R = 6371; // 지구 반지름 (km)
-        
-        const dLat = (latitude2 - latitude1) * Math.PI / 180;
-        const dLon = (longitude2 - longitude1) * Math.PI / 180;
-        
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(latitude1 * Math.PI / 180) * Math.cos(latitude2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distance = R * c;
-        
-        if (isNaN(distance) || distance < 0 || distance > 20000) {
-            return null;
-        }
-        
-        return distance;
-        
-    } catch (error) {
-        return null;
-    }
-}
-
-// 완성도 계산
-function calculateCompleteness(data) {
-    let score = 20; // 기본 점수
-    
-    if (data.common) {
-        if (data.common.overview) score += 25;
-        if (data.common.tel) score += 15;
-        if (data.common.homepage) score += 10;
-        if (data.common.usetime) score += 10;
-        if (data.common.parking) score += 5;
-        if (data.common.usefee) score += 5;
-    }
-    
-    if (data.intro) {
-        score += 10;
-    }
-    
-    if (data.info && Array.isArray(data.info) && data.info.length > 0) {
-        score += 5;
-    }
-    
-    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
-        score += 5;
-    }
-    
-    return Math.min(score, 100);
-}
-
-// HTTP 요청 (재시도 포함)
-async function fetchWithRetry(url, maxRetries = 3) {
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            const response = await fetch(url, {
-                timeout: 10000,
-                headers: {
-                    'User-Agent': 'HealingK-TourAPI/4.3.0'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return response;
-        } catch (error) {
-            if (i === maxRetries - 1) throw error;
-            
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-        }
-    }
-}
-
-// 콘텐츠 타입명
-function getContentTypeName(contentTypeId) {
-    const typeMap = {
-        '12': '관광지',
-        '14': '문화시설',
-        '15': '축제/공연/행사',
-        '25': '여행코스',
-        '28': '레포츠',
-        '32': '숙박',
-        '38': '쇼핑',
-        '39': '음식점'
-    };
-    return typeMap[contentTypeId] || '기타';
-}
-
-// 카테고리 정보
-function getCategoryInfo(cat1, cat2, cat3) {
-    const categoryMap = {
-        'A01': '자연',
-        'A02': '인문(문화/예술/역사)',
-        'A03': '레포츠',
-        'A04': '쇼핑',
-        'A05': '음식',
-        'B02': '숙박',
-        'C01': '추천코스'
-    };
-    
-    return {
-        main: categoryMap[cat1] || '기타',
-        cat1, cat2, cat3
-    };
-}
-
-// 지역 정보
-function getAreaInfo(areaCode, sigunguCode) {
-    const areaMap = {
-        '1': '서울', '2': '인천', '3': '대전', '4': '대구', '5': '광주',
-        '6': '부산', '7': '울산', '8': '세종', '31': '경기', '32': '강원',
-        '33': '충북', '34': '충남', '35': '경북', '36': '경남', '37': '전북',
-        '38': '전남', '39': '제주'
-    };
-    
-    return {
-        area: areaMap[areaCode] || '기타',
-        areaCode,
-        sigunguCode
-    };
-}
-
-// 커스텀 에러 클래스들
+// 에러 클래스
 class ApiError extends Error {
     constructor(message, code = 'API_ERROR') {
         super(message);
@@ -1661,4 +22,967 @@ class ValidationError extends Error {
         this.name = 'ValidationError';
         this.code = 'VALIDATION_ERROR';
     }
+}
+
+class SecurityError extends Error {
+    constructor(message, code) {
+        super(message);
+        this.name = 'SecurityError';
+        this.code = code;
+        this.statusCode = 403;
+    }
+}
+
+// ========================================
+// 2. TourAPI 클라이언트
+// ========================================
+
+class TourAPIClient {
+    constructor() {
+        this.baseUrl = 'https://apis.data.go.kr/B551011/KorService2';
+        this.defaultTimeout = 10000;
+        this.maxRetries = 3;
+        this.retryDelay = 1000;
+        
+        console.log('🌐 TourAPI 클라이언트 초기화');
+    }
+
+    async fetchWithRetry(url, options = {}, retries = this.maxRetries) {
+        const requestOptions = {
+            timeout: this.defaultTimeout,
+            headers: {
+                'User-Agent': 'TourismJS/1.0 (Tourism Information Service)',
+                'Accept': 'application/json',
+                ...options.headers
+            },
+            ...options
+        };
+
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                console.log(`🌐 API 호출 시도 ${attempt}/${retries}: ${this.maskApiKey(url)}`);
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), requestOptions.timeout);
+                
+                const response = await fetch(url, {
+                    ...requestOptions,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                console.log(`✅ API 호출 성공: ${response.status}`);
+                return response;
+
+            } catch (error) {
+                console.error(`❌ API 호출 실패 (${attempt}/${retries}):`, error.message);
+                
+                if (attempt === retries) {
+                    throw new Error(`API 호출 최종 실패: ${error.message}`);
+                }
+                
+                await this.delay(this.retryDelay * attempt);
+            }
+        }
+    }
+
+    validateApiResponse(data, operation) {
+        const resultCode = data.resultCode || data.response?.header?.resultCode;
+        
+        if (resultCode !== '0' && resultCode !== '0000') {
+            const errorMessage = data.response?.header?.resultMsg || 
+                               data.resultMsg || 
+                               '알 수 없는 API 오류';
+            throw new ApiError(`${operation} API 오류: ${errorMessage}`, resultCode);
+        }
+
+        if (!data.response?.body) {
+            throw new ApiError(`${operation} API 응답에 데이터가 없습니다`, 'NO_DATA');
+        }
+
+        return true;
+    }
+
+    extractItems(data) {
+        const items = data.response?.body?.items?.item || 
+                     data.items?.item || [];
+        return Array.isArray(items) ? items : items ? [items] : [];
+    }
+
+    extractSingleItem(data) {
+        const items = this.extractItems(data);
+        if (items.length === 0) {
+            throw new ApiError('데이터를 찾을 수 없습니다', 'NO_DATA');
+        }
+        return items[0];
+    }
+
+    buildUrl(endpoint, params) {
+        const url = new URL(endpoint, this.baseUrl);
+        
+        url.searchParams.set('MobileOS', 'ETC');
+        url.searchParams.set('MobileApp', 'TourismJS');
+        url.searchParams.set('_type', 'json');
+        
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== null && value !== undefined && value !== '') {
+                url.searchParams.set(key, value);
+            }
+        }
+        
+        return url.toString();
+    }
+
+    maskApiKey(url) {
+        return url.replace(/serviceKey=[^&]+/, 'serviceKey=***');
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
+// ========================================
+// 3. 간단한 캐시 매니저
+// ========================================
+
+class SimpleCacheManager {
+    constructor() {
+        this.cache = new Map();
+        this.stats = { hits: 0, misses: 0 };
+        this.maxSize = 100;
+        this.defaultTTL = 3600000; // 1시간
+        
+        console.log('💾 간단한 캐시 매니저 초기화');
+    }
+
+    get(key) {
+        const item = this.cache.get(key);
+        if (!item) {
+            this.stats.misses++;
+            return null;
+        }
+
+        if (Date.now() > item.expires) {
+            this.cache.delete(key);
+            this.stats.misses++;
+            return null;
+        }
+
+        this.stats.hits++;
+        return item.data;
+    }
+
+    set(key, data, ttlSeconds = null) {
+        if (this.cache.size >= this.maxSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+
+        const ttl = ttlSeconds ? ttlSeconds * 1000 : this.defaultTTL;
+        this.cache.set(key, {
+            data,
+            expires: Date.now() + ttl,
+            created: Date.now()
+        });
+    }
+
+    generateKey(prefix, params) {
+        const sortedParams = Object.keys(params)
+            .sort()
+            .map(key => `${key}:${params[key]}`)
+            .join('|');
+        
+        const hash = this.simpleHash(sortedParams);
+        return `${prefix}:${hash}`;
+    }
+
+    simpleHash(str) {
+        let hash = 0;
+        if (str.length === 0) return hash;
+        
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        
+        return Math.abs(hash).toString(36);
+    }
+
+    getStats() {
+        const total = this.stats.hits + this.stats.misses;
+        const hitRate = total > 0 ? (this.stats.hits / total * 100).toFixed(2) : 0;
+        
+        return {
+            size: this.cache.size,
+            maxSize: this.maxSize,
+            hits: this.stats.hits,
+            misses: this.stats.misses,
+            hitRate: `${hitRate}%`
+        };
+    }
+}
+
+// ========================================
+// 4. 보안 시스템 (간단 버전)
+// ========================================
+
+class SimpleSecurity {
+    constructor() {
+        this.allowedDomains = new Set([
+            'localhost', 'vercel.app', 'netlify.app', 'github.io',
+            'tistory.com', 'blog.naver.com', 'brunch.co.kr'
+        ]);
+        
+        this.rateLimitMap = new Map();
+        this.config = {
+            maxRequestsPerMinute: 60,
+            maxRequestsPerHour: 1000
+        };
+        
+        console.log('🔐 간단한 보안 시스템 초기화');
+    }
+
+    async validateRequest(req) {
+        const clientIP = this.getClientIP(req);
+        const referer = req.headers?.referer || req.headers?.origin || '';
+        
+        // 도메인 검증 (관대하게)
+        if (referer) {
+            const domain = this.extractDomain(referer);
+            const isAllowed = this.allowedDomains.has(domain) || 
+                             [...this.allowedDomains].some(allowed => domain.includes(allowed));
+                             
+            if (!isAllowed) {
+                console.log(`⚠️ 허용되지 않은 도메인: ${domain} (하지만 허용)`);
+                // 경고만 하고 차단하지는 않음
+            }
+        }
+
+        // 기본 Rate Limiting
+        await this.checkRateLimit(clientIP);
+        
+        // 기본 입력 정화
+        const sanitizedParams = this.basicSanitize(
+            req.method === 'GET' ? req.query : req.body
+        );
+        
+        return {
+            valid: true,
+            sanitizedParams,
+            clientIP,
+            domain: this.extractDomain(referer) || 'unknown',
+            riskLevel: 'low'
+        };
+    }
+
+    async checkRateLimit(clientIP) {
+        const now = Date.now();
+        const minute = Math.floor(now / 60000);
+        
+        const record = this.rateLimitMap.get(clientIP) || { minute: { time: minute, count: 0 } };
+
+        if (record.minute.time === minute) {
+            record.minute.count++;
+        } else {
+            record.minute = { time: minute, count: 1 };
+        }
+
+        this.rateLimitMap.set(clientIP, record);
+
+        if (record.minute.count > this.config.maxRequestsPerMinute) {
+            throw new SecurityError('요청이 너무 많습니다', 'RATE_LIMITED');
+        }
+
+        return { remaining: this.config.maxRequestsPerMinute - record.minute.count };
+    }
+
+    basicSanitize(params) {
+        if (!params || typeof params !== 'object') {
+            return params;
+        }
+
+        const sanitized = {};
+        
+        for (const [key, value] of Object.entries(params)) {
+            if (typeof value === 'string') {
+                sanitized[key] = value
+                    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                    .replace(/javascript:/gi, '')
+                    .trim();
+            } else {
+                sanitized[key] = value;
+            }
+        }
+
+        return sanitized;
+    }
+
+    getClientIP(req) {
+        return req.headers?.['x-forwarded-for'] || 
+               req.headers?.['x-real-ip'] || 
+               req.connection?.remoteAddress || 
+               'unknown';
+    }
+
+    extractDomain(url) {
+        if (!url) return 'unknown';
+        
+        try {
+            const urlObj = new URL(url);
+            return urlObj.hostname.toLowerCase();
+        } catch {
+            return 'invalid';
+        }
+    }
+}
+
+// ========================================
+// 5. 검색 엔진
+// ========================================
+
+class SearchEngine {
+    constructor() {
+        this.apiClient = new TourAPIClient();
+        this.cache = new SimpleCacheManager();
+        console.log('🔍 검색 엔진 초기화 완료');
+    }
+
+    async executeKeywordSearch(apiKey, params) {
+        const { query, numOfRows = 10, pageNo = 1 } = params;
+        
+        const cacheKey = this.cache.generateKey('keyword', { query, numOfRows, pageNo });
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+
+        let url = `${this.apiClient.baseUrl}/searchKeyword2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=TourismJS&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&keyword=${encodeURIComponent(query)}`;
+        
+        if (params.areaCode) url += `&areaCode=${params.areaCode}`;
+        if (params.contentTypeId) url += `&contentTypeId=${params.contentTypeId}`;
+
+        const response = await this.apiClient.fetchWithRetry(url);
+        const data = await response.json();
+        
+        this.apiClient.validateApiResponse(data, 'searchKeyword');
+        
+        const items = this.apiClient.extractItems(data);
+        const processedItems = items.map(item => this.processBasicItem(item));
+        
+        const result = {
+            items: processedItems,
+            totalCount: data.response?.body?.totalCount || processedItems.length,
+            source: 'keyword'
+        };
+        
+        this.cache.set(cacheKey, result, 1800);
+        return result;
+    }
+
+    async executeLocationSearch(apiKey, params) {
+        const { lat, lng, radius = 1000, numOfRows = 10, pageNo = 1 } = params;
+        
+        const cacheKey = this.cache.generateKey('location', { lat, lng, radius, numOfRows, pageNo });
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+
+        let url = `${this.apiClient.baseUrl}/locationBasedList2?serviceKey=${apiKey}&MobileOS=ETC&MobileApp=TourismJS&_type=json&numOfRows=${numOfRows}&pageNo=${pageNo}&arrange=E&mapX=${lng}&mapY=${lat}&radius=${radius}`;
+        
+        if (params.contentTypeId) url += `&contentTypeId=${params.contentTypeId}`;
+
+        const response = await this.apiClient.fetchWithRetry(url);
+        const data = await response.json();
+        
+        this.apiClient.validateApiResponse(data, 'locationBasedList');
+        
+        const items = this.apiClient.extractItems(data);
+        const processedItems = items.map(item => ({
+            ...this.processBasicItem(item),
+            distance: parseFloat(item.dist) || null
+        }));
+        
+        const result = {
+            items: processedItems,
+            totalCount: data.response?.body?.totalCount || processedItems.length,
+            source: 'location',
+            searchCenter: { lat: parseFloat(lat), lng: parseFloat(lng), radius }
+        };
+        
+        this.cache.set(cacheKey, result, 1800);
+        return result;
+    }
+
+    processBasicItem(item) {
+        return {
+            contentId: item.contentid,
+            contentTypeId: item.contenttypeid,
+            title: item.title,
+            addr1: item.addr1 || null,
+            addr2: item.addr2 || null,
+            tel: item.tel || null,
+            firstimage: item.firstimage || null,
+            firstimage2: item.firstimage2 || null,
+            mapx: parseFloat(item.mapx) || null,
+            mapy: parseFloat(item.mapy) || null,
+            areacode: item.areacode || null,
+            sigungucode: item.sigungucode || null,
+            cat1: item.cat1 || null,
+            cat2: item.cat2 || null,
+            cat3: item.cat3 || null,
+            readcount: parseInt(item.readcount) || 0,
+            modifiedtime: item.modifiedtime || null,
+            overview: item.overview || null,
+            typeName: this.getContentTypeName(item.contenttypeid)
+        };
+    }
+
+    getContentTypeName(contentTypeId) {
+        const typeMap = {
+            '12': '관광지',
+            '14': '문화시설',
+            '15': '축제/공연/행사',
+            '25': '여행코스',
+            '28': '레포츠',
+            '32': '숙박',
+            '38': '쇼핑',
+            '39': '음식점'
+        };
+        return typeMap[contentTypeId] || '기타';
+    }
+}
+
+// ========================================
+// 6. 상세정보 엔진
+// ========================================
+
+class DetailEngine {
+    constructor() {
+        this.apiClient = new TourAPIClient();
+        this.cache = new SimpleCacheManager();
+        console.log('📊 상세정보 엔진 초기화 완료');
+    }
+
+    async fetchDetailCommon(apiKey, contentId) {
+        const cacheKey = this.cache.generateKey('detail-common', { contentId });
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+
+        const url = this.apiClient.buildUrl('/detailCommon2', {
+            serviceKey: apiKey,
+            contentId
+        });
+
+        const response = await this.apiClient.fetchWithRetry(url);
+        const data = await response.json();
+        
+        this.apiClient.validateApiResponse(data, 'detailCommon');
+        const result = this.apiClient.extractSingleItem(data);
+        
+        this.cache.set(cacheKey, result, 3600);
+        return result;
+    }
+
+    async fetchDetailIntro(apiKey, contentId, contentTypeId) {
+        const cacheKey = this.cache.generateKey('detail-intro', { contentId, contentTypeId });
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+
+        const url = this.apiClient.buildUrl('/detailIntro2', {
+            serviceKey: apiKey,
+            contentId,
+            contentTypeId
+        });
+
+        const response = await this.apiClient.fetchWithRetry(url);
+        const data = await response.json();
+        
+        this.apiClient.validateApiResponse(data, 'detailIntro');
+        const result = this.apiClient.extractSingleItem(data);
+        
+        this.cache.set(cacheKey, result, 3600);
+        return result;
+    }
+
+    async fetchDetailImages(apiKey, contentId) {
+        const cacheKey = this.cache.generateKey('detail-images', { contentId });
+        const cached = this.cache.get(cacheKey);
+        if (cached) {
+            return { ...cached, fromCache: true };
+        }
+
+        const url = this.apiClient.buildUrl('/detailImage2', {
+            serviceKey: apiKey,
+            contentId,
+            imageYN: 'Y'
+        });
+
+        const response = await this.apiClient.fetchWithRetry(url);
+        const data = await response.json();
+        
+        this.apiClient.validateApiResponse(data, 'detailImage');
+        const result = this.apiClient.extractItems(data);
+        
+        this.cache.set(cacheKey, result, 3600);
+        return result;
+    }
+
+    async collectAllDetails(apiKey, contentId) {
+        console.log(`📊 상세정보 수집 시작: ${contentId}`);
+        
+        const startTime = Date.now();
+        
+        try {
+            // 1단계: 기본 정보
+            const commonData = await this.fetchDetailCommon(apiKey, contentId);
+            const contentTypeId = commonData.contenttypeid;
+            
+            console.log(`📋 콘텐츠 타입: ${contentTypeId}`);
+
+            // 2단계: 병렬로 추가 정보 수집
+            const [introResult, imageResult] = await Promise.allSettled([
+                this.fetchDetailIntro(apiKey, contentId, contentTypeId),
+                this.fetchDetailImages(apiKey, contentId)
+            ]);
+
+            // 3단계: 결과 구조화
+            const detailData = {
+                common: this.processCommonData(commonData),
+                intro: introResult.status === 'fulfilled' ? 
+                    this.processIntroData(contentTypeId, introResult.value) : null,
+                images: imageResult.status === 'fulfilled' ? 
+                    this.processImageData(imageResult.value) : [],
+                meta: {
+                    contentId,
+                    contentTypeId,
+                    typeName: this.getContentTypeName(contentTypeId),
+                    collectedAt: new Date().toISOString(),
+                    collectionTime: Date.now() - startTime
+                }
+            };
+
+            console.log(`✅ 상세정보 수집 완료: ${Date.now() - startTime}ms`);
+            return detailData;
+
+        } catch (error) {
+            console.error(`❌ 상세정보 수집 실패: ${contentId}`, error);
+            throw error;
+        }
+    }
+
+    processCommonData(commonData) {
+        return {
+            contentId: commonData.contentid,
+            contentTypeId: commonData.contenttypeid,
+            title: commonData.title,
+            overview: this.cleanHtmlContent(commonData.overview),
+            location: {
+                address: {
+                    main: commonData.addr1,
+                    detail: commonData.addr2,
+                    full: `${commonData.addr1}${commonData.addr2 ? ' ' + commonData.addr2 : ''}`
+                },
+                coordinates: commonData.mapx && commonData.mapy ? {
+                    lng: parseFloat(commonData.mapx),
+                    lat: parseFloat(commonData.mapy)
+                } : null
+            },
+            contact: {
+                tel: commonData.tel,
+                homepage: this.cleanHtmlContent(commonData.homepage)
+            },
+            media: {
+                primaryImage: commonData.firstimage,
+                thumbnailImage: commonData.firstimage2
+            },
+            metadata: {
+                created: commonData.createdtime,
+                modified: commonData.modifiedtime,
+                readCount: parseInt(commonData.readcount) || 0,
+                typeName: this.getContentTypeName(commonData.contenttypeid)
+            }
+        };
+    }
+
+    processIntroData(contentTypeId, introData) {
+        if (!introData) return null;
+
+        const base = {
+            contentId: introData.contentid,
+            contentTypeId: introData.contenttypeid,
+            type: this.getContentTypeName(contentTypeId)
+        };
+
+        // 타입별 특화 처리 (간단 버전)
+        if (contentTypeId === '12') { // 관광지
+            return {
+                ...base,
+                facilities: {
+                    parking: introData.parking,
+                    pet: introData.chkpet === '1',
+                    creditCard: introData.chkcreditcard === '1'
+                },
+                operation: {
+                    hours: introData.usetime,
+                    restDays: introData.restdate
+                }
+            };
+        } else if (contentTypeId === '39') { // 음식점
+            return {
+                ...base,
+                restaurant: {
+                    menu: {
+                        signature: introData.firstmenu
+                    },
+                    facilities: {
+                        parking: introData.parkingfood,
+                        creditCard: introData.chkcreditcardfood === '1'
+                    },
+                    hours: {
+                        operating: introData.opentimefood,
+                        closed: introData.restdatefood
+                    }
+                }
+            };
+        }
+
+        return base;
+    }
+
+    processImageData(imageData) {
+        if (!imageData || !Array.isArray(imageData)) return [];
+
+        return imageData.map((image, index) => ({
+            id: index + 1,
+            contentId: image.contentid,
+            originalUrl: image.originimgurl,
+            smallUrl: image.smallimageurl,
+            name: image.imgname,
+            isPrimary: index === 0
+        }));
+    }
+
+    cleanHtmlContent(html) {
+        if (!html) return null;
+        return html
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .trim();
+    }
+
+    getContentTypeName(contentTypeId) {
+        const typeMap = {
+            '12': '관광지',
+            '14': '문화시설',
+            '15': '축제/공연/행사',
+            '25': '여행코스',
+            '28': '레포츠',
+            '32': '숙박',
+            '38': '쇼핑',
+            '39': '음식점'
+        };
+        return typeMap[contentTypeId] || '기타';
+    }
+}
+
+// ========================================
+// 7. 메인 관광 시스템
+// ========================================
+
+class TourismSystem {
+    constructor() {
+        this.security = new SimpleSecurity();
+        this.searchEngine = new SearchEngine();
+        this.detailEngine = new DetailEngine();
+        this.cache = new SimpleCacheManager();
+        
+        console.log('🎯 관광 시스템 초기화 완료');
+    }
+
+    async processRequest(operation, params, context = {}) {
+        const startTime = Date.now();
+        
+        try {
+            // API 키 확인
+            if (!API_KEY) {
+                throw new Error('TOURISM_API_KEY 환경변수가 설정되지 않았습니다');
+            }
+
+            console.log(`🎯 요청 처리 시작: ${operation}`);
+
+            let result;
+            
+            switch (operation) {
+                case 'masterSearch':
+                case 'search':
+                    result = await this.handleSearch(params);
+                    break;
+                    
+                case 'ultimateDetail':
+                case 'detail':
+                    result = await this.handleDetail(params);
+                    break;
+                    
+                case 'locationSearch':
+                    result = await this.handleLocationSearch(params);
+                    break;
+                    
+                default:
+                    throw new Error(`지원하지 않는 오퍼레이션: ${operation}`);
+            }
+
+            const totalTime = Date.now() - startTime;
+
+            return {
+                success: true,
+                operation,
+                data: result,
+                metadata: {
+                    performance: {
+                        totalTime,
+                        timestamp: new Date().toISOString()
+                    },
+                    cache: this.cache.getStats(),
+                    version: '1.0.0'
+                }
+            };
+
+        } catch (error) {
+            console.error('🚨 요청 처리 오류:', error);
+            
+            return {
+                success: false,
+                operation,
+                error: {
+                    message: error.message,
+                    code: error.code || 'UNKNOWN_ERROR'
+                },
+                metadata: {
+                    performance: {
+                        totalTime: Date.now() - startTime,
+                        timestamp: new Date().toISOString()
+                    }
+                }
+            };
+        }
+    }
+
+    async handleSearch(params) {
+        const { query, type = 'keyword', numOfRows = 10 } = params;
+        
+        if (!query) {
+            throw new ValidationError('검색 키워드가 필요합니다');
+        }
+
+        console.log(`🔍 검색 실행: "${query}" (타입: ${type})`);
+        
+        let searchResult;
+        
+        if (type === 'location' && params.lat && params.lng) {
+            searchResult = await this.searchEngine.executeLocationSearch(API_KEY, {
+                lat: params.lat,
+                lng: params.lng,
+                radius: params.radius || 1000,
+                numOfRows
+            });
+        } else {
+            searchResult = await this.searchEngine.executeKeywordSearch(API_KEY, {
+                query,
+                numOfRows,
+                areaCode: params.areaCode,
+                contentTypeId: params.contentTypeId
+            });
+        }
+
+        return {
+            items: searchResult.items,
+            searchInfo: {
+                query,
+                type,
+                totalFound: searchResult.totalCount,
+                source: searchResult.source,
+                fromCache: searchResult.fromCache || false
+            }
+        };
+    }
+
+    async handleDetail(params) {
+        const { contentId } = params;
+        
+        if (!contentId) {
+            throw new ValidationError('상세정보 조회에는 contentId가 필요합니다');
+        }
+
+        console.log(`📊 상세정보 조회: ${contentId}`);
+        
+        const detailResult = await this.detailEngine.collectAllDetails(API_KEY, contentId);
+        
+        // 간단한 완성도 계산
+        const completeness = this.calculateCompleteness(detailResult);
+        
+        return {
+            ...detailResult,
+            analysis: {
+                completeness: {
+                    overall: {
+                        percentage: completeness,
+                        grade: this.getGrade(completeness)
+                    }
+                }
+            }
+        };
+    }
+
+    async handleLocationSearch(params) {
+        const { lat, lng, radius = 1000 } = params;
+        
+        if (!lat || !lng) {
+            throw new ValidationError('위치 검색에는 lat, lng가 필요합니다');
+        }
+
+        console.log(`📍 위치 검색: (${lat}, ${lng}) 반경 ${radius}m`);
+        
+        const locationResult = await this.searchEngine.executeLocationSearch(API_KEY, {
+            lat,
+            lng,
+            radius,
+            numOfRows: params.numOfRows || 10
+        });
+
+        return {
+            items: locationResult.items,
+            searchCenter: locationResult.searchCenter,
+            searchInfo: {
+                type: 'location',
+                totalFound: locationResult.totalCount,
+                fromCache: locationResult.fromCache || false
+            }
+        };
+    }
+
+    calculateCompleteness(detailData) {
+        let score = 0;
+        
+        if (detailData.common?.title) score += 20;
+        if (detailData.common?.overview) score += 30;
+        if (detailData.common?.location?.coordinates) score += 15;
+        if (detailData.common?.contact?.tel) score += 10;
+        if (detailData.intro) score += 15;
+        if (detailData.images?.length > 0) score += 10;
+        
+        return Math.min(100, score);
+    }
+
+    getGrade(percentage) {
+        if (percentage >= 90) return 'A+';
+        if (percentage >= 80) return 'A';
+        if (percentage >= 70) return 'B+';
+        if (percentage >= 60) return 'B';
+        if (percentage >= 50) return 'C';
+        return 'D';
+    }
+}
+
+// ========================================
+// 8. 테스트 함수들
+// ========================================
+
+async function testTourismSystem() {
+    console.log('🧪 관광 시스템 테스트 시작\n');
+    
+    if (!API_KEY) {
+        console.error('❌ TOURISM_API_KEY 환경변수가 설정되지 않았습니다');
+        console.log('💡 해결방법: export TOURISM_API_KEY="your_api_key_here"');
+        return;
+    }
+
+    const tourism = new TourismSystem();
+    
+    try {
+        // 1. 검색 테스트
+        console.log('🔍 1. 검색 테스트 (경복궁)');
+        const searchResult = await tourism.processRequest('masterSearch', {
+            query: '경복궁',
+            numOfRows: 3
+        });
+        
+        console.log('✅ 검색 결과:', JSON.stringify(searchResult, null, 2));
+        console.log('');
+
+        // 2. 상세정보 테스트 (검색 결과가 있으면)
+        if (searchResult.success && searchResult.data.items.length > 0) {
+            const contentId = searchResult.data.items[0].contentId;
+            
+            console.log(`📊 2. 상세정보 테스트 (${contentId})`);
+            const detailResult = await tourism.processRequest('ultimateDetail', {
+                contentId: contentId
+            });
+            
+            console.log('✅ 상세정보 결과:', JSON.stringify(detailResult, null, 2));
+            console.log('');
+        }
+
+        // 3. 위치 검색 테스트
+        console.log('📍 3. 위치 검색 테스트 (서울 시청 주변)');
+        const locationResult = await tourism.processRequest('locationSearch', {
+            lat: 37.5665,
+            lng: 126.9780,
+            radius: 1000,
+            numOfRows: 3
+        });
+        
+        console.log('✅ 위치 검색 결과:', JSON.stringify(locationResult, null, 2));
+        console.log('');
+
+        // 4. 캐시 통계
+        console.log('💾 4. 캐시 통계');
+        console.log(tourism.cache.getStats());
+
+        console.log('\n🎉 모든 테스트 완료!');
+
+    } catch (error) {
+        console.error('❌ 테스트 실패:', error);
+    }
+}
+
+// ========================================
+// 9. 메인 실행부
+// ========================================
+
+// Node.js 환경에서 직접 실행시
+if (typeof module !== 'undefined' && require.main === module) {
+    console.log('🚀 관광JS 시스템 시작...\n');
+    testTourismSystem();
+}
+
+// 브라우저나 다른 환경에서 사용할 수 있도록 export
+if (typeof module !== 'undefined') {
+    module.exports = {
+        TourismSystem,
+        testTourismSystem,
+        API_KEY
+    };
+}
+
+// 글로벌 객체로도 제공 (브라우저용)
+if (typeof window !== 'undefined') {
+    window.TourismJS = {
+        TourismSystem,
+        testTourismSystem
+    };
 }
