@@ -1,4 +1,4 @@
-// ===== TourAPI 4.3 Enterprise - 최종 완성 버전 =====
+// ===== alltourism.js - 한국관광공사 API 엔터프라이즈 시스템 =====
 'use strict';
 
 // 런타임 환경 감지 및 폴리필
@@ -10,6 +10,56 @@ if (isNode && typeof fetch === 'undefined') {
 
 // ===== 서비스 시작 시간 추적 =====
 const SERVICE_START_TIME = Date.now();
+
+// ===== 의존성 주입 컨테이너 =====
+class ServiceContainer {
+    constructor() {
+        this.services = new Map();
+        this.singletons = new Map();
+        this.initialized = false;
+    }
+
+    register(name, factory, singleton = true) {
+        this.services.set(name, { factory, singleton });
+        return this;
+    }
+
+    get(name) {
+        if (!this.services.has(name)) {
+            throw new Error(`Service '${name}' not registered`);
+        }
+
+        const service = this.services.get(name);
+        
+        if (service.singleton) {
+            if (!this.singletons.has(name)) {
+                this.singletons.set(name, service.factory(this));
+            }
+            return this.singletons.get(name);
+        }
+
+        return service.factory(this);
+    }
+
+    initialize() {
+        if (this.initialized) return this;
+        
+        const initOrder = ['constants', 'i18n', 'config', 'logger', 'cache', 'rateLimiter', 'validator', 'httpClient', 'security'];
+        
+        for (const serviceName of initOrder) {
+            if (this.services.has(serviceName)) {
+                this.get(serviceName);
+            }
+        }
+        
+        this.initialized = true;
+        return this;
+    }
+
+    isInitialized() {
+        return this.initialized;
+    }
+}
 
 // ===== 동시성 제어 유틸리티 =====
 class Semaphore {
@@ -101,7 +151,7 @@ class InternationalizationManager {
             RATE_LIMIT_EXCEEDED: '요청 한도를 초과했습니다',
             CORS_ERROR: '허용되지 않은 Origin입니다',
             INVALID_API_KEY: '유효하지 않은 API 키입니다',
-            MISSING_API_KEY: 'TOURISM_API_KEY 또는 KTO_API_KEY 환경변수가 설정되지 않았습니다',
+            MISSING_API_KEY: 'TOURISM_API_KEY 환경변수가 설정되지 않았습니다',
             UNSUPPORTED_OPERATION: '지원하지 않는 오퍼레이션: {operation}',
             NOT_FOUND: '데이터를 찾을 수 없습니다',
             EMPTY_RESPONSE: 'API 응답이 없습니다',
@@ -125,7 +175,7 @@ class InternationalizationManager {
             RATE_LIMIT_EXCEEDED: 'Rate limit exceeded',
             CORS_ERROR: 'Origin not allowed',
             INVALID_API_KEY: 'Invalid API key',
-            MISSING_API_KEY: 'TOURISM_API_KEY or KTO_API_KEY environment variable not configured',
+            MISSING_API_KEY: 'TOURISM_API_KEY environment variable not configured',
             UNSUPPORTED_OPERATION: 'Unsupported operation: {operation}',
             NOT_FOUND: 'Data not found',
             EMPTY_RESPONSE: 'Empty API response',
@@ -218,7 +268,7 @@ class ConstantsManager {
             '39': { name: '제주', emoji: '🌺', en: 'Jeju' }
         };
 
-        // ✅ 올바른 API 엔드포인트 (KorService2 사용)
+        // ✅ 올바른 API 엔드포인트
         this.API_BASE_URL = 'https://apis.data.go.kr/B551011/KorService2';
         
         this.API_ENDPOINTS = {
@@ -240,10 +290,10 @@ class ConstantsManager {
         };
 
         this.DEFAULT_CONFIG = {
-            // ✅ TOURISM_API_KEY와 KTO_API_KEY만 사용
+            // ✅ TOURISM_API_KEY만 사용
             apiKey: null,
-            appName: 'HealingK-TourAPI',
-            version: '4.3.0-Enterprise',
+            appName: 'AllTourism-Enterprise',
+            version: '1.0.0',
             allowedOrigins: [
                 'https://your-blog.com',
                 'https://www.your-blog.com',
@@ -302,7 +352,8 @@ class ConstantsManager {
 
 // ===== 설정 관리 시스템 =====
 class ConfigManager {
-    constructor() {
+    constructor(container) {
+        this.container = container;
         this.config = this.loadConfig();
         this.validators = new Map();
         this.subscribers = new Set();
@@ -326,13 +377,11 @@ class ConfigManager {
     }
 
     loadConfig() {
-        const constants = new ConstantsManager();
+        const constants = this.container ? this.container.get('constants') : new ConstantsManager();
         const defaultConfig = { ...constants.DEFAULT_CONFIG };
         
-        // ✅ TOURISM_API_KEY와 KTO_API_KEY만 확인
-        const apiKey = process.env.TOURISM_API_KEY || 
-                      process.env.KTO_API_KEY || 
-                      defaultConfig.apiKey;
+        // ✅ TOURISM_API_KEY만 사용
+        const apiKey = process.env.TOURISM_API_KEY || defaultConfig.apiKey;
         
         return {
             ...defaultConfig,
@@ -462,7 +511,7 @@ class ConfigManager {
         const errors = [];
         
         if (!this.config.apiKey) {
-            errors.push('TOURISM_API_KEY 또는 KTO_API_KEY 환경변수가 설정되지 않았습니다');
+            errors.push('TOURISM_API_KEY 환경변수가 설정되지 않았습니다');
         }
         
         if (this.config.rateLimitPerMinute <= 0) {
@@ -487,8 +536,9 @@ class ConfigManager {
 
 // ===== 로깅 시스템 =====
 class Logger {
-    constructor(configManager) {
-        this.configManager = configManager;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container ? container.get('config') : null;
         this.logLevel = this.configManager?.get('logLevel') || 'info';
         this.logLevels = {
             debug: 0,
@@ -593,11 +643,12 @@ class Logger {
     }
 }
 
-// ===== 캐시 시스템 =====
+// ===== 고급 캐시 시스템 =====
 class AdvancedCache {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.cache = new Map();
         this.accessTimes = new Map();
         this.stats = {
@@ -611,7 +662,15 @@ class AdvancedCache {
         this.sizeTracker = 0;
         this.maxMemorySize = this.configManager.get('maxMemorySize');
         
+        // 메모리 모니터링 설정
+        this.memoryMonitor = {
+            checkInterval: this.configManager.get('memoryCheckInterval'),
+            threshold: this.configManager.get('memoryThreshold'),
+            lastCheck: Date.now()
+        };
+        
         this.startCleanupWorker();
+        this.startMemoryMonitoring();
         this.setupConfigSubscription();
     }
 
@@ -762,6 +821,33 @@ class AdvancedCache {
         });
     }
 
+    startMemoryMonitoring() {
+        setInterval(() => {
+            const usage = process.memoryUsage();
+            const heapUsagePercent = usage.heapUsed / usage.heapTotal;
+            
+            if (heapUsagePercent > this.memoryMonitor.threshold) {
+                this.logger.warn('High memory usage detected', {
+                    heapUsagePercent: Math.round(heapUsagePercent * 100),
+                    heapUsed: Math.round(usage.heapUsed / 1024 / 1024),
+                    heapTotal: Math.round(usage.heapTotal / 1024 / 1024)
+                });
+                
+                this.emergencyCleanup();
+            }
+        }, this.memoryMonitor.checkInterval);
+    }
+
+    emergencyCleanup() {
+        const targetSize = Math.floor(this.cache.size * 0.3);
+        while (this.cache.size > targetSize) {
+            this.evictLRU();
+        }
+        this.logger.info('Emergency cache cleanup completed', {
+            remainingItems: this.cache.size
+        });
+    }
+
     enforceSizeLimit() {
         while (this.cache.size > this.maxSize) {
             this.evictLRU();
@@ -822,9 +908,10 @@ class AdvancedCache {
 
 // ===== 레이트 리미터 =====
 class RateLimiter {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.requests = new Map();
         this.limit = this.configManager.get('rateLimitPerMinute');
         this.windowMs = 60 * 1000;
@@ -894,14 +981,14 @@ class RateLimiter {
 }
 
 // ===== 커스텀 에러 클래스 =====
-class TourApiError extends Error {
+class TourismApiError extends Error {
     constructor(messageCode, operation, statusCode = 500, details = {}, params = {}, i18nInstance = null) {
         const message = i18nInstance ? 
             i18nInstance.getMessage(messageCode, params) : 
             messageCode;
         
         super(message);
-        this.name = 'TourApiError';
+        this.name = 'TourismApiError';
         this.code = messageCode;
         this.operation = operation;
         this.statusCode = statusCode;
@@ -922,7 +1009,7 @@ class TourApiError extends Error {
     }
 }
 
-class ValidationError extends TourApiError {
+class ValidationError extends TourismApiError {
     constructor(message, field, value, i18nInstance = null) {
         super('VALIDATION_ERROR', 'validation', 400, { field, value }, {}, i18nInstance);
         this.name = 'ValidationError';
@@ -930,14 +1017,14 @@ class ValidationError extends TourApiError {
     }
 }
 
-class ApiTimeoutError extends TourApiError {
+class ApiTimeoutError extends TourismApiError {
     constructor(operation, timeout, i18nInstance = null) {
         super('API_TIMEOUT', operation, 408, { timeout }, { timeout }, i18nInstance);
         this.name = 'ApiTimeoutError';
     }
 }
 
-class RateLimitError extends TourApiError {
+class RateLimitError extends TourismApiError {
     constructor(limit, remaining, i18nInstance = null) {
         super('RATE_LIMIT_EXCEEDED', 'rateLimit', 429, { limit, remaining }, {}, i18nInstance);
         this.name = 'RateLimitError';
@@ -946,8 +1033,9 @@ class RateLimitError extends TourApiError {
 
 // ===== 입력 검증 시스템 =====
 class InputValidator {
-    constructor(i18n) {
-        this.i18n = i18n;
+    constructor(container) {
+        this.container = container;
+        this.i18n = container.get('i18n');
         this.schemas = new Map();
         this.setupSchemas();
     }
@@ -1080,9 +1168,11 @@ class InputValidator {
 
 // ===== HTTP 클라이언트 =====
 class HttpClient {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.constants = container.get('constants');
+        this.logger = container.get('logger');
         this.timeout = this.configManager.get('apiTimeout');
         this.retryAttempts = this.configManager.get('retryAttempts');
         this.retryDelay = this.configManager.get('retryDelay');
@@ -1144,12 +1234,14 @@ class HttpClient {
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    throw new TourApiError(
+                    const i18n = this.container.get('i18n');
+                    throw new TourismApiError(
                         'HTTP_ERROR',
                         'request',
                         response.status,
                         { url, status: response.status, statusText: response.statusText },
-                        { status: response.status, statusText: response.statusText }
+                        { status: response.status, statusText: response.statusText },
+                        i18n
                     );
                 }
 
@@ -1166,7 +1258,8 @@ class HttpClient {
                 clearTimeout(timeoutId);
                 
                 if (error.name === 'AbortError') {
-                    error = new ApiTimeoutError('request', this.timeout);
+                    const i18n = this.container.get('i18n');
+                    error = new ApiTimeoutError('request', this.timeout, i18n);
                 }
 
                 this.logger.warn('HTTP request failed', { 
@@ -1188,14 +1281,14 @@ class HttpClient {
 
     // ✅ 올바른 한국관광공사 API 호출 메소드
     async getTourismData(endpoint, params = {}) {
-        const constants = new ConstantsManager();
         const apiKey = this.configManager.get('apiKey');
         
         if (!apiKey) {
-            throw new TourApiError('MISSING_API_KEY', endpoint);
+            const i18n = this.container.get('i18n');
+            throw new TourismApiError('MISSING_API_KEY', endpoint, 500, {}, {}, i18n);
         }
 
-        const url = constants.getApiUrl(endpoint);
+        const url = this.constants.getApiUrl(endpoint);
         
         // ✅ 필수 파라미터 설정
         const queryParams = new URLSearchParams({
@@ -1221,11 +1314,14 @@ class HttpClient {
         const resultCode = data.response?.header?.resultCode;
         if (resultCode !== '0000' && resultCode !== '00') {
             const errorMessage = data.response?.header?.resultMsg || 'Unknown API error';
-            throw new TourApiError(
+            const i18n = this.container.get('i18n');
+            throw new TourismApiError(
                 'API_ERROR',
                 endpoint,
                 500,
-                { resultCode, originalMessage: errorMessage }
+                { resultCode, originalMessage: errorMessage },
+                {},
+                i18n
             );
         }
 
@@ -1245,7 +1341,7 @@ class HttpClient {
             const batchPromises = batch.map(req => 
                 this.request(req.url, req.options)
                     .catch(error => ({ 
-                        error: error instanceof TourApiError ? error.toJSON() : error.message, 
+                        error: error instanceof TourismApiError ? error.toJSON() : error.message, 
                         request: req 
                     }))
             );
@@ -1264,9 +1360,10 @@ class HttpClient {
 
 // ===== 보안 및 인증 시스템 =====
 class SecurityManager {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.allowedOrigins = this.configManager.get('allowedOrigins');
         this.allowedApiKeys = this.configManager.get('allowedApiKeys');
         this.securityHeaders = {
@@ -1279,16 +1376,18 @@ class SecurityManager {
         };
     }
 
-    validateRequest(req, res, rateLimiter, i18n) {
+    validateRequest(req, res) {
         const clientId = this.getClientId(req);
+        const rateLimiter = this.container.get('rateLimiter');
+        const i18n = this.container.get('i18n');
         
         if (!rateLimiter.isAllowed(clientId)) {
             const remaining = rateLimiter.getRemainingQuota(clientId);
             throw new RateLimitError(this.configManager.get('rateLimitPerMinute'), remaining, i18n);
         }
 
-        this.handleCors(req, res, i18n);
-        this.validateApiKey(req, i18n);
+        this.handleCors(req, res);
+        this.validateApiKey(req);
         this.setSecurityHeaders(res);
         
         const remaining = rateLimiter.getRemainingQuota(clientId);
@@ -1307,9 +1406,10 @@ class SecurityManager {
         return apiKey ? `api:${apiKey}` : `ip:${ip}`;
     }
 
-    handleCors(req, res, i18n) {
+    handleCors(req, res) {
         const origin = req.headers.origin;
         const isDevelopment = this.configManager.get('environment') === 'development';
+        const i18n = this.container.get('i18n');
         
         if (this.allowedOrigins.includes('*')) {
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1320,7 +1420,7 @@ class SecurityManager {
             res.setHeader('Access-Control-Allow-Origin', origin);
         } else if (origin) {
             this.logger.error('Unauthorized origin blocked', { origin });
-            throw new TourApiError('CORS_ERROR', 'security', 403, { origin }, {}, i18n);
+            throw new TourismApiError('CORS_ERROR', 'security', 403, { origin }, {}, i18n);
         }
 
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -1330,13 +1430,14 @@ class SecurityManager {
         res.setHeader('Access-Control-Max-Age', '3600');
     }
 
-    validateApiKey(req, i18n) {
+    validateApiKey(req) {
         if (this.allowedApiKeys.length === 0) return;
 
         const apiKey = req.headers['x-api-key'];
+        const i18n = this.container.get('i18n');
         
         if (!apiKey || !this.allowedApiKeys.includes(apiKey)) {
-            throw new TourApiError('INVALID_API_KEY', 'security', 401, {}, {}, i18n);
+            throw new TourismApiError('INVALID_API_KEY', 'security', 401, {}, {}, i18n);
         }
     }
 
@@ -1356,7 +1457,7 @@ class ResponseFormatter {
             data,
             metadata: {
                 ...metadata,
-                version: '4.3.0-Enterprise',
+                version: '1.0.0',
                 timestamp: new Date().toISOString(),
                 performance
             }
@@ -1404,12 +1505,14 @@ class ApiResponseProcessor {
         return Array.isArray(items) ? items : items ? [items] : [];
     }
 
-    static processBasicItem(item, constants, i18n) {
+    static processBasicItem(item, container) {
         const mapx = item.mapx && item.mapx !== '' && item.mapx !== '0' ? 
                     parseFloat(item.mapx) : null;
         const mapy = item.mapy && item.mapy !== '' && item.mapy !== '0' ? 
                     parseFloat(item.mapy) : null;
 
+        const constants = container.get('constants');
+        const i18n = container.get('i18n');
         const contentType = constants.get('CONTENT_TYPE_MAP', item.contenttypeid);
         const areaInfo = constants.get('AREA_CODE_MAP', item.areacode);
         const currentLang = i18n.currentLanguage;
@@ -1544,10 +1647,69 @@ class GeoUtils {
     }
 }
 
+// ===== 테스트 러너 =====
+class TestRunner {
+    constructor(container) {
+        this.container = container;
+        this.tests = [];
+        this.results = { passed: 0, failed: 0, errors: [] };
+    }
+
+    addTest(name, testFn) {
+        this.tests.push({ name, testFn });
+        return this;
+    }
+
+    async runAll() {
+        console.log('🧪 Running comprehensive tests...');
+        
+        for (const test of this.tests) {
+            try {
+                await test.testFn();
+                this.results.passed++;
+                console.log(`✅ ${test.name}`);
+            } catch (error) {
+                this.results.failed++;
+                this.results.errors.push({ test: test.name, error: error.message });
+                console.log(`❌ ${test.name}: ${error.message}`);
+            }
+        }
+
+        const total = this.results.passed + this.results.failed;
+        const successRate = total > 0 ? Math.round((this.results.passed / total) * 100) : 0;
+        
+        console.log(`\n📊 Test Results: ${this.results.passed}/${total} passed (${successRate}%)`);
+        
+        if (this.results.errors.length > 0) {
+            console.log('\n❌ Failed tests:');
+            this.results.errors.forEach(({ test, error }) => {
+                console.log(`  - ${test}: ${error}`);
+            });
+        }
+
+        return {
+            ...this.results,
+            total,
+            successRate,
+            summary: `${this.results.passed}/${total} tests passed (${successRate}%)`
+        };
+    }
+
+    assert(condition, message) {
+        if (!condition) {
+            throw new Error(message);
+        }
+    }
+}
+
 // ===== API 핸들러 클래스 =====
-class TourApiHandlers {
-    static async handleAreaBasedList(httpClient, validator, cache, constants, i18n, logger, params) {
+class AllTourismApiHandlers {
+    static async handleAreaBasedList(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const logger = container.get('logger');
         
         validator.validate('areaBasedList', params);
         
@@ -1576,7 +1738,6 @@ class TourApiHandlers {
             }
         }
 
-        // ✅ 올바른 API 호출
         const apiParams = {
             numOfRows,
             pageNo,
@@ -1595,7 +1756,7 @@ class TourApiHandlers {
         const data = await httpClient.getTourismData('areaBasedList', apiParams);
 
         const items = ApiResponseProcessor.extractItems(data);
-        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, constants, i18n));
+        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, container));
 
         if (userLat && userLng) {
             processedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
@@ -1646,8 +1807,13 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleDetailCommon(httpClient, validator, cache, constants, i18n, logger, params) {
+    static async handleDetailCommon(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const logger = container.get('logger');
+        const i18n = container.get('i18n');
         
         validator.validate('detailCommon', params);
         
@@ -1660,22 +1826,21 @@ class TourApiHandlers {
             return ResponseFormatter.addCacheInfo(cachedData, true, cache.getStats());
         }
 
-        // ✅ 올바른 API 호출
         const data = await httpClient.getTourismData('detailCommon', { contentId });
 
         const items = ApiResponseProcessor.extractItems(data);
         if (items.length === 0) {
-            throw new TourApiError('NOT_FOUND', 'detailCommon', 404, {}, {}, i18n);
+            throw new TourismApiError('NOT_FOUND', 'detailCommon', 404, {}, {}, i18n);
         }
 
         const item = items[0];
         const processedItem = {
-            ...ApiResponseProcessor.processBasicItem(item, constants, i18n),
+            ...ApiResponseProcessor.processBasicItem(item, container),
             telname: item.telname || null,
             homepage: ApiResponseProcessor.sanitizeHtml(item.homepage) || null,
             overview: ApiResponseProcessor.sanitizeHtml(item.overview) || null,
             meta: {
-                ...ApiResponseProcessor.processBasicItem(item, constants, i18n).meta,
+                ...ApiResponseProcessor.processBasicItem(item, container).meta,
                 hasOverview: !!item.overview,
                 hasHomepage: !!item.homepage,
                 hasTel: !!item.tel,
@@ -1688,7 +1853,7 @@ class TourApiHandlers {
         const result = ResponseFormatter.formatSuccess('detailCommon', processedItem, {
             operation: 'detailCommon',
             contentId,
-            dataSource: 'TourAPI 4.3'
+            dataSource: 'AllTourism API 1.0'
         }, {
             apiResponseTime: apiTime,
             totalProcessingTime: Date.now() - startTime
@@ -1705,8 +1870,12 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleSearchKeyword(httpClient, validator, cache, constants, i18n, logger, params) {
+    static async handleSearchKeyword(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const logger = container.get('logger');
         
         validator.validate('searchKeyword', params);
         
@@ -1735,7 +1904,6 @@ class TourApiHandlers {
             }
         }
 
-        // ✅ 올바른 API 호출
         const apiParams = {
             keyword: encodeURIComponent(keyword),
             numOfRows,
@@ -1755,7 +1923,7 @@ class TourApiHandlers {
         const data = await httpClient.getTourismData('searchKeyword', apiParams);
 
         const items = ApiResponseProcessor.extractItems(data);
-        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, constants, i18n));
+        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, container));
 
         if (userLat && userLng) {
             processedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
@@ -1808,8 +1976,11 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleLocationBasedList(httpClient, validator, constants, i18n, logger, params) {
+    static async handleLocationBasedList(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const httpClient = container.get('httpClient');
+        const logger = container.get('logger');
         
         validator.validate('locationBasedList', params);
         
@@ -1822,7 +1993,6 @@ class TourApiHandlers {
             lclsSystm1 = '', lclsSystm2 = '', lclsSystm3 = ''
         } = params;
 
-        // ✅ 올바른 API 호출
         const apiParams = {
             mapX,
             mapY,
@@ -1845,7 +2015,7 @@ class TourApiHandlers {
 
         const items = ApiResponseProcessor.extractItems(data);
         const processedItems = items.map(item => ({
-            ...ApiResponseProcessor.processBasicItem(item, constants, i18n),
+            ...ApiResponseProcessor.processBasicItem(item, container),
             dist: parseFloat(item.dist) || null
         }));
 
@@ -1898,7 +2068,11 @@ class TourApiHandlers {
         return Math.round((filledFields / fields.length) * 100);
     }
 
-    static async handleBatchDetail(httpClient, validator, configManager, constants, i18n, logger, contentIds) {
+    static async handleBatchDetail(container, contentIds) {
+        const validator = container.get('validator');
+        const configManager = container.get('config');
+        const i18n = container.get('i18n');
+        
         validator.validate('batchDetail', { contentIds });
         
         if (!Array.isArray(contentIds) || contentIds.length === 0) {
@@ -1916,9 +2090,9 @@ class TourApiHandlers {
         for (let i = 0; i < contentIds.length; i += batchSize) {
             const batch = contentIds.slice(i, i + batchSize);
             const promises = batch.map(contentId => 
-                this.handleDetailCommon(httpClient, validator, null, constants, i18n, logger, { contentId })
+                this.handleDetailCommon(container, { contentId })
                     .catch(error => ({ 
-                        error: error instanceof TourApiError ? error.toJSON() : {
+                        error: error instanceof TourismApiError ? error.toJSON() : {
                             name: error.name,
                             message: error.message,
                             stack: error.stack
@@ -1955,36 +2129,46 @@ class TourApiHandlers {
     }
 }
 
-// ===== 시스템 초기화 =====
-const constants = new ConstantsManager();
-const i18n = new InternationalizationManager();
-const configManager = new ConfigManager();
+// ===== 서비스 컨테이너 설정 및 초기화 =====
+const container = new ServiceContainer();
+
+container
+    .register('constants', () => new ConstantsManager())
+    .register('i18n', () => new InternationalizationManager())
+    .register('config', (container) => new ConfigManager(container))
+    .register('logger', (container) => new Logger(container))
+    .register('cache', (container) => new AdvancedCache(container))
+    .register('rateLimiter', (container) => new RateLimiter(container))
+    .register('validator', (container) => new InputValidator(container))
+    .register('httpClient', (container) => new HttpClient(container))
+    .register('security', (container) => new SecurityManager(container));
+
+container.initialize();
+
+const configManager = container.get('config');
+const logger = container.get('logger');
+const i18n = container.get('i18n');
+const constants = container.get('constants');
+const cache = container.get('cache');
+
+i18n.setLanguage(configManager.get('defaultLanguage'));
 
 // 설정 검증
 try {
     configManager.validateConfig();
-    console.log('✅ Configuration validated successfully', {
+    logger.info('✅ Configuration validated successfully', {
         apiKey: configManager.hasValidApiKey() ? 'Set' : 'Missing',
         environment: configManager.get('environment')
     });
 } catch (error) {
-    console.error('❌ Configuration validation failed:', error.message);
+    logger.error('❌ Configuration validation failed', error);
     if (configManager.get('environment') !== 'development') {
         process.exit(1);
     }
 }
 
-const logger = new Logger(configManager);
-const rateLimiter = new RateLimiter(configManager, logger);
-const cache = new AdvancedCache(configManager, logger);
-const validator = new InputValidator(i18n);
-const httpClient = new HttpClient(configManager, logger);
-const securityManager = new SecurityManager(configManager, logger);
-
-i18n.setLanguage(configManager.get('defaultLanguage'));
-
 // ===== 메인 핸들러 =====
-async function tourApiHandler(req, res) {
+async function allTourismHandler(req, res) {
     const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
     const startTime = Date.now();
     
@@ -2005,19 +2189,20 @@ async function tourApiHandler(req, res) {
 
     try {
         if (req.method === 'OPTIONS') {
-            securityManager.handleCors(req, res, i18n);
+            const security = container.get('security');
+            security.handleCors(req, res);
             res.status(200).end();
             return;
         }
 
-        const securityInfo = securityManager.validateRequest(req, res, rateLimiter, i18n);
+        const security = container.get('security');
+        const securityInfo = security.validateRequest(req, res);
         
         const { operation = 'areaBasedList', ...params } = 
             req.method === 'GET' ? req.query : req.body;
         
-        // ✅ API 키 체크
         if (!configManager.hasValidApiKey()) {
-            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+            throw new TourismApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
         }
 
         if (!constants.isValidOperation(operation)) {
@@ -2040,19 +2225,19 @@ async function tourApiHandler(req, res) {
         let result;
         switch (operation) {
             case 'areaBasedList':
-                result = await TourApiHandlers.handleAreaBasedList(httpClient, validator, cache, constants, i18n, logger, params);
+                result = await AllTourismApiHandlers.handleAreaBasedList(container, params);
                 break;
             case 'detailCommon':
-                result = await TourApiHandlers.handleDetailCommon(httpClient, validator, cache, constants, i18n, logger, params);
+                result = await AllTourismApiHandlers.handleDetailCommon(container, params);
                 break;
             case 'searchKeyword':
-                result = await TourApiHandlers.handleSearchKeyword(httpClient, validator, cache, constants, i18n, logger, params);
+                result = await AllTourismApiHandlers.handleSearchKeyword(container, params);
                 break;
             case 'locationBasedList':
-                result = await TourApiHandlers.handleLocationBasedList(httpClient, validator, constants, i18n, logger, params);
+                result = await AllTourismApiHandlers.handleLocationBasedList(container, params);
                 break;
             case 'batchDetail':
-                result = await TourApiHandlers.handleBatchDetail(httpClient, validator, configManager, constants, i18n, logger, params.contentIds);
+                result = await AllTourismApiHandlers.handleBatchDetail(container, params.contentIds);
                 break;
             default:
                 throw new ValidationError(`미구현 오퍼레이션: ${operation}`, 'operation', operation, i18n);
@@ -2073,7 +2258,7 @@ async function tourApiHandler(req, res) {
             nodeVersion: process.version,
             uptime: Date.now() - SERVICE_START_TIME,
             cacheStats: cache.getStats(),
-            concurrentRequests: httpClient.semaphore.currentConcurrent,
+            concurrentRequests: container.get('httpClient').semaphore.currentConcurrent,
             apiKeyConfigured: configManager.hasValidApiKey()
         };
 
@@ -2163,109 +2348,58 @@ function healthCheck() {
 
 // ===== 테스트 시스템 =====
 function runTests() {
-    console.log('🧪 Running comprehensive tests...');
+    const testRunner = new TestRunner(container);
     
-    const tests = [
-        {
-            name: 'Configuration Test',
-            test: () => {
-                if (configManager.get('environment') === undefined) throw new Error('Environment should be defined');
-                if (!constants.isValidOperation('areaBasedList')) throw new Error('areaBasedList should be valid operation');
+    testRunner
+        .addTest('Configuration Test', () => {
+            testRunner.assert(configManager.get('environment') !== undefined, 'Environment should be defined');
+            testRunner.assert(constants.isValidOperation('areaBasedList'), 'areaBasedList should be valid operation');
+        })
+        .addTest('API Key Test', () => {
+            testRunner.assert(configManager.hasValidApiKey(), 'API key should be configured');
+        })
+        .addTest('Cache Test', () => {
+            cache.set('test-key', { test: 'data' });
+            testRunner.assert(cache.get('test-key') !== null, 'Cache should store and retrieve data');
+        })
+        .addTest('I18n Test', () => {
+            i18n.setLanguage('en');
+            testRunner.assert(i18n.getMessage('NOT_FOUND') === 'Data not found', 'English message should work');
+            i18n.setLanguage('ko');
+            testRunner.assert(i18n.getMessage('NOT_FOUND') === '데이터를 찾을 수 없습니다', 'Korean message should work');
+        })
+        .addTest('Accept-Language Parsing Test', () => {
+            const parsed = LanguageNegotiator.parseAcceptLanguage('en-US,en;q=0.9,ko;q=0.8');
+            testRunner.assert(parsed.length === 3, 'Should parse 3 language preferences');
+            testRunner.assert(parsed[0].language === 'en-US', 'First preference should be en-US');
+        })
+        .addTest('Semaphore Test', () => {
+            const semaphore = new Semaphore(2);
+            testRunner.assert(semaphore.maxConcurrent === 2, 'Semaphore should have correct limit');
+        })
+        .addTest('Validation Test', () => {
+            const validator = container.get('validator');
+            try {
+                validator.validate('detailCommon', {});
+                testRunner.assert(false, 'Should throw validation error');
+            } catch (error) {
+                testRunner.assert(error instanceof ValidationError, 'Should throw ValidationError');
             }
-        },
-        {
-            name: 'API Key Test',
-            test: () => {
-                if (!configManager.hasValidApiKey()) throw new Error('API key should be configured');
-            }
-        },
-        {
-            name: 'Cache Test',
-            test: () => {
-                cache.set('test-key', { test: 'data' });
-                if (cache.get('test-key') === null) throw new Error('Cache should store and retrieve data');
-            }
-        },
-        {
-            name: 'I18n Test',
-            test: () => {
-                i18n.setLanguage('en');
-                if (i18n.getMessage('NOT_FOUND') !== 'Data not found') throw new Error('English message should work');
-                i18n.setLanguage('ko');
-                if (i18n.getMessage('NOT_FOUND') !== '데이터를 찾을 수 없습니다') throw new Error('Korean message should work');
-            }
-        },
-        {
-            name: 'Accept-Language Parsing Test',
-            test: () => {
-                const parsed = LanguageNegotiator.parseAcceptLanguage('en-US,en;q=0.9,ko;q=0.8');
-                if (parsed.length !== 3) throw new Error('Should parse 3 language preferences');
-                if (parsed[0].language !== 'en-US') throw new Error('First preference should be en-US');
-            }
-        },
-        {
-            name: 'Semaphore Test',
-            test: () => {
-                const semaphore = new Semaphore(2);
-                if (semaphore.maxConcurrent !== 2) throw new Error('Semaphore should have correct limit');
-            }
-        },
-        {
-            name: 'Validation Test',
-            test: () => {
-                try {
-                    validator.validate('detailCommon', {});
-                    throw new Error('Should throw validation error');
-                } catch (error) {
-                    if (!(error instanceof ValidationError)) throw new Error('Should throw ValidationError');
-                }
-            }
-        }
-    ];
-
-    let passed = 0;
-    let failed = 0;
-    const errors = [];
-
-    for (const testCase of tests) {
-        try {
-            testCase.test();
-            passed++;
-            console.log(`✅ ${testCase.name}`);
-        } catch (error) {
-            failed++;
-            errors.push({ test: testCase.name, error: error.message });
-            console.log(`❌ ${testCase.name}: ${error.message}`);
-        }
-    }
-
-    const total = passed + failed;
-    const successRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-    
-    console.log(`\n📊 Test Results: ${passed}/${total} passed (${successRate}%)`);
-    
-    if (errors.length > 0) {
-        console.log('\n❌ Failed tests:');
-        errors.forEach(({ test, error }) => {
-            console.log(`  - ${test}: ${error}`);
+        })
+        .addTest('Service Container Test', () => {
+            testRunner.assert(container.isInitialized(), 'Container should be initialized');
+            testRunner.assert(container.get('config') === configManager, 'Should return same config instance');
         });
-    }
 
-    return {
-        passed,
-        failed,
-        total,
-        successRate,
-        errors,
-        summary: `${passed}/${total} tests passed (${successRate}%)`
-    };
+    return testRunner.runAll();
 }
 
 // ===== 모듈 내보내기 =====
 module.exports = {
-    handler: tourApiHandler,
+    handler: allTourismHandler,
     healthCheck,
     runTests,
+    container,
     configManager,
     logger,
     cache,
@@ -2273,10 +2407,12 @@ module.exports = {
     constants,
     
     // 클래스들
-    TourApiHandlers,
+    AllTourismApiHandlers,
     SecurityManager,
     InputValidator,
     ResponseFormatter,
+    ServiceContainer,
+    TestRunner,
     
     // 유틸리티들
     GeoUtils,
@@ -2286,7 +2422,7 @@ module.exports = {
 };
 
 module.exports.middleware = function(req, res, next) {
-    tourApiHandler(req, res).catch(next);
+    allTourismHandler(req, res).catch(next);
 };
 
 module.exports.serverless = async function(event, context) {
@@ -2306,7 +2442,7 @@ module.exports.serverless = async function(event, context) {
         end: function() { return this; }
     };
     
-    await tourApiHandler(req, res);
+    await allTourismHandler(req, res);
     
     return {
         statusCode: res.statusCode,
@@ -2316,7 +2452,7 @@ module.exports.serverless = async function(event, context) {
 };
 
 // 초기화 로그
-logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
+logger.info('🚀 AllTourism Enterprise API System v1.0.0 초기화 완료', {
     version: configManager.get('version'),
     environment: configManager.get('environment'),
     apiKeyConfigured: configManager.hasValidApiKey(),
@@ -2328,8 +2464,12 @@ logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
         concurrencyControl: true,
         i18n: true,
         acceptLanguageParsing: true,
-        correctApiIntegration: true
+        dependencyInjection: true,
+        memoryMonitoring: true,
+        comprehensiveTesting: true
     },
     concurrentLimit: configManager.get('maxConcurrent'),
-    supportedLanguages: i18n.getSupportedLanguages()
+    supportedLanguages: i18n.getSupportedLanguages(),
+    servicesRegistered: Array.from(container.services.keys()),
+    containerInitialized: container.isInitialized()
 });
