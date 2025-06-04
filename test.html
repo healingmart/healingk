@@ -3,168 +3,349 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관광 API 테스트 클라이언트</title>
+    <title>TourAPI 4.0 테스트</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #0056b3; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px; }
-        button:hover { background-color: #218838; }
-        pre { background-color: #eee; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
-        .result-section { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-        .error { color: #dc3545; font-weight: bold; }
-        .loading { color: #007bff; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #27ae60;
+            margin-top: 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .loading {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>관광 API 테스트 클라이언트</h1>
-        <p>배포된 서버리스 API를 테스트할 수 있는 간단한 클라이언트입니다.</p>
-
-        <div>
-            <label for="apiBaseUrl">API 기본 URL (예: `https://healingk.vercel.app`):</label>
-            <input type="text" id="apiBaseUrl" value="https://healingk.vercel.app">
-            <p style="font-size: 0.8em; color: gray;">* Vercel에 배포된 프로젝트 URL로 변경해주세요.</p>
+        <h1>🏛️ TourAPI 4.0 테스트 페이지</h1>
+        
+        <!-- 기본 검색 테스트 -->
+        <div class="test-section">
+            <h3>🔍 기본 검색 테스트</h3>
+            <button onclick="testAreaBasedList()">지역기반 검색</button>
+            <button onclick="testKeywordSearch()">키워드 검색</button>
+            <button onclick="testLocationBased()">위치기반 검색</button>
+            <button onclick="testFestivalSearch()">행사 검색</button>
+            <div id="search-result" class="result"></div>
         </div>
 
-        <hr>
-
-        <h2>🔍 키워드 검색 테스트 (/api/search)</h2>
-        <div>
-            <label for="keywordQuery">검색 키워드:</label>
-            <input type="text" id="keywordQuery" value="경복궁">
-        </div>
-        <div>
-            <label for="keywordNumOfRows">표시 개수:</label>
-            <input type="number" id="keywordNumOfRows" value="5">
-        </div>
-        <div>
-            <label for="keywordPageNo">페이지 번호:</label>
-            <input type="number" id="keywordPageNo" value="1">
-        </div>
-        <div>
-            <button onclick="searchByKeyword()">키워드 검색 실행</button>
+        <!-- 코드 조회 테스트 -->
+        <div class="test-section">
+            <h3>📋 코드 조회 테스트</h3>
+            <button onclick="testAreaCode()">지역코드</button>
+            <button onclick="testCategoryCode()">카테고리코드</button>
+            <button onclick="testLdongCode()">법정동코드 (v4.3)</button>
+            <button onclick="testLclsSystmCode()">분류체계코드 (v4.3)</button>
+            <div id="code-result" class="result"></div>
         </div>
 
-        <hr>
-
-        <h2>📍 위치 기반 검색 테스트 (/api/location)</h2>
-        <div>
-            <label for="locationLat">위도 (lat):</label>
-            <input type="text" id="locationLat" value="37.5665">
-        </div>
-        <div>
-            <label for="locationLng">경도 (lng):</label>
-            <input type="text" id="locationLng" value="126.9780">
-        </div>
-        <div>
-            <label for="locationRadius">반경 (m):</label>
-            <input type="number" id="locationRadius" value="1000">
-        </div>
-        <div>
-            <label for="locationNumOfRows">표시 개수:</label>
-            <input type="number" id="locationNumOfRows" value="5">
-        </div>
-        <div>
-            <button onclick="searchByLocation()">위치 검색 실행</button>
+        <!-- 상세정보 테스트 -->
+        <div class="test-section">
+            <h3>📝 상세정보 테스트</h3>
+            <input type="text" id="contentId" placeholder="콘텐츠 ID (예: 125405)" value="125405">
+            <button onclick="testDetailCommon()">공통정보</button>
+            <button onclick="testDetailIntro()">소개정보</button>
+            <button onclick="testDetailImage()">이미지정보</button>
+            <button onclick="testGetAllData()">통합정보</button>
+            <div id="detail-result" class="result"></div>
         </div>
 
-        <hr>
-
-        <h2>💡 기타 엔드포인트</h2>
-        <div>
-            <button onclick="callHealthCheck()">헬스 체크 (/health)</button>
-            <button onclick="callApiDocs()">API 문서 (/api/docs)</button>
-            <button onclick="callApiStats()">서비스 통계 (/api/stats)</button>
-        </div>
-
-        <div class="result-section">
-            <h2>결과:</h2>
-            <p id="statusMessage" class="loading"></p>
-            <pre id="apiResult"></pre>
+        <!-- 커스텀 테스트 -->
+        <div class="test-section">
+            <h3>⚙️ 커스텀 테스트</h3>
+            <select id="operation">
+                <option value="search">지역기반검색</option>
+                <option value="searchKeyword">키워드검색</option>
+                <option value="locationBasedList">위치기반검색</option>
+                <option value="detailCommon">공통정보</option>
+            </select>
+            <input type="text" id="customParams" placeholder='{"keyword": "경복궁"}' style="width: 300px;">
+            <button onclick="testCustom()">실행</button>
+            <div id="custom-result" class="result"></div>
         </div>
     </div>
 
     <script>
-        async function callApi(endpoint, params = {}) {
-            const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
-            if (!apiBaseUrl) {
-                displayResult(null, new Error('API 기본 URL을 입력해주세요.'));
-                return;
-            }
+        const API_BASE = '/api/tourism';
 
-            const url = new URL(`${apiBaseUrl}${endpoint}`);
-            for (const key in params) {
-                if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
-                    url.searchParams.append(key, params[key]);
-                }
-            }
-
-            document.getElementById('statusMessage').textContent = `요청 중: ${url.href}`;
-            document.getElementById('apiResult').textContent = '로딩 중...';
-
+        async function callAPI(operation, params = {}) {
             try {
-                const response = await fetch(url);
+                const body = { operation, ...params };
+                console.log('🚀 API 요청:', body);
+                
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+
                 const data = await response.json();
-                displayResult(data);
+                return data;
             } catch (error) {
-                displayResult(null, error);
+                console.error('❌ API 오류:', error);
+                throw error;
             }
         }
 
-        function displayResult(data, error = null) {
-            const statusMessage = document.getElementById('statusMessage');
-            const apiResult = document.getElementById('apiResult');
-
-            if (error) {
-                statusMessage.textContent = `오류 발생: ${error.message}`;
-                statusMessage.className = 'error';
-                apiResult.textContent = JSON.stringify({ error: error.message, stack: error.stack }, null, 2);
+        function displayResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = JSON.stringify(data, null, 2);
+            
+            if (data.success) {
+                element.className = 'result success';
             } else {
-                statusMessage.textContent = '요청 성공!';
-                statusMessage.className = '';
-                apiResult.textContent = JSON.stringify(data, null, 2);
+                element.className = 'result error';
             }
         }
 
-        // --- 각 버튼에 연결될 함수 ---
-
-        async function searchByKeyword() {
-            const query = document.getElementById('keywordQuery').value;
-            const numOfRows = document.getElementById('keywordNumOfRows').value;
-            const pageNo = document.getElementById('keywordPageNo').value;
-
-            await callApi('/api/search', { query, numOfRows, pageNo });
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '⏳ 로딩 중...';
+            element.className = 'result loading';
         }
 
-        async function searchByLocation() {
-            const lat = document.getElementById('locationLat').value;
-            const lng = document.getElementById('locationLng').value;
-            const radius = document.getElementById('locationRadius').value;
-            const numOfRows = document.getElementById('locationNumOfRows').value;
-
-            await callApi('/api/location', { lat, lng, radius, numOfRows });
+        // 테스트 함수들
+        async function testAreaBasedList() {
+            showLoading('search-result');
+            try {
+                const result = await callAPI('areaBasedList', {
+                    areaCode: '1',
+                    contentTypeId: '12',
+                    numOfRows: '5'
+                });
+                displayResult('search-result', result);
+            } catch (error) {
+                displayResult('search-result', { error: error.message });
+            }
         }
 
-        async function callHealthCheck() {
-            await callApi('/health');
+        async function testKeywordSearch() {
+            showLoading('search-result');
+            try {
+                const result = await callAPI('searchKeyword', {
+                    keyword: '경복궁',
+                    numOfRows: '5'
+                });
+                displayResult('search-result', result);
+            } catch (error) {
+                displayResult('search-result', { error: error.message });
+            }
         }
 
-        async function callApiDocs() {
-            await callApi('/api/docs');
+        async function testLocationBased() {
+            showLoading('search-result');
+            try {
+                const result = await callAPI('locationBasedList', {
+                    mapX: '126.9784147',
+                    mapY: '37.5666805',
+                    radius: '1000',
+                    numOfRows: '5'
+                });
+                displayResult('search-result', result);
+            } catch (error) {
+                displayResult('search-result', { error: error.message });
+            }
         }
 
-        async function callApiStats() {
-            await callApi('/api/stats');
+        async function testFestivalSearch() {
+            showLoading('search-result');
+            try {
+                const today = new Date();
+                const startDate = today.toISOString().slice(0, 10).replace(/-/g, '');
+                
+                const result = await callAPI('searchFestival', {
+                    eventStartDate: startDate,
+                    numOfRows: '5'
+                });
+                displayResult('search-result', result);
+            } catch (error) {
+                displayResult('search-result', { error: error.message });
+            }
         }
 
-        // 초기 URL 설정 (Vercel 배포 후 실제 URL로 변경 필요)
-        document.addEventListener('DOMContentLoaded', () => {
-            const defaultVercelUrl = 'https://healingk.vercel.app'; // 여기에 실제 Vercel URL을 넣으세요.
-            document.getElementById('apiBaseUrl').value = defaultVercelUrl;
-        });
+        async function testAreaCode() {
+            showLoading('code-result');
+            try {
+                const result = await callAPI('areaCode', {
+                    numOfRows: '20'
+                });
+                displayResult('code-result', result);
+            } catch (error) {
+                displayResult('code-result', { error: error.message });
+            }
+        }
+
+        async function testCategoryCode() {
+            showLoading('code-result');
+            try {
+                const result = await callAPI('categoryCode', {
+                    contentTypeId: '12',
+                    numOfRows: '10'
+                });
+                displayResult('code-result', result);
+            } catch (error) {
+                displayResult('code-result', { error: error.message });
+            }
+        }
+
+        async function testLdongCode() {
+            showLoading('code-result');
+            try {
+                const result = await callAPI('ldongCode', {
+                    lDongRegnCd: '11',
+                    numOfRows: '10'
+                });
+                displayResult('code-result', result);
+            } catch (error) {
+                displayResult('code-result', { error: error.message });
+            }
+        }
+
+        async function testLclsSystmCode() {
+            showLoading('code-result');
+            try {
+                const result = await callAPI('lclsSystmCode', {
+                    lclsSystmListYn: 'N',
+                    numOfRows: '10'
+                });
+                displayResult('code-result', result);
+            } catch (error) {
+                displayResult('code-result', { error: error.message });
+            }
+        }
+
+        async function testDetailCommon() {
+            showLoading('detail-result');
+            try {
+                const contentId = document.getElementById('contentId').value;
+                const result = await callAPI('detailCommon', {
+                    contentId: contentId
+                });
+                displayResult('detail-result', result);
+            } catch (error) {
+                displayResult('detail-result', { error: error.message });
+            }
+        }
+
+        async function testDetailIntro() {
+            showLoading('detail-result');
+            try {
+                const contentId = document.getElementById('contentId').value;
+                const result = await callAPI('detailIntro', {
+                    contentId: contentId,
+                    contentTypeId: '12'
+                });
+                displayResult('detail-result', result);
+            } catch (error) {
+                displayResult('detail-result', { error: error.message });
+            }
+        }
+
+        async function testDetailImage() {
+            showLoading('detail-result');
+            try {
+                const contentId = document.getElementById('contentId').value;
+                const result = await callAPI('detailImage', {
+                    contentId: contentId
+                });
+                displayResult('detail-result', result);
+            } catch (error) {
+                displayResult('detail-result', { error: error.message });
+            }
+        }
+
+        async function testGetAllData() {
+            showLoading('detail-result');
+            try {
+                const contentId = document.getElementById('contentId').value;
+                const result = await callAPI('getAllData', {
+                    contentId: contentId,
+                    includeImages: 'true'
+                });
+                displayResult('detail-result', result);
+            } catch (error) {
+                displayResult('detail-result', { error: error.message });
+            }
+        }
+
+        async function testCustom() {
+            showLoading('custom-result');
+            try {
+                const operation = document.getElementById('operation').value;
+                const paramsStr = document.getElementById('customParams').value;
+                const params = paramsStr ? JSON.parse(paramsStr) : {};
+                
+                const result = await callAPI(operation, params);
+                displayResult('custom-result', result);
+            } catch (error) {
+                displayResult('custom-result', { error: error.message });
+            }
+        }
     </script>
 </body>
 </html>
