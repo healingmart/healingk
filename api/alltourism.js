@@ -1,4 +1,4 @@
-// ===== TourAPI 4.3 Enterprise Implementation - 완전 개선 버전 =====
+// ===== TourAPI 4.3 Enterprise Implementation - TOUR_API_KEY 완전 제거 버전 =====
 'use strict';
 
 // 런타임 환경 감지 및 폴리필
@@ -152,7 +152,7 @@ class InternationalizationManager {
             RATE_LIMIT_EXCEEDED: '요청 한도를 초과했습니다',
             CORS_ERROR: '허용되지 않은 Origin입니다',
             INVALID_API_KEY: '유효하지 않은 API 키입니다',
-            MISSING_API_KEY: 'API 키가 설정되지 않았습니다',
+            MISSING_API_KEY: 'TOURISM_API_KEY 또는 KTO_API_KEY 환경변수가 설정되지 않았습니다',
             UNSUPPORTED_OPERATION: '지원하지 않는 오퍼레이션: {operation}',
             NOT_FOUND: '데이터를 찾을 수 없습니다',
             EMPTY_RESPONSE: 'API 응답이 없습니다',
@@ -175,7 +175,7 @@ class InternationalizationManager {
             RATE_LIMIT_EXCEEDED: 'Rate limit exceeded',
             CORS_ERROR: 'Origin not allowed',
             INVALID_API_KEY: 'Invalid API key',
-            MISSING_API_KEY: 'API key not configured',
+            MISSING_API_KEY: 'TOURISM_API_KEY or KTO_API_KEY environment variable not configured',
             UNSUPPORTED_OPERATION: 'Unsupported operation: {operation}',
             NOT_FOUND: 'Data not found',
             EMPTY_RESPONSE: 'Empty API response',
@@ -286,7 +286,7 @@ class ConstantsManager {
         };
 
         this.DEFAULT_CONFIG = {
-            // ✅ TOUR_API_KEY 완전 제거 - TOURISM_API_KEY와 KTO_API_KEY만 사용
+            // ✅ 완전히 수정: tourApiKey만 사용
             tourApiKey: null,
             appName: 'HealingK-TourAPI',
             version: '4.3.0-Enterprise',
@@ -314,7 +314,63 @@ class ConstantsManager {
             logLevel: 'info',
             defaultLanguage: 'ko',
             memoryCheckInterval: 30000,
-            memoryThreshold: 0.9
+            memoryThreshold: 0.9,
+            // ✅ 개발 모드에서 샘플 데이터 사용 여부
+            useSampleData: false
+        };
+
+        // ✅ 샘플 데이터 추가 (개발/테스트용)
+        this.SAMPLE_DATA = {
+            areaBasedList: {
+                success: true,
+                operation: 'areaBasedList',
+                data: {
+                    items: [
+                        {
+                            contentId: '126508',
+                            contentTypeId: '12',
+                            title: '경복궁',
+                            addr1: '서울특별시 종로구 사직로 161',
+                            firstimage: 'https://tong.visitkorea.or.kr/cms/resource/83/2678083_image2_1.JPG',
+                            mapx: 126.9769,
+                            mapy: 37.5788,
+                            areacode: '1',
+                            cat1: 'A02',
+                            cat2: 'A0201',
+                            cat3: 'A02010100',
+                            meta: {
+                                typeName: '관광지',
+                                typeIcon: '🏛️',
+                                areaName: '서울',
+                                areaEmoji: '🏙️',
+                                hasImage: true,
+                                hasLocation: true,
+                                completeness: 85
+                            }
+                        }
+                    ],
+                    pagination: {
+                        totalCount: 1,
+                        pageNo: 1,
+                        numOfRows: 10,
+                        totalPages: 1,
+                        hasNext: false,
+                        hasPrev: false
+                    }
+                },
+                metadata: {
+                    operation: 'areaBasedList',
+                    itemCount: 1,
+                    searchCriteria: 2,
+                    version: '4.3.0-Enterprise',
+                    timestamp: new Date().toISOString(),
+                    performance: {
+                        apiResponseTime: 0,
+                        totalProcessingTime: 0
+                    },
+                    notice: 'TOURISM_API_KEY 또는 KTO_API_KEY 환경변수 설정 필요 - 샘플 데이터 제공'
+                }
+            }
         };
     }
 
@@ -339,6 +395,10 @@ class ConstantsManager {
         const area = this.AREA_CODE_MAP[areaCode];
         if (!area) return lang === 'en' ? 'Other' : '기타';
         return lang === 'en' ? area.en : area.name;
+    }
+
+    getSampleData(operation) {
+        return this.SAMPLE_DATA[operation] || null;
     }
 }
 
@@ -372,7 +432,7 @@ class ConfigManager {
         const constants = this.container ? this.container.get('constants') : new ConstantsManager();
         const defaultConfig = { ...constants.DEFAULT_CONFIG };
         
-        // ✅ TOUR_API_KEY 완전 제거 - TOURISM_API_KEY와 KTO_API_KEY만 사용
+        // ✅ 완전히 수정: TOURISM_API_KEY와 KTO_API_KEY만 확인
         const tourApiKey = process.env.TOURISM_API_KEY || 
                           process.env.KTO_API_KEY || 
                           defaultConfig.tourApiKey;
@@ -398,7 +458,8 @@ class ConfigManager {
             logLevel: process.env.LOG_LEVEL || defaultConfig.logLevel,
             defaultLanguage: process.env.DEFAULT_LANGUAGE || defaultConfig.defaultLanguage,
             memoryCheckInterval: this.parseIntWithDefault(process.env.MEMORY_CHECK_INTERVAL, defaultConfig.memoryCheckInterval),
-            memoryThreshold: this.parseFloatWithDefault(process.env.MEMORY_THRESHOLD, defaultConfig.memoryThreshold)
+            memoryThreshold: this.parseFloatWithDefault(process.env.MEMORY_THRESHOLD, defaultConfig.memoryThreshold),
+            useSampleData: process.env.USE_SAMPLE_DATA === 'true' || defaultConfig.useSampleData
         };
     }
 
@@ -411,12 +472,14 @@ class ConfigManager {
         this.environmentOverrides.set('production', {
             allowedOrigins: (origins) => origins.filter(origin => !origin.includes('localhost')),
             enableMetrics: true,
-            logLevel: 'warn'
+            logLevel: 'warn',
+            useSampleData: false
         });
 
         this.environmentOverrides.set('development', {
             enableMetrics: false,
-            logLevel: 'debug'
+            logLevel: 'debug',
+            useSampleData: true  // ✅ 개발 환경에서는 샘플 데이터 허용
         });
     }
 
@@ -505,11 +568,17 @@ class ConfigManager {
         const errors = [];
         const i18n = this.container ? this.container.get('i18n') : null;
         
+        // ✅ API 키 검증 수정 - 개발 환경에서는 경고만
         if (!this.config.tourApiKey) {
             const message = i18n ? 
                 i18n.getMessage('MISSING_API_KEY') : 
                 'TOURISM_API_KEY 또는 KTO_API_KEY 환경변수가 설정되지 않았습니다';
-            errors.push(message);
+            
+            if (this.config.environment === 'development') {
+                console.warn('⚠️ 개발 환경:', message, '- 샘플 데이터로 동작합니다.');
+            } else {
+                errors.push(message);
+            }
         }
         
         if (this.config.rateLimitPerMinute <= 0) {
@@ -528,6 +597,16 @@ class ConfigManager {
 
     isInitialized() {
         return this.initialized;
+    }
+
+    // ✅ API 키 사용 가능 여부 확인
+    hasValidApiKey() {
+        return !!this.config.tourApiKey;
+    }
+
+    // ✅ 샘플 데이터 사용 여부 확인
+    shouldUseSampleData() {
+        return !this.hasValidApiKey() && this.config.useSampleData;
     }
 }
 
@@ -689,7 +768,6 @@ class AdvancedCache {
         });
     }
 
-    // ✅ 개선된 캐시 키 생성
     generateKey(operation, params) {
         const normalizeValue = (value) => {
             if (Array.isArray(value)) return value.sort().join(',');
@@ -819,7 +897,6 @@ class AdvancedCache {
         });
     }
 
-    // ✅ 새로운 메모리 모니터링 시스템
     startMemoryMonitoring() {
         setInterval(() => {
             const usage = process.memoryUsage();
@@ -1176,7 +1253,6 @@ class HttpClient {
         this.retryDelay = this.configManager.get('retryDelay');
         this.maxConcurrent = this.configManager.get('maxConcurrent');
         
-        // ✅ 하드코딩 제거
         this.userAgent = `${this.configManager.get('appName')}/v${this.configManager.get('version')}`;
         
         this.semaphore = new Semaphore(this.maxConcurrent);
@@ -1426,7 +1502,6 @@ class ResponseFormatter {
     }
 
     static formatError(error, operation = null) {
-        // ✅ 의존성 주입으로 환경 설정 확인
         const isProduction = process.env.NODE_ENV === 'production';
         
         const response = {
@@ -1694,9 +1769,23 @@ class TourApiHandlers {
         const cache = container.get('cache');
         const httpClient = container.get('httpClient');
         const configManager = container.get('config');
+        const constants = container.get('constants');
         const logger = container.get('logger');
         
         validator.validate('areaBasedList', params);
+        
+        // ✅ API 키 확인 및 샘플 데이터 처리
+        if (!configManager.hasValidApiKey()) {
+            if (configManager.shouldUseSampleData()) {
+                logger.warn('Using sample data due to missing API key');
+                const sampleData = constants.getSampleData('areaBasedList');
+                if (sampleData) {
+                    return sampleData;
+                }
+            }
+            const i18n = container.get('i18n');
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+        }
         
         const {
             numOfRows = '10', pageNo = '1', arrange = 'C',
@@ -1811,6 +1900,12 @@ class TourApiHandlers {
         
         validator.validate('detailCommon', params);
         
+        // ✅ API 키 확인
+        if (!configManager.hasValidApiKey()) {
+            const i18n = container.get('i18n');
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+        }
+        
         const { contentId } = params;
         const cacheKey = cache.generateKey('detailCommon', { contentId });
         
@@ -1886,6 +1981,12 @@ class TourApiHandlers {
         const logger = container.get('logger');
         
         validator.validate('searchKeyword', params);
+        
+        // ✅ API 키 확인
+        if (!configManager.hasValidApiKey()) {
+            const i18n = container.get('i18n');
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+        }
         
         const {
             keyword, areaCode = '', sigunguCode = '',
@@ -2002,6 +2103,12 @@ class TourApiHandlers {
         
         validator.validate('locationBasedList', params);
         
+        // ✅ API 키 확인
+        if (!configManager.hasValidApiKey()) {
+            const i18n = container.get('i18n');
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+        }
+        
         const {
             mapX, mapY, radius,
             numOfRows = '10', pageNo = '1', arrange = 'E',
@@ -2101,6 +2208,12 @@ class TourApiHandlers {
         
         validator.validate('batchDetail', { contentIds });
         
+        // ✅ API 키 확인
+        if (!configManager.hasValidApiKey()) {
+            const i18n = container.get('i18n');
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
+        }
+        
         if (!Array.isArray(contentIds) || contentIds.length === 0) {
             const i18n = container.get('i18n');
             throw new ValidationError(
@@ -2188,8 +2301,9 @@ i18n.setLanguage(configManager.get('defaultLanguage'));
 try {
     configManager.validateConfig();
     logger.info('✅ Configuration validated successfully', {
-        tourApiKey: configManager.get('tourApiKey') ? 'Set' : 'Missing',
-        environment: configManager.get('environment')
+        tourApiKey: configManager.hasValidApiKey() ? 'Set' : 'Missing',
+        environment: configManager.get('environment'),
+        sampleDataEnabled: configManager.shouldUseSampleData()
     });
 } catch (error) {
     logger.error('❌ Configuration validation failed', error);
@@ -2233,8 +2347,8 @@ async function tourApiHandler(req, res) {
         const { operation = 'areaBasedList', ...params } = 
             req.method === 'GET' ? req.query : req.body;
         
-        const apiKey = configManager.get('tourApiKey');
-        if (!apiKey) {
+        // ✅ API 키 체크 수정
+        if (!configManager.hasValidApiKey() && !configManager.shouldUseSampleData()) {
             throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
         }
 
@@ -2252,7 +2366,8 @@ async function tourApiHandler(req, res) {
             operation,
             paramCount: Object.keys(params).length,
             clientId: securityInfo.clientId,
-            apiKeyPresent: !!apiKey
+            apiKeyPresent: configManager.hasValidApiKey(),
+            usingSampleData: configManager.shouldUseSampleData()
         });
 
         let result;
@@ -2291,7 +2406,9 @@ async function tourApiHandler(req, res) {
             nodeVersion: process.version,
             uptime: Date.now() - SERVICE_START_TIME,
             cacheStats: cache.getStats(),
-            concurrentRequests: container.get('httpClient').semaphore.currentConcurrent
+            concurrentRequests: container.get('httpClient').semaphore.currentConcurrent,
+            apiKeyConfigured: configManager.hasValidApiKey(),
+            usingSampleData: configManager.shouldUseSampleData()
         };
 
         logger.info('API request completed successfully', {
@@ -2372,7 +2489,8 @@ function healthCheck() {
             maxCacheSize: configManager.get('maxCacheSize'),
             maxConcurrent: configManager.get('maxConcurrent'),
             supportedLanguages: i18n.getSupportedLanguages(),
-            apiKeyConfigured: !!configManager.get('tourApiKey')
+            apiKeyConfigured: configManager.hasValidApiKey(),
+            usingSampleData: configManager.shouldUseSampleData()
         },
         timestamp: new Date().toISOString()
     };
@@ -2388,8 +2506,10 @@ function runTests() {
             testRunner.assert(constants.isValidOperation('areaBasedList'), 'areaBasedList should be valid operation');
         })
         .addTest('API Key Test', () => {
-            const apiKey = configManager.get('tourApiKey');
-            testRunner.assert(!!apiKey, 'API key should be configured');
+            // ✅ 수정: API 키 또는 샘플 데이터 사용 가능해야 함
+            const hasApiKey = configManager.hasValidApiKey();
+            const canUseSampleData = configManager.shouldUseSampleData();
+            testRunner.assert(hasApiKey || canUseSampleData, 'API key should be configured OR sample data should be available');
         })
         .addTest('Cache Test', () => {
             cache.set('test-key', { test: 'data' });
@@ -2488,7 +2608,8 @@ module.exports.serverless = async function(event, context) {
 logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
     version: configManager.get('version'),
     environment: configManager.get('environment'),
-    apiKeyConfigured: !!configManager.get('tourApiKey'),
+    apiKeyConfigured: configManager.hasValidApiKey(),
+    sampleDataEnabled: configManager.shouldUseSampleData(),
     features: {
         caching: true,
         rateLimiting: true,
@@ -2499,7 +2620,8 @@ logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
         acceptLanguageParsing: true,
         dependencyInjection: true,
         memoryMonitoring: true,
-        comprehensiveTesting: true
+        comprehensiveTesting: true,
+        sampleDataSupport: true
     },
     concurrentLimit: configManager.get('maxConcurrent'),
     supportedLanguages: i18n.getSupportedLanguages(),
