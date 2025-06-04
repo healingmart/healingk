@@ -1,4 +1,4 @@
-// ===== TourAPI 4.3 Enterprise Implementation - API 키 문제 해결 버전 =====
+// ===== TourAPI 4.3 Enterprise Implementation - 완전 개선 버전 =====
 'use strict';
 
 // 런타임 환경 감지 및 폴리필
@@ -10,6 +10,57 @@ if (isNode && typeof fetch === 'undefined') {
 
 // ===== 서비스 시작 시간 추적 =====
 const SERVICE_START_TIME = Date.now();
+
+// ===== 의존성 주입 컨테이너 =====
+class ServiceContainer {
+    constructor() {
+        this.services = new Map();
+        this.singletons = new Map();
+        this.initialized = false;
+    }
+
+    register(name, factory, singleton = true) {
+        this.services.set(name, { factory, singleton });
+        return this;
+    }
+
+    get(name) {
+        if (!this.services.has(name)) {
+            throw new Error(`Service '${name}' not registered`);
+        }
+
+        const service = this.services.get(name);
+        
+        if (service.singleton) {
+            if (!this.singletons.has(name)) {
+                this.singletons.set(name, service.factory(this));
+            }
+            return this.singletons.get(name);
+        }
+
+        return service.factory(this);
+    }
+
+    initialize() {
+        if (this.initialized) return this;
+        
+        // 의존성 순서대로 초기화
+        const initOrder = ['constants', 'i18n', 'config', 'logger', 'cache', 'rateLimiter', 'validator', 'httpClient', 'security'];
+        
+        for (const serviceName of initOrder) {
+            if (this.services.has(serviceName)) {
+                this.get(serviceName);
+            }
+        }
+        
+        this.initialized = true;
+        return this;
+    }
+
+    isInitialized() {
+        return this.initialized;
+    }
+}
 
 // ===== 동시성 제어 유틸리티 =====
 class Semaphore {
@@ -114,7 +165,8 @@ class InternationalizationManager {
             MAX_LENGTH_ERROR: '는 최대 {maxLength}자 이하여야 합니다',
             NUMERIC_ERROR: '는 숫자여야 합니다',
             ENUM_ERROR: '는 다음 값 중 하나여야 합니다: {values}',
-            BATCH_CONTENT_IDS_REQUIRED: '배치 작업에는 contentIds 배열이 필요합니다'
+            BATCH_CONTENT_IDS_REQUIRED: '배치 작업에는 contentIds 배열이 필요합니다',
+            CONFIG_VALIDATION_FAILED: '설정 검증 실패'
         });
 
         this.messages.set('en', {
@@ -136,7 +188,8 @@ class InternationalizationManager {
             MAX_LENGTH_ERROR: ' must be at most {maxLength} characters',
             NUMERIC_ERROR: ' must be a number',
             ENUM_ERROR: ' must be one of: {values}',
-            BATCH_CONTENT_IDS_REQUIRED: 'Batch operation requires contentIds array'
+            BATCH_CONTENT_IDS_REQUIRED: 'Batch operation requires contentIds array',
+            CONFIG_VALIDATION_FAILED: 'Configuration validation failed'
         });
     }
 
@@ -233,8 +286,10 @@ class ConstantsManager {
         };
 
         this.DEFAULT_CONFIG = {
-            // ✅ API 키 관련 수정 - TOURISM_API_KEY 우선순위
+            // ✅ TOUR_API_KEY 완전 제거 - TOURISM_API_KEY와 KTO_API_KEY만 사용
             tourApiKey: null,
+            appName: 'HealingK-TourAPI',
+            version: '4.3.0-Enterprise',
             allowedOrigins: [
                 'https://your-blog.com',
                 'https://www.your-blog.com',
@@ -245,6 +300,7 @@ class ConstantsManager {
             allowedApiKeys: [],
             rateLimitPerMinute: 1000,
             maxCacheSize: 5000,
+            maxMemorySize: 50 * 1024 * 1024, // 50MB
             cacheTtl: 30 * 60 * 1000,
             apiTimeout: 15000,
             retryAttempts: 3,
@@ -256,7 +312,9 @@ class ConstantsManager {
             maxBatchSize: 5,
             environment: 'development',
             logLevel: 'info',
-            defaultLanguage: 'ko'
+            defaultLanguage: 'ko',
+            memoryCheckInterval: 30000,
+            memoryThreshold: 0.9
         };
     }
 
@@ -284,9 +342,10 @@ class ConstantsManager {
     }
 }
 
-// ===== 의존성 주입 기반 설정 관리 시스템 (API 키 문제 해결) =====
+// ===== 개선된 설정 관리 시스템 =====
 class ConfigManager {
-    constructor() {
+    constructor(container) {
+        this.container = container;
         this.config = this.loadConfig();
         this.validators = new Map();
         this.subscribers = new Set();
@@ -299,36 +358,47 @@ class ConfigManager {
         this.initialized = true;
     }
 
+    parseIntWithDefault(value, defaultValue) {
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? defaultValue : parsed;
+    }
+
+    parseFloatWithDefault(value, defaultValue) {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? defaultValue : parsed;
+    }
+
     loadConfig() {
-        const constants = new ConstantsManager();
+        const constants = this.container ? this.container.get('constants') : new ConstantsManager();
         const defaultConfig = { ...constants.DEFAULT_CONFIG };
         
-        // ✅ API 키 우선순위 수정: TOURISM_API_KEY → TOUR_API_KEY → KTO_API_KEY
+        // ✅ TOUR_API_KEY 완전 제거 - TOURISM_API_KEY와 KTO_API_KEY만 사용
         const tourApiKey = process.env.TOURISM_API_KEY || 
-                          process.env.TOUR_API_KEY || 
                           process.env.KTO_API_KEY || 
                           defaultConfig.tourApiKey;
         
-        // 환경변수에서 설정 로드
         return {
             ...defaultConfig,
             tourApiKey: tourApiKey,
             allowedOrigins: this.parseArray(process.env.ALLOWED_ORIGINS) || defaultConfig.allowedOrigins,
             allowedApiKeys: this.parseArray(process.env.ALLOWED_API_KEYS) || defaultConfig.allowedApiKeys,
-            rateLimitPerMinute: parseInt(process.env.RATE_LIMIT) || defaultConfig.rateLimitPerMinute,
-            maxCacheSize: parseInt(process.env.MAX_CACHE_SIZE) || defaultConfig.maxCacheSize,
-            cacheTtl: parseInt(process.env.CACHE_TTL) || defaultConfig.cacheTtl,
-            apiTimeout: parseInt(process.env.API_TIMEOUT) || defaultConfig.apiTimeout,
-            retryAttempts: parseInt(process.env.RETRY_ATTEMPTS) || defaultConfig.retryAttempts,
-            retryDelay: parseInt(process.env.RETRY_DELAY) || defaultConfig.retryDelay,
-            maxConcurrent: parseInt(process.env.MAX_CONCURRENT) || defaultConfig.maxConcurrent,
+            rateLimitPerMinute: this.parseIntWithDefault(process.env.RATE_LIMIT, defaultConfig.rateLimitPerMinute),
+            maxCacheSize: this.parseIntWithDefault(process.env.MAX_CACHE_SIZE, defaultConfig.maxCacheSize),
+            maxMemorySize: this.parseIntWithDefault(process.env.MAX_MEMORY_SIZE, defaultConfig.maxMemorySize),
+            cacheTtl: this.parseIntWithDefault(process.env.CACHE_TTL, defaultConfig.cacheTtl),
+            apiTimeout: this.parseIntWithDefault(process.env.API_TIMEOUT, defaultConfig.apiTimeout),
+            retryAttempts: this.parseIntWithDefault(process.env.RETRY_ATTEMPTS, defaultConfig.retryAttempts),
+            retryDelay: this.parseIntWithDefault(process.env.RETRY_DELAY, defaultConfig.retryDelay),
+            maxConcurrent: this.parseIntWithDefault(process.env.MAX_CONCURRENT, defaultConfig.maxConcurrent),
             enableMetrics: process.env.ENABLE_METRICS === 'true',
             enableCompression: process.env.ENABLE_COMPRESSION !== 'false',
             enableBatching: process.env.ENABLE_BATCHING === 'true',
-            maxBatchSize: parseInt(process.env.MAX_BATCH_SIZE) || defaultConfig.maxBatchSize,
+            maxBatchSize: this.parseIntWithDefault(process.env.MAX_BATCH_SIZE, defaultConfig.maxBatchSize),
             environment: process.env.NODE_ENV || defaultConfig.environment,
             logLevel: process.env.LOG_LEVEL || defaultConfig.logLevel,
-            defaultLanguage: process.env.DEFAULT_LANGUAGE || defaultConfig.defaultLanguage
+            defaultLanguage: process.env.DEFAULT_LANGUAGE || defaultConfig.defaultLanguage,
+            memoryCheckInterval: this.parseIntWithDefault(process.env.MEMORY_CHECK_INTERVAL, defaultConfig.memoryCheckInterval),
+            memoryThreshold: this.parseFloatWithDefault(process.env.MEMORY_THRESHOLD, defaultConfig.memoryThreshold)
         };
     }
 
@@ -431,12 +501,15 @@ class ConfigManager {
         });
     }
 
-    // ✅ API 키 검증 수정
     validateConfig() {
         const errors = [];
+        const i18n = this.container ? this.container.get('i18n') : null;
         
         if (!this.config.tourApiKey) {
-            errors.push('TOURISM_API_KEY 환경변수가 설정되지 않았습니다');
+            const message = i18n ? 
+                i18n.getMessage('MISSING_API_KEY') : 
+                'TOURISM_API_KEY 또는 KTO_API_KEY 환경변수가 설정되지 않았습니다';
+            errors.push(message);
         }
         
         if (this.config.rateLimitPerMinute <= 0) {
@@ -444,7 +517,10 @@ class ConfigManager {
         }
         
         if (errors.length > 0) {
-            throw new Error(`설정 검증 실패: ${errors.join(', ')}`);
+            const message = i18n ? 
+                i18n.getMessage('CONFIG_VALIDATION_FAILED') : 
+                '설정 검증 실패';
+            throw new Error(`${message}: ${errors.join(', ')}`);
         }
         
         return true;
@@ -457,8 +533,9 @@ class ConfigManager {
 
 // ===== 고급 로깅 시스템 =====
 class Logger {
-    constructor(configManager) {
-        this.configManager = configManager;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container ? container.get('config') : null;
         this.logLevel = this.configManager?.get('logLevel') || 'info';
         this.logLevels = {
             debug: 0,
@@ -565,9 +642,10 @@ class Logger {
 
 // ===== 개선된 메모리 효율적인 캐시 시스템 =====
 class AdvancedCache {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.cache = new Map();
         this.accessTimes = new Map();
         this.stats = {
@@ -579,9 +657,17 @@ class AdvancedCache {
         this.maxSize = this.configManager.get('maxCacheSize');
         this.ttl = this.configManager.get('cacheTtl');
         this.sizeTracker = 0;
-        this.maxMemorySize = 50 * 1024 * 1024; // 50MB
+        this.maxMemorySize = this.configManager.get('maxMemorySize');
+        
+        // 메모리 모니터링 설정
+        this.memoryMonitor = {
+            checkInterval: this.configManager.get('memoryCheckInterval'),
+            threshold: this.configManager.get('memoryThreshold'),
+            lastCheck: Date.now()
+        };
         
         this.startCleanupWorker();
+        this.startMemoryMonitoring();
         this.setupConfigSubscription();
     }
 
@@ -596,15 +682,27 @@ class AdvancedCache {
             } else if (key === 'cacheTtl') {
                 this.ttl = newValue;
                 this.logger.info('Cache TTL updated', { old: oldValue, new: newValue });
+            } else if (key === 'maxMemorySize') {
+                this.maxMemorySize = newValue;
+                this.logger.info('Cache max memory updated', { old: oldValue, new: newValue });
             }
         });
     }
 
+    // ✅ 개선된 캐시 키 생성
     generateKey(operation, params) {
+        const normalizeValue = (value) => {
+            if (Array.isArray(value)) return value.sort().join(',');
+            if (typeof value === 'object' && value !== null) {
+                return JSON.stringify(value, Object.keys(value).sort());
+            }
+            return String(value);
+        };
+
         const sortedEntries = Object.entries(params)
             .filter(([_, value]) => value !== undefined && value !== null && value !== '')
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, value]) => `${key}:${value}`)
+            .map(([key, value]) => `${key}:${normalizeValue(value)}`)
             .join('|');
         
         return `${operation}:${sortedEntries}`;
@@ -721,6 +819,34 @@ class AdvancedCache {
         });
     }
 
+    // ✅ 새로운 메모리 모니터링 시스템
+    startMemoryMonitoring() {
+        setInterval(() => {
+            const usage = process.memoryUsage();
+            const heapUsagePercent = usage.heapUsed / usage.heapTotal;
+            
+            if (heapUsagePercent > this.memoryMonitor.threshold) {
+                this.logger.warn('High memory usage detected', {
+                    heapUsagePercent: Math.round(heapUsagePercent * 100),
+                    heapUsed: Math.round(usage.heapUsed / 1024 / 1024),
+                    heapTotal: Math.round(usage.heapTotal / 1024 / 1024)
+                });
+                
+                this.emergencyCleanup();
+            }
+        }, this.memoryMonitor.checkInterval);
+    }
+
+    emergencyCleanup() {
+        const targetSize = Math.floor(this.cache.size * 0.3); // 30%까지 줄임
+        while (this.cache.size > targetSize) {
+            this.evictLRU();
+        }
+        this.logger.info('Emergency cache cleanup completed', {
+            remainingItems: this.cache.size
+        });
+    }
+
     enforceSizeLimit() {
         while (this.cache.size > this.maxSize) {
             this.evictLRU();
@@ -781,9 +907,10 @@ class AdvancedCache {
 
 // ===== 개선된 레이트 리미터 =====
 class RateLimiter {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.requests = new Map();
         this.limit = this.configManager.get('rateLimitPerMinute');
         this.windowMs = 60 * 1000;
@@ -854,9 +981,9 @@ class RateLimiter {
 
 // ===== 개선된 커스텀 에러 클래스 =====
 class TourApiError extends Error {
-    constructor(messageCode, operation, statusCode = 500, details = {}, params = {}) {
-        const message = (typeof i18n !== 'undefined') ? 
-            i18n.getMessage(messageCode, params) : 
+    constructor(messageCode, operation, statusCode = 500, details = {}, params = {}, i18nInstance = null) {
+        const message = i18nInstance ? 
+            i18nInstance.getMessage(messageCode, params) : 
             messageCode;
         
         super(message);
@@ -882,31 +1009,32 @@ class TourApiError extends Error {
 }
 
 class ValidationError extends TourApiError {
-    constructor(message, field, value) {
-        super('VALIDATION_ERROR', 'validation', 400, { field, value });
+    constructor(message, field, value, i18nInstance = null) {
+        super('VALIDATION_ERROR', 'validation', 400, { field, value }, {}, i18nInstance);
         this.name = 'ValidationError';
         this.message = message;
     }
 }
 
 class ApiTimeoutError extends TourApiError {
-    constructor(operation, timeout) {
-        super('API_TIMEOUT', operation, 408, { timeout }, { timeout });
+    constructor(operation, timeout, i18nInstance = null) {
+        super('API_TIMEOUT', operation, 408, { timeout }, { timeout }, i18nInstance);
         this.name = 'ApiTimeoutError';
     }
 }
 
 class RateLimitError extends TourApiError {
-    constructor(limit, remaining) {
-        super('RATE_LIMIT_EXCEEDED', 'rateLimit', 429, { limit, remaining });
+    constructor(limit, remaining, i18nInstance = null) {
+        super('RATE_LIMIT_EXCEEDED', 'rateLimit', 429, { limit, remaining }, {}, i18nInstance);
         this.name = 'RateLimitError';
     }
 }
 
 // ===== 완전히 다국어화된 입력 검증 시스템 =====
 class InputValidator {
-    constructor(i18n) {
-        this.i18n = i18n;
+    constructor(container) {
+        this.container = container;
+        this.i18n = container.get('i18n');
         this.schemas = new Map();
         this.setupSchemas();
     }
@@ -964,7 +1092,8 @@ class InputValidator {
             throw new ValidationError(
                 this.i18n.getMessage('UNSUPPORTED_OPERATION', { operation }), 
                 'operation', 
-                operation
+                operation,
+                this.i18n
             );
         }
 
@@ -1024,7 +1153,12 @@ class InputValidator {
         }
 
         if (errors.length > 0) {
-            throw new ValidationError(`${this.i18n.getMessage('VALIDATION_ERROR')}: ${errors.join(', ')}`, 'validation', params);
+            throw new ValidationError(
+                `${this.i18n.getMessage('VALIDATION_ERROR')}: ${errors.join(', ')}`, 
+                'validation', 
+                params,
+                this.i18n
+            );
         }
 
         return true;
@@ -1033,14 +1167,17 @@ class InputValidator {
 
 // ===== 동시성 제어가 포함된 HTTP 클라이언트 =====
 class HttpClient {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.timeout = this.configManager.get('apiTimeout');
         this.retryAttempts = this.configManager.get('retryAttempts');
         this.retryDelay = this.configManager.get('retryDelay');
         this.maxConcurrent = this.configManager.get('maxConcurrent');
-        this.userAgent = 'HealingK-TourAPI/4.3.0-Enterprise';
+        
+        // ✅ 하드코딩 제거
+        this.userAgent = `${this.configManager.get('appName')}/v${this.configManager.get('version')}`;
         
         this.semaphore = new Semaphore(this.maxConcurrent);
         
@@ -1055,6 +1192,9 @@ class HttpClient {
             if (key === 'maxConcurrent') {
                 this.semaphore = new Semaphore(newValue);
                 this.maxConcurrent = newValue;
+            }
+            if (key === 'appName' || key === 'version') {
+                this.userAgent = `${this.configManager.get('appName')}/v${this.configManager.get('version')}`;
             }
         });
     }
@@ -1093,12 +1233,14 @@ class HttpClient {
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
+                    const i18n = this.container.get('i18n');
                     throw new TourApiError(
                         'HTTP_ERROR',
                         'request',
                         response.status,
                         { url, status: response.status, statusText: response.statusText },
-                        { status: response.status, statusText: response.statusText }
+                        { status: response.status, statusText: response.statusText },
+                        i18n
                     );
                 }
 
@@ -1115,7 +1257,8 @@ class HttpClient {
                 clearTimeout(timeoutId);
                 
                 if (error.name === 'AbortError') {
-                    error = new ApiTimeoutError('request', this.timeout);
+                    const i18n = this.container.get('i18n');
+                    error = new ApiTimeoutError('request', this.timeout, i18n);
                 }
 
                 this.logger.warn('HTTP request failed', { 
@@ -1176,39 +1319,12 @@ class HttpClient {
     }
 }
 
-// ===== 의존성 주입 기반 초기화 =====
-const i18n = new InternationalizationManager();
-const constants = new ConstantsManager();
-const configManager = new ConfigManager();
-
-// 설정 검증
-try {
-    configManager.validateConfig();
-    logger && logger.info('✅ Configuration validated successfully', {
-        tourApiKey: configManager.get('tourApiKey') ? 'Set' : 'Missing',
-        environment: configManager.get('environment')
-    });
-} catch (error) {
-    console.error('❌ Configuration validation failed:', error.message);
-    // 개발 환경에서는 경고만 출력하고 계속 진행
-    if (configManager.get('environment') !== 'development') {
-        process.exit(1);
-    }
-}
-
-const logger = new Logger(configManager);
-const rateLimiter = new RateLimiter(configManager, logger);
-const cache = new AdvancedCache(configManager, logger);
-const validator = new InputValidator(i18n);
-const httpClient = new HttpClient(configManager, logger);
-
-i18n.setLanguage(configManager.get('defaultLanguage'));
-
 // ===== 보안 및 인증 시스템 =====
 class SecurityManager {
-    constructor(configManager, logger) {
-        this.configManager = configManager;
-        this.logger = logger;
+    constructor(container) {
+        this.container = container;
+        this.configManager = container.get('config');
+        this.logger = container.get('logger');
         this.allowedOrigins = this.configManager.get('allowedOrigins');
         this.allowedApiKeys = this.configManager.get('allowedApiKeys');
         this.securityHeaders = {
@@ -1223,10 +1339,12 @@ class SecurityManager {
 
     validateRequest(req, res) {
         const clientId = this.getClientId(req);
+        const rateLimiter = this.container.get('rateLimiter');
+        const i18n = this.container.get('i18n');
         
         if (!rateLimiter.isAllowed(clientId)) {
             const remaining = rateLimiter.getRemainingQuota(clientId);
-            throw new RateLimitError(this.configManager.get('rateLimitPerMinute'), remaining);
+            throw new RateLimitError(this.configManager.get('rateLimitPerMinute'), remaining, i18n);
         }
 
         this.handleCors(req, res);
@@ -1252,6 +1370,7 @@ class SecurityManager {
     handleCors(req, res) {
         const origin = req.headers.origin;
         const isDevelopment = this.configManager.get('environment') === 'development';
+        const i18n = this.container.get('i18n');
         
         if (this.allowedOrigins.includes('*')) {
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1262,7 +1381,7 @@ class SecurityManager {
             res.setHeader('Access-Control-Allow-Origin', origin);
         } else if (origin) {
             this.logger.error('Unauthorized origin blocked', { origin });
-            throw new TourApiError('CORS_ERROR', 'security', 403, { origin });
+            throw new TourApiError('CORS_ERROR', 'security', 403, { origin }, {}, i18n);
         }
 
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -1276,8 +1395,10 @@ class SecurityManager {
         if (this.allowedApiKeys.length === 0) return;
 
         const apiKey = req.headers['x-api-key'];
+        const i18n = this.container.get('i18n');
+        
         if (!apiKey || !this.allowedApiKeys.includes(apiKey)) {
-            throw new TourApiError('INVALID_API_KEY', 'security', 401);
+            throw new TourApiError('INVALID_API_KEY', 'security', 401, {}, {}, i18n);
         }
     }
 
@@ -1305,7 +1426,8 @@ class ResponseFormatter {
     }
 
     static formatError(error, operation = null) {
-        const isProduction = configManager.get('environment') === 'production';
+        // ✅ 의존성 주입으로 환경 설정 확인
+        const isProduction = process.env.NODE_ENV === 'production';
         
         const response = {
             success: false,
@@ -1367,12 +1489,14 @@ class ApiResponseProcessor {
         return Array.isArray(items) ? items : items ? [items] : [];
     }
 
-    static processBasicItem(item) {
+    static processBasicItem(item, container) {
         const mapx = item.mapx && item.mapx !== '' && item.mapx !== '0' ? 
                     parseFloat(item.mapx) : null;
         const mapy = item.mapy && item.mapy !== '' && item.mapy !== '0' ? 
                     parseFloat(item.mapy) : null;
 
+        const constants = container.get('constants');
+        const i18n = container.get('i18n');
         const contentType = constants.get('CONTENT_TYPE_MAP', item.contenttypeid);
         const areaInfo = constants.get('AREA_CODE_MAP', item.areacode);
         const currentLang = i18n.currentLanguage;
@@ -1507,10 +1631,70 @@ class GeoUtils {
     }
 }
 
+// ===== 개선된 테스트 시스템 =====
+class TestRunner {
+    constructor(container) {
+        this.container = container;
+        this.tests = [];
+        this.results = { passed: 0, failed: 0, errors: [] };
+    }
+
+    addTest(name, testFn) {
+        this.tests.push({ name, testFn });
+        return this;
+    }
+
+    async runAll() {
+        console.log('🧪 Running comprehensive tests...');
+        
+        for (const test of this.tests) {
+            try {
+                await test.testFn();
+                this.results.passed++;
+                console.log(`✅ ${test.name}`);
+            } catch (error) {
+                this.results.failed++;
+                this.results.errors.push({ test: test.name, error: error.message });
+                console.log(`❌ ${test.name}: ${error.message}`);
+            }
+        }
+
+        const total = this.results.passed + this.results.failed;
+        const successRate = total > 0 ? Math.round((this.results.passed / total) * 100) : 0;
+        
+        console.log(`\n📊 Test Results: ${this.results.passed}/${total} passed (${successRate}%)`);
+        
+        if (this.results.errors.length > 0) {
+            console.log('\n❌ Failed tests:');
+            this.results.errors.forEach(({ test, error }) => {
+                console.log(`  - ${test}: ${error}`);
+            });
+        }
+
+        return {
+            ...this.results,
+            total,
+            successRate,
+            summary: `${this.results.passed}/${total} tests passed (${successRate}%)`
+        };
+    }
+
+    assert(condition, message) {
+        if (!condition) {
+            throw new Error(message);
+        }
+    }
+}
+
 // ===== API 핸들러 클래스 =====
 class TourApiHandlers {
-    static async handleAreaBasedList(apiKey, params) {
+    static async handleAreaBasedList(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const configManager = container.get('config');
+        const logger = container.get('logger');
         
         validator.validate('areaBasedList', params);
         
@@ -1539,11 +1723,12 @@ class TourApiHandlers {
             }
         }
 
+        const apiKey = configManager.get('tourApiKey');
         const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2';
         const queryParams = {
             serviceKey: apiKey,
             MobileOS: 'ETC',
-            MobileApp: 'HealingK-Enterprise',
+            MobileApp: `${configManager.get('appName')}-Enterprise`,
             _type: 'json',
             numOfRows,
             pageNo,
@@ -1565,7 +1750,7 @@ class TourApiHandlers {
         ApiResponseProcessor.validateApiResponse(data, 'areaBasedList');
 
         const items = ApiResponseProcessor.extractItems(data);
-        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item));
+        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, container));
 
         if (userLat && userLng) {
             processedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
@@ -1616,8 +1801,13 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleDetailCommon(apiKey, params) {
+    static async handleDetailCommon(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const configManager = container.get('config');
+        const logger = container.get('logger');
         
         validator.validate('detailCommon', params);
         
@@ -1630,11 +1820,12 @@ class TourApiHandlers {
             return ResponseFormatter.addCacheInfo(cachedData, true, cache.getStats());
         }
 
+        const apiKey = configManager.get('tourApiKey');
         const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/detailCommon2';
         const queryParams = {
             serviceKey: apiKey,
             MobileOS: 'ETC',
-            MobileApp: 'HealingK-Enterprise',
+            MobileApp: `${configManager.get('appName')}-Enterprise`,
             _type: 'json',
             contentId
         };
@@ -1651,12 +1842,12 @@ class TourApiHandlers {
 
         const item = items[0];
         const processedItem = {
-            ...ApiResponseProcessor.processBasicItem(item),
+            ...ApiResponseProcessor.processBasicItem(item, container),
             telname: item.telname || null,
             homepage: ApiResponseProcessor.sanitizeHtml(item.homepage) || null,
             overview: ApiResponseProcessor.sanitizeHtml(item.overview) || null,
             meta: {
-                ...ApiResponseProcessor.processBasicItem(item).meta,
+                ...ApiResponseProcessor.processBasicItem(item, container).meta,
                 hasOverview: !!item.overview,
                 hasHomepage: !!item.homepage,
                 hasTel: !!item.tel,
@@ -1686,8 +1877,13 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleSearchKeyword(apiKey, params) {
+    static async handleSearchKeyword(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const cache = container.get('cache');
+        const httpClient = container.get('httpClient');
+        const configManager = container.get('config');
+        const logger = container.get('logger');
         
         validator.validate('searchKeyword', params);
         
@@ -1716,11 +1912,12 @@ class TourApiHandlers {
             }
         }
 
+        const apiKey = configManager.get('tourApiKey');
         const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchKeyword2';
         const queryParams = {
             serviceKey: apiKey,
             MobileOS: 'ETC',
-            MobileApp: 'HealingK-Enterprise',
+            MobileApp: `${configManager.get('appName')}-Enterprise`,
             _type: 'json',
             keyword: encodeURIComponent(keyword),
             numOfRows,
@@ -1743,7 +1940,7 @@ class TourApiHandlers {
         ApiResponseProcessor.validateApiResponse(data, 'searchKeyword');
 
         const items = ApiResponseProcessor.extractItems(data);
-        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item));
+        let processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, container));
 
         if (userLat && userLng) {
             processedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
@@ -1796,8 +1993,12 @@ class TourApiHandlers {
         return result;
     }
 
-    static async handleLocationBasedList(apiKey, params) {
+    static async handleLocationBasedList(container, params) {
         const startTime = Date.now();
+        const validator = container.get('validator');
+        const httpClient = container.get('httpClient');
+        const configManager = container.get('config');
+        const logger = container.get('logger');
         
         validator.validate('locationBasedList', params);
         
@@ -1810,11 +2011,12 @@ class TourApiHandlers {
             lclsSystm1 = '', lclsSystm2 = '', lclsSystm3 = ''
         } = params;
 
+        const apiKey = configManager.get('tourApiKey');
         const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/locationBasedList2';
         const queryParams = {
             serviceKey: apiKey,
             MobileOS: 'ETC',
-            MobileApp: 'HealingK-Enterprise',
+            MobileApp: `${configManager.get('appName')}-Enterprise`,
             _type: 'json',
             mapX,
             mapY,
@@ -1840,7 +2042,7 @@ class TourApiHandlers {
 
         const items = ApiResponseProcessor.extractItems(data);
         const processedItems = items.map(item => ({
-            ...ApiResponseProcessor.processBasicItem(item),
+            ...ApiResponseProcessor.processBasicItem(item, container),
             dist: parseFloat(item.dist) || null // API에서 제공하는 거리
         }));
 
@@ -1893,11 +2095,20 @@ class TourApiHandlers {
         return Math.round((filledFields / fields.length) * 100);
     }
 
-    static async handleBatchDetail(apiKey, contentIds) {
+    static async handleBatchDetail(container, contentIds) {
+        const validator = container.get('validator');
+        const configManager = container.get('config');
+        
         validator.validate('batchDetail', { contentIds });
         
         if (!Array.isArray(contentIds) || contentIds.length === 0) {
-            throw new ValidationError(i18n.getMessage('BATCH_CONTENT_IDS_REQUIRED'), 'contentIds', contentIds);
+            const i18n = container.get('i18n');
+            throw new ValidationError(
+                i18n.getMessage('BATCH_CONTENT_IDS_REQUIRED'), 
+                'contentIds', 
+                contentIds,
+                i18n
+            );
         }
         
         const batchSize = configManager.get('maxBatchSize');
@@ -1906,7 +2117,7 @@ class TourApiHandlers {
         for (let i = 0; i < contentIds.length; i += batchSize) {
             const batch = contentIds.slice(i, i + batchSize);
             const promises = batch.map(contentId => 
-                this.handleDetailCommon(apiKey, { contentId })
+                this.handleDetailCommon(container, { contentId })
                     .catch(error => ({ 
                         error: error instanceof TourApiError ? error.toJSON() : {
                             name: error.name,
@@ -1945,9 +2156,50 @@ class TourApiHandlers {
     }
 }
 
-// ===== 보안 매니저 초기화 및 메인 핸들러 =====
-const securityManager = new SecurityManager(configManager, logger);
+// ===== 서비스 컨테이너 설정 및 초기화 =====
+const container = new ServiceContainer();
 
+// 서비스 등록 (의존성 순서대로)
+container
+    .register('constants', () => new ConstantsManager())
+    .register('i18n', () => new InternationalizationManager())
+    .register('config', (container) => new ConfigManager(container))
+    .register('logger', (container) => new Logger(container))
+    .register('cache', (container) => new AdvancedCache(container))
+    .register('rateLimiter', (container) => new RateLimiter(container))
+    .register('validator', (container) => new InputValidator(container))
+    .register('httpClient', (container) => new HttpClient(container))
+    .register('security', (container) => new SecurityManager(container));
+
+// 서비스 초기화
+container.initialize();
+
+// 서비스 참조 생성
+const configManager = container.get('config');
+const logger = container.get('logger');
+const i18n = container.get('i18n');
+const constants = container.get('constants');
+const cache = container.get('cache');
+
+// 기본 언어 설정
+i18n.setLanguage(configManager.get('defaultLanguage'));
+
+// 설정 검증
+try {
+    configManager.validateConfig();
+    logger.info('✅ Configuration validated successfully', {
+        tourApiKey: configManager.get('tourApiKey') ? 'Set' : 'Missing',
+        environment: configManager.get('environment')
+    });
+} catch (error) {
+    logger.error('❌ Configuration validation failed', error);
+    // 개발 환경에서는 경고만 출력하고 계속 진행
+    if (configManager.get('environment') !== 'development') {
+        process.exit(1);
+    }
+}
+
+// ===== 메인 핸들러 =====
 async function tourApiHandler(req, res) {
     const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
     const startTime = Date.now();
@@ -1969,27 +2221,29 @@ async function tourApiHandler(req, res) {
 
     try {
         if (req.method === 'OPTIONS') {
-            securityManager.handleCors(req, res);
+            const security = container.get('security');
+            security.handleCors(req, res);
             res.status(200).end();
             return;
         }
 
-        const securityInfo = securityManager.validateRequest(req, res);
+        const security = container.get('security');
+        const securityInfo = security.validateRequest(req, res);
         
         const { operation = 'areaBasedList', ...params } = 
             req.method === 'GET' ? req.query : req.body;
         
-        // ✅ 수정된 API 키 가져오기 (TOURISM_API_KEY 우선)
         const apiKey = configManager.get('tourApiKey');
         if (!apiKey) {
-            throw new TourApiError('MISSING_API_KEY', 'configuration', 500);
+            throw new TourApiError('MISSING_API_KEY', 'configuration', 500, {}, {}, i18n);
         }
 
         if (!constants.isValidOperation(operation)) {
             throw new ValidationError(
                 i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
                 'operation',
-                operation
+                operation,
+                i18n
             );
         }
 
@@ -2004,22 +2258,22 @@ async function tourApiHandler(req, res) {
         let result;
         switch (operation) {
             case 'areaBasedList':
-                result = await TourApiHandlers.handleAreaBasedList(apiKey, params);
+                result = await TourApiHandlers.handleAreaBasedList(container, params);
                 break;
             case 'detailCommon':
-                result = await TourApiHandlers.handleDetailCommon(apiKey, params);
+                result = await TourApiHandlers.handleDetailCommon(container, params);
                 break;
             case 'searchKeyword':
-                result = await TourApiHandlers.handleSearchKeyword(apiKey, params);
+                result = await TourApiHandlers.handleSearchKeyword(container, params);
                 break;
             case 'locationBasedList':
-                result = await TourApiHandlers.handleLocationBasedList(apiKey, params);
+                result = await TourApiHandlers.handleLocationBasedList(container, params);
                 break;
             case 'batchDetail':
-                result = await TourApiHandlers.handleBatchDetail(apiKey, params.contentIds);
+                result = await TourApiHandlers.handleBatchDetail(container, params.contentIds);
                 break;
             default:
-                throw new ValidationError(`미구현 오퍼레이션: ${operation}`, 'operation', operation);
+                throw new ValidationError(`미구현 오퍼레이션: ${operation}`, 'operation', operation, i18n);
         }
 
         const totalTime = Date.now() - startTime;
@@ -2032,12 +2286,12 @@ async function tourApiHandler(req, res) {
         };
 
         result.metadata.system = {
-            version: '4.3.0-Enterprise',
+            version: configManager.get('version'),
             environment: configManager.get('environment'),
             nodeVersion: process.version,
             uptime: Date.now() - SERVICE_START_TIME,
             cacheStats: cache.getStats(),
-            concurrentRequests: httpClient.semaphore.currentConcurrent
+            concurrentRequests: container.get('httpClient').semaphore.currentConcurrent
         };
 
         logger.info('API request completed successfully', {
@@ -2090,7 +2344,7 @@ function healthCheck() {
     
     return {
         status: 'healthy',
-        version: '4.3.0-Enterprise',
+        version: configManager.get('version'),
         uptime: {
             milliseconds: preciseUptime,
             seconds: Math.floor(preciseUptime / 1000),
@@ -2124,58 +2378,53 @@ function healthCheck() {
     };
 }
 
-// ===== 테스트 지원 함수들 =====
+// ===== 개선된 테스트 시스템 =====
 function runTests() {
-    console.log('🧪 Running comprehensive tests...');
+    const testRunner = new TestRunner(container);
     
-    try {
-        // 설정 테스트
-        assert(configManager.get('environment') !== undefined, 'Environment should be defined');
-        assert(constants.isValidOperation('areaBasedList'), 'areaBasedList should be valid operation');
-        
-        // API 키 테스트
-        const apiKey = configManager.get('tourApiKey');
-        assert(!!apiKey, 'API key should be configured');
-        
-        // 캐시 테스트
-        cache.set('test-key', { test: 'data' });
-        assert(cache.get('test-key') !== null, 'Cache should store and retrieve data');
-        
-        // 다국어 테스트
-        i18n.setLanguage('en');
-        assert(i18n.getMessage('NOT_FOUND') === 'Data not found', 'English message should work');
-        i18n.setLanguage('ko');
-        assert(i18n.getMessage('NOT_FOUND') === '데이터를 찾을 수 없습니다', 'Korean message should work');
-        
-        // Accept-Language 파싱 테스트
-        const parsed = LanguageNegotiator.parseAcceptLanguage('en-US,en;q=0.9,ko;q=0.8');
-        assert(parsed.length === 3, 'Should parse 3 language preferences');
-        assert(parsed[0].language === 'en-US', 'First preference should be en-US');
-        
-        // 동시성 제어 테스트
-        const semaphore = new Semaphore(2);
-        assert(semaphore.maxConcurrent === 2, 'Semaphore should have correct limit');
-        
-        // 검증 테스트
-        try {
-            validator.validate('detailCommon', {});
-            assert(false, 'Should throw validation error');
-        } catch (error) {
-            assert(error instanceof ValidationError, 'Should throw ValidationError');
-        }
-        
-        console.log('✅ All comprehensive tests passed!');
-        return { success: true, message: 'All tests passed successfully' };
-    } catch (error) {
-        console.error('❌ Test failed:', error.message);
-        return { success: false, message: error.message };
-    }
-}
+    testRunner
+        .addTest('Configuration Test', () => {
+            testRunner.assert(configManager.get('environment') !== undefined, 'Environment should be defined');
+            testRunner.assert(constants.isValidOperation('areaBasedList'), 'areaBasedList should be valid operation');
+        })
+        .addTest('API Key Test', () => {
+            const apiKey = configManager.get('tourApiKey');
+            testRunner.assert(!!apiKey, 'API key should be configured');
+        })
+        .addTest('Cache Test', () => {
+            cache.set('test-key', { test: 'data' });
+            testRunner.assert(cache.get('test-key') !== null, 'Cache should store and retrieve data');
+        })
+        .addTest('I18n Test', () => {
+            i18n.setLanguage('en');
+            testRunner.assert(i18n.getMessage('NOT_FOUND') === 'Data not found', 'English message should work');
+            i18n.setLanguage('ko');
+            testRunner.assert(i18n.getMessage('NOT_FOUND') === '데이터를 찾을 수 없습니다', 'Korean message should work');
+        })
+        .addTest('Accept-Language Parsing Test', () => {
+            const parsed = LanguageNegotiator.parseAcceptLanguage('en-US,en;q=0.9,ko;q=0.8');
+            testRunner.assert(parsed.length === 3, 'Should parse 3 language preferences');
+            testRunner.assert(parsed[0].language === 'en-US', 'First preference should be en-US');
+        })
+        .addTest('Semaphore Test', () => {
+            const semaphore = new Semaphore(2);
+            testRunner.assert(semaphore.maxConcurrent === 2, 'Semaphore should have correct limit');
+        })
+        .addTest('Validation Test', () => {
+            const validator = container.get('validator');
+            try {
+                validator.validate('detailCommon', {});
+                testRunner.assert(false, 'Should throw validation error');
+            } catch (error) {
+                testRunner.assert(error instanceof ValidationError, 'Should throw ValidationError');
+            }
+        })
+        .addTest('Service Container Test', () => {
+            testRunner.assert(container.isInitialized(), 'Container should be initialized');
+            testRunner.assert(container.get('config') === configManager, 'Should return same config instance');
+        });
 
-function assert(condition, message) {
-    if (!condition) {
-        throw new Error(message);
-    }
+    return testRunner.runAll();
 }
 
 // ===== 모듈 내보내기 =====
@@ -2183,17 +2432,22 @@ module.exports = {
     handler: tourApiHandler,
     healthCheck,
     runTests,
+    container,
     configManager,
     logger,
     cache,
     i18n,
     constants,
     
+    // 클래스들
     TourApiHandlers,
     SecurityManager,
     InputValidator,
     ResponseFormatter,
+    ServiceContainer,
+    TestRunner,
     
+    // 유틸리티들
     GeoUtils,
     ApiResponseProcessor,
     LanguageNegotiator,
@@ -2232,7 +2486,7 @@ module.exports.serverless = async function(event, context) {
 
 // 초기화 로그
 logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
-    version: '4.3.0-Enterprise',
+    version: configManager.get('version'),
     environment: configManager.get('environment'),
     apiKeyConfigured: !!configManager.get('tourApiKey'),
     features: {
@@ -2243,8 +2497,12 @@ logger.info('🚀 TourAPI 4.3 Enterprise system initialized', {
         concurrencyControl: true,
         i18n: true,
         acceptLanguageParsing: true,
-        dependencyInjection: true
+        dependencyInjection: true,
+        memoryMonitoring: true,
+        comprehensiveTesting: true
     },
     concurrentLimit: configManager.get('maxConcurrent'),
-    supportedLanguages: i18n.getSupportedLanguages()
+    supportedLanguages: i18n.getSupportedLanguages(),
+    servicesRegistered: Array.from(container.services.keys()),
+    containerInitialized: container.isInitialized()
 });
