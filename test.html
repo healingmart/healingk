@@ -3,736 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧪 관광JS 완전 테스트 페이지</title>
+    <title>관광 API 테스트 클라이언트</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-        
-        .test-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 30px;
-        }
-        
-        .test-section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            border-left: 5px solid #4CAF50;
-        }
-        
-        .test-section h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-        
-        .input-group {
-            margin-bottom: 15px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        
-        .input-group input:focus, .input-group select:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        
-        .btn {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 100%;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-        }
-        
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .results {
-            grid-column: 1 / -1;
-            background: #1e1e1e;
-            color: #00ff00;
-            border-radius: 10px;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
-            max-height: 600px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            line-height: 1.4;
-        }
-        
-        .loading {
-            text-align: center;
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        
-        .status {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .status.success { background: #4CAF50; color: white; }
-        .status.error { background: #f44336; color: white; }
-        .status.info { background: #2196F3; color: white; }
-        
-        .quick-tests {
-            grid-column: 1 / -1;
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .quick-btn {
-            padding: 8px 16px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        .quick-btn:hover {
-            background: #1976D2;
-        }
-        
-        @media (max-width: 768px) {
-            .test-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+        button:hover { background-color: #218838; }
+        pre { background-color: #eee; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        .result-section { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .error { color: #dc3545; font-weight: bold; }
+        .loading { color: #007bff; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🧪 관광JS 완전 테스트</h1>
-            <p>TourAPI 4.0 통합 시스템 실시간 테스트</p>
-            <div class="status info" id="apiStatus">API 상태 확인 중...</div>
+        <h1>관광 API 테스트 클라이언트</h1>
+        <p>배포된 서버리스 API를 테스트할 수 있는 간단한 클라이언트입니다.</p>
+
+        <div>
+            <label for="apiBaseUrl">API 기본 URL (예: `https://healingk.vercel.app`):</label>
+            <input type="text" id="apiBaseUrl" value="https://healingk.vercel.app">
+            <p style="font-size: 0.8em; color: gray;">* Vercel에 배포된 프로젝트 URL로 변경해주세요.</p>
         </div>
-        
-        <div class="test-grid">
-            <!-- 빠른 테스트 버튼들 -->
-            <div class="quick-tests">
-                <button class="quick-btn" onclick="quickTest('경복궁')">🏛️ 경복궁 테스트</button>
-                <button class="quick-btn" onclick="quickTest('N서울타워')">🗼 N서울타워 테스트</button>
-                <button class="quick-btn" onclick="quickTest('부산 해운대')">🏖️ 해운대 테스트</button>
-                <button class="quick-btn" onclick="quickTest('제주도')">🌴 제주도 테스트</button>
-                <button class="quick-btn" onclick="testPerformance()">⚡ 성능 테스트</button>
-                <button class="quick-btn" onclick="clearResults()">🗑️ 결과 지우기</button>
-            </div>
-            
-            <!-- 검색 테스트 -->
-            <div class="test-section">
-                <h3>🔍 검색 테스트</h3>
-                <div class="input-group">
-                    <label>키워드</label>
-                    <input type="text" id="searchKeyword" placeholder="예: 경복궁" value="경복궁">
-                </div>
-                <div class="input-group">
-                    <label>검색 타입</label>
-                    <select id="searchType">
-                        <option value="auto">자동 선택</option>
-                        <option value="keyword">키워드</option>
-                        <option value="location">위치기반</option>
-                        <option value="area">지역기반</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>결과 수</label>
-                    <input type="number" id="searchCount" value="5" min="1" max="20">
-                </div>
-                <button class="btn" onclick="testSearch()">🔍 검색 실행</button>
-            </div>
-            
-            <!-- 상세정보 테스트 -->
-            <div class="test-section">
-                <h3>📊 상세정보 테스트</h3>
-                <div class="input-group">
-                    <label>Content ID</label>
-                    <input type="text" id="contentId" placeholder="예: 126508" value="126508">
-                </div>
-                <div class="input-group">
-                    <label>분석 레벨</label>
-                    <select id="analysisLevel">
-                        <option value="basic">기본</option>
-                        <option value="advanced">고급</option>
-                        <option value="complete">완전</option>
-                    </select>
-                </div>
-                <button class="btn" onclick="testDetail()">📊 상세정보 조회</button>
-            </div>
-            
-            <!-- 위치기반 테스트 -->
-            <div class="test-section">
-                <h3>📍 위치기반 테스트</h3>
-                <div class="input-group">
-                    <label>위도 (Latitude)</label>
-                    <input type="number" id="latitude" placeholder="37.5665" value="37.5665" step="0.0001">
-                </div>
-                <div class="input-group">
-                    <label>경도 (Longitude)</label>
-                    <input type="number" id="longitude" placeholder="126.9780" value="126.9780" step="0.0001">
-                </div>
-                <div class="input-group">
-                    <label>반경 (미터)</label>
-                    <input type="number" id="radius" value="1000" min="100" max="20000">
-                </div>
-                <button class="btn" onclick="testLocation()">📍 위치검색 실행</button>
-            </div>
-            
-            <!-- 성능 테스트 -->
-            <div class="test-section">
-                <h3>⚡ 성능 테스트</h3>
-                <div class="input-group">
-                    <label>테스트 횟수</label>
-                    <input type="number" id="testCount" value="3" min="1" max="10">
-                </div>
-                <div class="input-group">
-                    <label>동시 요청 수</label>
-                    <input type="number" id="concurrentCount" value="2" min="1" max="5">
-                </div>
-                <button class="btn" onclick="testPerformance()">⚡ 성능 측정</button>
-            </div>
-            
-            <!-- 결과 표시 영역 -->
-            <div class="results" id="results">
-🎯 관광JS 테스트 페이지 준비 완료!
 
-📋 사용 방법:
-1. 위의 빠른 테스트 버튼으로 즉시 테스트
-2. 각 섹션에서 상세 설정 후 테스트
-3. 결과는 여기에 실시간으로 표시됩니다
+        <hr>
 
-⚠️ 참고사항:
-- 실제 TourAPI를 사용하므로 API 키가 필요합니다
-- CORS 문제로 인해 일부 브라우저에서 제한될 수 있습니다
-- 로컬 서버에서 실행하는 것을 권장합니다
+        <h2>🔍 키워드 검색 테스트 (/api/search)</h2>
+        <div>
+            <label for="keywordQuery">검색 키워드:</label>
+            <input type="text" id="keywordQuery" value="경복궁">
+        </div>
+        <div>
+            <label for="keywordNumOfRows">표시 개수:</label>
+            <input type="number" id="keywordNumOfRows" value="5">
+        </div>
+        <div>
+            <label for="keywordPageNo">페이지 번호:</label>
+            <input type="number" id="keywordPageNo" value="1">
+        </div>
+        <div>
+            <button onclick="searchByKeyword()">키워드 검색 실행</button>
+        </div>
 
-🚀 테스트를 시작해보세요!
-            </div>
+        <hr>
+
+        <h2>📍 위치 기반 검색 테스트 (/api/location)</h2>
+        <div>
+            <label for="locationLat">위도 (lat):</label>
+            <input type="text" id="locationLat" value="37.5665">
+        </div>
+        <div>
+            <label for="locationLng">경도 (lng):</label>
+            <input type="text" id="locationLng" value="126.9780">
+        </div>
+        <div>
+            <label for="locationRadius">반경 (m):</label>
+            <input type="number" id="locationRadius" value="1000">
+        </div>
+        <div>
+            <label for="locationNumOfRows">표시 개수:</label>
+            <input type="number" id="locationNumOfRows" value="5">
+        </div>
+        <div>
+            <button onclick="searchByLocation()">위치 검색 실행</button>
+        </div>
+
+        <hr>
+
+        <h2>💡 기타 엔드포인트</h2>
+        <div>
+            <button onclick="callHealthCheck()">헬스 체크 (/health)</button>
+            <button onclick="callApiDocs()">API 문서 (/api/docs)</button>
+            <button onclick="callApiStats()">서비스 통계 (/api/stats)</button>
+        </div>
+
+        <div class="result-section">
+            <h2>결과:</h2>
+            <p id="statusMessage" class="loading"></p>
+            <pre id="apiResult"></pre>
         </div>
     </div>
 
     <script>
-        // 전역 변수
-        let isLoading = false;
-        let testResults = [];
-
-        // API 기본 설정
-        const API_CONFIG = {
-            baseUrl: '/api/tourism-master', // 실제 API 엔드포인트
-            timeout: 10000,
-            retries: 3
-        };
-
-        // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            log('🎯 관광JS 테스트 페이지 초기화 완료');
-            checkAPIStatus();
-        });
-
-        // API 상태 확인
-        async function checkAPIStatus() {
-            try {
-                updateStatus('API 상태 확인 중...', 'info');
-                
-                // 간단한 헬스체크 (실제 구현에서는 별도 엔드포인트)
-                const response = await fetch(API_CONFIG.baseUrl, {
-                    method: 'OPTIONS'
-                });
-                
-                if (response.ok) {
-                    updateStatus('API 연결 성공', 'success');
-                    log('✅ API 서버 연결 성공');
-                } else {
-                    updateStatus('API 연결 실패', 'error');
-                    log('❌ API 서버 연결 실패');
-                }
-            } catch (error) {
-                updateStatus('API 서버 없음 (모킹 모드)', 'error');
-                log('⚠️ API 서버에 연결할 수 없습니다. 모킹 모드로 전환합니다.');
-            }
-        }
-
-        // 빠른 테스트
-        async function quickTest(keyword) {
-            document.getElementById('searchKeyword').value = keyword;
-            await testSearch();
-        }
-
-        // 검색 테스트
-        async function testSearch() {
-            if (isLoading) return;
-            
-            const keyword = document.getElementById('searchKeyword').value;
-            const type = document.getElementById('searchType').value;
-            const count = document.getElementById('searchCount').value;
-            
-            if (!keyword.trim()) {
-                log('❌ 검색 키워드를 입력해주세요');
+        async function callApi(endpoint, params = {}) {
+            const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+            if (!apiBaseUrl) {
+                displayResult(null, new Error('API 기본 URL을 입력해주세요.'));
                 return;
             }
-            
-            setLoading(true);
-            log(`🔍 검색 테스트 시작: "${keyword}" (타입: ${type}, 개수: ${count})`);
-            
+
+            const url = new URL(`${apiBaseUrl}${endpoint}`);
+            for (const key in params) {
+                if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
+                    url.searchParams.append(key, params[key]);
+                }
+            }
+
+            document.getElementById('statusMessage').textContent = `요청 중: ${url.href}`;
+            document.getElementById('apiResult').textContent = '로딩 중...';
+
             try {
-                const startTime = Date.now();
-                
-                // API 호출 시뮬레이션 또는 실제 호출
-                const result = await callAPI('masterSearch', {
-                    query: keyword,
-                    type: type,
-                    numOfRows: count,
-                    enhance: 'true'
-                });
-                
-                const endTime = Date.now();
-                const duration = endTime - startTime;
-                
-                log(`✅ 검색 완료 (${duration}ms)`);
-                log('📊 검색 결과:');
-                log(JSON.stringify(result, null, 2));
-                
-                // 결과 분석
-                if (result.success && result.data.items) {
-                    log(`\n📈 결과 분석:`);
-                    log(`- 총 ${result.data.items.length}개 결과`);
-                    log(`- 평균 완성도: ${calculateAverageCompleteness(result.data.items)}%`);
-                    log(`- 이미지 있는 항목: ${countItemsWithImages(result.data.items)}개`);
-                }
-                
+                const response = await fetch(url);
+                const data = await response.json();
+                displayResult(data);
             } catch (error) {
-                log(`❌ 검색 실패: ${error.message}`);
-                
-                // 모킹 데이터로 대체
-                const mockResult = generateMockSearchResult(keyword, count);
-                log('\n🎭 모킹 데이터로 대체:');
-                log(JSON.stringify(mockResult, null, 2));
-            }
-            
-            setLoading(false);
-        }
-
-        // 상세정보 테스트
-        async function testDetail() {
-            if (isLoading) return;
-            
-            const contentId = document.getElementById('contentId').value;
-            const level = document.getElementById('analysisLevel').value;
-            
-            if (!contentId.trim()) {
-                log('❌ Content ID를 입력해주세요');
-                return;
-            }
-            
-            setLoading(true);
-            log(`📊 상세정보 테스트 시작: ${contentId} (레벨: ${level})`);
-            
-            try {
-                const startTime = Date.now();
-                
-                const result = await callAPI('ultimateDetail', {
-                    contentId: contentId,
-                    maxDepth: level,
-                    includeImages: 'true'
-                });
-                
-                const duration = Date.now() - startTime;
-                
-                log(`✅ 상세정보 조회 완료 (${duration}ms)`);
-                log('📊 상세정보 결과:');
-                log(JSON.stringify(result, null, 2));
-                
-                // 품질 분석
-                if (result.success && result.data.analysis) {
-                    log(`\n📈 품질 분석:`);
-                    log(`- 완성도: ${result.data.analysis.completeness?.overall?.percentage}%`);
-                    log(`- 등급: ${result.data.analysis.completeness?.overall?.grade}`);
-                    log(`- 이미지 수: ${result.data.images?.length || 0}개`);
-                }
-                
-            } catch (error) {
-                log(`❌ 상세정보 조회 실패: ${error.message}`);
-                
-                // 모킹 데이터로 대체
-                const mockResult = generateMockDetailResult(contentId);
-                log('\n🎭 모킹 데이터로 대체:');
-                log(JSON.stringify(mockResult, null, 2));
-            }
-            
-            setLoading(false);
-        }
-
-        // 위치기반 테스트
-        async function testLocation() {
-            if (isLoading) return;
-            
-            const lat = document.getElementById('latitude').value;
-            const lng = document.getElementById('longitude').value;
-            const radius = document.getElementById('radius').value;
-            
-            if (!lat || !lng) {
-                log('❌ 위도와 경도를 입력해주세요');
-                return;
-            }
-            
-            setLoading(true);
-            log(`📍 위치기반 테스트 시작: (${lat}, ${lng}) 반경 ${radius}m`);
-            
-            try {
-                const startTime = Date.now();
-                
-                const result = await callAPI('locationBasedList', {
-                    lat: lat,
-                    lng: lng,
-                    radius: radius,
-                    numOfRows: 10
-                });
-                
-                const duration = Date.now() - startTime;
-                
-                log(`✅ 위치검색 완료 (${duration}ms)`);
-                log('📊 위치검색 결과:');
-                log(JSON.stringify(result, null, 2));
-                
-            } catch (error) {
-                log(`❌ 위치검색 실패: ${error.message}`);
-                
-                // 모킹 데이터
-                const mockResult = generateMockLocationResult(lat, lng);
-                log('\n🎭 모킹 데이터로 대체:');
-                log(JSON.stringify(mockResult, null, 2));
-            }
-            
-            setLoading(false);
-        }
-
-        // 성능 테스트
-        async function testPerformance() {
-            if (isLoading) return;
-            
-            const testCount = parseInt(document.getElementById('testCount').value);
-            const concurrentCount = parseInt(document.getElementById('concurrentCount').value);
-            
-            setLoading(true);
-            log(`⚡ 성능 테스트 시작: ${testCount}회 테스트, ${concurrentCount}개 동시 요청`);
-            
-            const testCases = [
-                { operation: 'masterSearch', params: { query: '경복궁' } },
-                { operation: 'ultimateDetail', params: { contentId: '126508' } },
-                { operation: 'locationBasedList', params: { lat: 37.5665, lng: 126.9780, radius: 1000 } }
-            ];
-            
-            const results = [];
-            
-            try {
-                for (let i = 0; i < testCount; i++) {
-                    log(`\n📊 테스트 라운드 ${i + 1}/${testCount}`);
-                    
-                    const roundPromises = [];
-                    
-                    for (let j = 0; j < concurrentCount; j++) {
-                        const testCase = testCases[j % testCases.length];
-                        roundPromises.push(measurePerformance(testCase.operation, testCase.params));
-                    }
-                    
-                    const roundResults = await Promise.allSettled(roundPromises);
-                    results.push(...roundResults.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean));
-                }
-                
-                // 성능 통계 계산
-                const avgTime = results.reduce((sum, r) => sum + r.duration, 0) / results.length;
-                const minTime = Math.min(...results.map(r => r.duration));
-                const maxTime = Math.max(...results.map(r => r.duration));
-                const successRate = (results.filter(r => r.success).length / results.length) * 100;
-                
-                log(`\n📈 성능 테스트 결과:`);
-                log(`- 평균 응답시간: ${avgTime.toFixed(2)}ms`);
-                log(`- 최소 응답시간: ${minTime}ms`);
-                log(`- 최대 응답시간: ${maxTime}ms`);
-                log(`- 성공률: ${successRate.toFixed(1)}%`);
-                log(`- 총 요청 수: ${results.length}개`);
-                
-            } catch (error) {
-                log(`❌ 성능 테스트 실패: ${error.message}`);
-            }
-            
-            setLoading(false);
-        }
-
-        // API 호출 함수
-        async function callAPI(operation, params) {
-            const url = API_CONFIG.baseUrl;
-            const payload = {
-                operation: operation,
-                ...params
-            };
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return await response.json();
-        }
-
-        // 성능 측정
-        async function measurePerformance(operation, params) {
-            const startTime = Date.now();
-            
-            try {
-                const result = await callAPI(operation, params);
-                const duration = Date.now() - startTime;
-                
-                return {
-                    operation,
-                    success: result.success,
-                    duration,
-                    size: JSON.stringify(result).length
-                };
-            } catch (error) {
-                return {
-                    operation,
-                    success: false,
-                    duration: Date.now() - startTime,
-                    error: error.message
-                };
+                displayResult(null, error);
             }
         }
 
-        // 모킹 데이터 생성
-        function generateMockSearchResult(keyword, count) {
-            return {
-                success: true,
-                data: {
-                    items: Array.from({ length: parseInt(count) }, (_, i) => ({
-                        contentId: `mock${i + 1}`,
-                        title: `${keyword} 관련 장소 ${i + 1}`,
-                        addr1: `서울특별시 ${['종로구', '중구', '용산구', '성동구'][i % 4]}`,
-                        firstimage: i % 2 === 0 ? 'http://example.com/image.jpg' : null,
-                        overview: `${keyword}와 관련된 멋진 관광지입니다.`,
-                        relevanceScore: 90 - i * 5,
-                        typeName: '관광지'
-                    }))
-                },
-                metadata: {
-                    operation: 'masterSearch',
-                    performance: { totalTime: 250 },
-                    mock: true
-                }
-            };
-        }
+        function displayResult(data, error = null) {
+            const statusMessage = document.getElementById('statusMessage');
+            const apiResult = document.getElementById('apiResult');
 
-        function generateMockDetailResult(contentId) {
-            return {
-                success: true,
-                data: {
-                    common: {
-                        contentId: contentId,
-                        title: '경복궁',
-                        overview: '조선 왕조의 법궁으로 1395년에 건립되었습니다.',
-                        location: {
-                            address: { main: '서울특별시 종로구 사직로 161' },
-                            coordinates: { lat: 37.5788, lng: 126.9769 }
-                        }
-                    },
-                    analysis: {
-                        completeness: {
-                            overall: { percentage: 85, grade: 'A' }
-                        },
-                        quality: {
-                            content: { hasOverview: true, hasContact: true }
-                        }
-                    },
-                    images: [
-                        { originalUrl: 'http://example.com/gyeongbok1.jpg', isPrimary: true },
-                        { originalUrl: 'http://example.com/gyeongbok2.jpg', isPrimary: false }
-                    ]
-                },
-                metadata: {
-                    operation: 'ultimateDetail',
-                    performance: { totalTime: 450 },
-                    mock: true
-                }
-            };
-        }
-
-        function generateMockLocationResult(lat, lng) {
-            return {
-                success: true,
-                data: {
-                    items: [
-                        {
-                            contentId: 'near1',
-                            title: '주변 관광지 1',
-                            distance: 0.5,
-                            addr1: '서울특별시 중구'
-                        },
-                        {
-                            contentId: 'near2', 
-                            title: '주변 관광지 2',
-                            distance: 0.8,
-                            addr1: '서울특별시 종로구'
-                        }
-                    ],
-                    searchCenter: { lat: parseFloat(lat), lng: parseFloat(lng) }
-                },
-                metadata: {
-                    operation: 'locationBasedList',
-                    performance: { totalTime: 300 },
-                    mock: true
-                }
-            };
-        }
-
-        // 유틸리티 함수들
-        function log(message) {
-            const results = document.getElementById('results');
-            const timestamp = new Date().toLocaleTimeString();
-            results.textContent += `[${timestamp}] ${message}\n`;
-            results.scrollTop = results.scrollHeight;
-        }
-
-        function clearResults() {
-            document.getElementById('results').textContent = '🗑️ 결과가 지워졌습니다. 새로운 테스트를 시작해주세요.\n';
-        }
-
-        function setLoading(loading) {
-            isLoading = loading;
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach(btn => btn.disabled = loading);
-            
-            if (loading) {
-                log('⏳ 처리 중...');
+            if (error) {
+                statusMessage.textContent = `오류 발생: ${error.message}`;
+                statusMessage.className = 'error';
+                apiResult.textContent = JSON.stringify({ error: error.message, stack: error.stack }, null, 2);
+            } else {
+                statusMessage.textContent = '요청 성공!';
+                statusMessage.className = '';
+                apiResult.textContent = JSON.stringify(data, null, 2);
             }
         }
 
-        function updateStatus(message, type) {
-            const statusEl = document.getElementById('apiStatus');
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
+        // --- 각 버튼에 연결될 함수 ---
+
+        async function searchByKeyword() {
+            const query = document.getElementById('keywordQuery').value;
+            const numOfRows = document.getElementById('keywordNumOfRows').value;
+            const pageNo = document.getElementById('keywordPageNo').value;
+
+            await callApi('/api/search', { query, numOfRows, pageNo });
         }
 
-        function calculateAverageCompleteness(items) {
-            if (!items.length) return 0;
-            const total = items.reduce((sum, item) => {
-                return sum + (item.completeness?.percentage || 50);
-            }, 0);
-            return Math.round(total / items.length);
+        async function searchByLocation() {
+            const lat = document.getElementById('locationLat').value;
+            const lng = document.getElementById('locationLng').value;
+            const radius = document.getElementById('locationRadius').value;
+            const numOfRows = document.getElementById('locationNumOfRows').value;
+
+            await callApi('/api/location', { lat, lng, radius, numOfRows });
         }
 
-        function countItemsWithImages(items) {
-            return items.filter(item => item.firstimage).length;
+        async function callHealthCheck() {
+            await callApi('/health');
         }
 
-        // 키보드 단축키
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case '1':
-                        e.preventDefault();
-                        testSearch();
-                        break;
-                    case '2':
-                        e.preventDefault();
-                        testDetail();
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        testLocation();
-                        break;
-                    case 'r':
-                        e.preventDefault();
-                        clearResults();
-                        break;
-                }
-            }
+        async function callApiDocs() {
+            await callApi('/api/docs');
+        }
+
+        async function callApiStats() {
+            await callApi('/api/stats');
+        }
+
+        // 초기 URL 설정 (Vercel 배포 후 실제 URL로 변경 필요)
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultVercelUrl = 'https://healingk.vercel.app'; // 여기에 실제 Vercel URL을 넣으세요.
+            document.getElementById('apiBaseUrl').value = defaultVercelUrl;
         });
     </script>
 </body>
