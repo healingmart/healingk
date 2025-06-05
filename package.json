@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "commonjs",
   "main": "tourism-api.js",
-  "engines": {
+  "engines": { 
     "node": "18.x"
   },
   "dependencies": {
