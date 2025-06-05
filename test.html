@@ -12,7 +12,74 @@
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+        }<!DOCTYPE html>
+<html>
+<head>
+    <title>AllTourism API Test</title>
+</head>
+<body>
+    <h1>🇰🇷 한국관광공사 API</h1>
+    
+    <div>
+        <button onclick="testAreaBasedList()">지역기반 목록</button>
+        <button onclick="testSearchKeyword()">키워드 검색</button>
+        <button onclick="testHealthCheck()">헬스체크</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function callAPI(endpoint, params = {}) {
+            try {
+                const url = new URL(`${API_BASE}/api/tourism`);
+                Object.entries(params).forEach(([key, value]) => {
+                    url.searchParams.append(key, value);
+                });
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = 
+                    `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div style="color: red;">Error: ${error.message}</div>`;
+            }
         }
+        
+        function testAreaBasedList() {
+            callAPI('/api/tourism', {
+                operation: 'areaBasedList',
+                areaCode: '1',
+                numOfRows: '5'
+            });
+        }
+        
+        function testSearchKeyword() {
+            callAPI('/api/tourism', {
+                operation: 'searchKeyword',
+                keyword: '경복궁',
+                numOfRows: '3'
+            });
+        }
+        
+        async function testHealthCheck() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div style="color: red;">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
         .container {
             background: rgba(255,255,255,0.1);
             padding: 30px;
