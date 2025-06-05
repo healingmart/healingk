@@ -3,447 +3,945 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 Emergency Diagnostic Tool v3.0</title>
+    <title>🌟 AllTourism API 초간단 테스트</title>
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --success-color: #10b981;
-            --error-color: #ef4444;
-            --warning-color: #f59e0b;
-            --bg-color: #f8fafc;
-        }
-        
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg-color);
-            margin: 0;
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
             padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .emergency-panel {
-            background: linear-gradient(135deg, #fee2e2, #fef3c7);
-            border: 3px solid #ef4444;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        .diagnostic-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-            margin: 2rem 0;
-        }
-        
-        .diagnostic-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .result-box {
-            background: #1a1a1a;
-            color: #00ff00;
-            padding: 1rem;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            margin: 1rem 0;
-            white-space: pre-wrap;
-        }
-        
-        .btn {
-            background: var(--primary-color);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-card { 
+            background: rgba(255,255,255,0.2);
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .success { 
+            background: rgba(40, 167, 69, 0.3); 
+            border-color: rgba(40, 167, 69, 0.5);
+        }
+        .error { 
+            background: rgba(220, 53, 69, 0.3); 
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+        button { 
+            padding: 12px 25px; 
+            margin: 8px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
             cursor: pointer;
-            font-size: 1rem;
-            margin: 0.5rem;
-            transition: all 0.3s ease;
+            font-size: 14px;
+            transition: all 0.3s;
         }
-        
-        .btn:hover { background: #1d4ed8; }
-        .btn-danger { background: var(--error-color); }
-        .btn-warning { background: var(--warning-color); }
-        .btn-success { background: var(--success-color); }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
+        button:hover { 
+            background: #218838; 
+            transform: translateY(-1px);
         }
-        
-        .status-online { background: var(--success-color); }
-        .status-offline { background: var(--error-color); }
-        .status-unknown { background: var(--warning-color); }
-        
-        .log-entry {
-            padding: 0.5rem;
-            margin: 0.25rem 0;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
         }
-        
-        .log-success { background: rgba(16, 185, 129, 0.1); color: #059669; }
-        .log-error { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
-        .log-warning { background: rgba(245, 158, 11, 0.1); color: #d97706; }
-        .log-info { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+        pre { 
+            background: rgba(0,0,0,0.3); 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .loading { 
+            display: inline-block; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        .setup-box {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            width: 300px;
+            margin: 5px;
+        }
+        input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="emergency-panel">
-            <h1>🚨 EMERGENCY DIAGNOSTIC TOOL v3.0</h1>
-            <h2>🔍 API 서버 상태 완전 진단</h2>
-            <p><strong>현재 상황:</strong> JSON 파싱 오류 - HTML 페이지가 반환되고 있음</p>
-            
-            <div style="margin: 1rem 0;">
-                <button class="btn btn-danger" onclick="startEmergencyDiag()">
-                    🚨 응급 진단 시작
-                </button>
-                <button class="btn btn-warning" onclick="scanAllEndpoints()">
-                    🔍 모든 엔드포인트 스캔
-                </button>
-                <button class="btn btn-success" onclick="testOriginalApi()">
-                    🧪 원본 API 직접 테스트
-                </button>
-                <button class="btn" onclick="clearLogs()">
-                    🧹 로그 지우기
-                </button>
-            </div>
+        <h1>🌟 AllTourism API 초간단 테스트</h1>
+        <p>한국관광공사 API를 브라우저에서 직접 테스트해보세요!</p>
+
+        <!-- API 키 설정 -->
+        <div class="setup-box">
+            <h3>⚙️ 1단계: API 키 입력</h3>
+            <input type="text" id="apiKey" placeholder="여기에 TOURISM_API_KEY를 입력하세요" />
+            <button onclick="API키저장()">저장</button>
+            <p>💡 <a href="https://www.data.go.kr/data/15101578/openapi.do" target="_blank" style="color: #ffc107;">API 키 발급받기</a></p>
         </div>
 
-        <div class="diagnostic-grid">
-            <div class="diagnostic-card">
-                <h3>🎯 서버 연결 상태</h3>
-                <div id="serverStatus">
-                    <div><span class="status-indicator status-unknown"></span> 확인 중...</div>
-                </div>
-            </div>
-            
-            <div class="diagnostic-card">
-                <h3>🗺️ 발견된 엔드포인트</h3>
-                <div id="endpointList">
-                    <div>스캔하지 않음</div>
-                </div>
-            </div>
-            
-            <div class="diagnostic-card">
-                <h3>🔑 API 키 테스트</h3>
-                <div id="apiKeyStatus">
-                    <div>테스트하지 않음</div>
-                </div>
-            </div>
-            
-            <div class="diagnostic-card">
-                <h3>📊 응답 분석</h3>
-                <div id="responseAnalysis">
-                    <div>분석하지 않음</div>
-                </div>
-            </div>
+        <!-- 테스트 버튼들 -->
+        <div class="test-card">
+            <h3>🧪 내장 테스트</h3>
+            <button onclick="시스템테스트()">시스템 체크</button>
+            <button onclick="캐시테스트()">캐시 테스트</button>
+            <button onclick="언어테스트()">다국어 테스트</button>
+            <div id="systemResult"></div>
         </div>
 
-        <div class="diagnostic-card" style="margin-top: 2rem;">
-            <h3>📝 실시간 진단 로그</h3>
-            <div class="result-box" id="diagnosticLog">
-진단 도구 준비 완료.
-'응급 진단 시작' 버튼을 클릭하세요.
-            </div>
+        <div class="test-card">
+            <h3>🏛️ 서울 관광지 검색</h3>
+            <button onclick="서울관광지테스트()">테스트 실행</button>
+            <div id="seoulResult"></div>
         </div>
 
-        <div class="diagnostic-card" style="margin-top: 1rem;">
-            <h3>🔧 수동 테스트</h3>
-            <div>
-                <input type="url" id="manualUrl" placeholder="테스트할 URL 입력" style="width: 70%; padding: 0.5rem; margin-right: 1rem;">
-                <button class="btn" onclick="testManualUrl()">🧪 테스트</button>
-            </div>
-            <div style="margin-top: 1rem;">
-                <label>테스트 파라미터:</label>
-                <textarea id="testParams" rows="3" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;" placeholder='{"operation": "areaBasedList", "areaCode": "1", "numOfRows": "1"}'></textarea>
-            </div>
+        <div class="test-card">
+            <h3>🔍 키워드 검색 (경복궁)</h3>
+            <button onclick="키워드테스트()">테스트 실행</button>
+            <div id="keywordResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>📍 위치 기반 검색 (강남역 1km)</h3>
+            <button onclick="위치테스트()">테스트 실행</button>
+            <div id="locationResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>📦 배치 테스트 (여러 관광지 한번에)</h3>
+            <button onclick="배치테스트()">테스트 실행</button>
+            <div id="batchResult"></div>
         </div>
     </div>
 
     <script>
-        let logCount = 0;
-
-        function log(level, message) {
-            const logDiv = document.getElementById('diagnosticLog');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${level}`;
-            logEntry.textContent = entry;
-            
-            logDiv.appendChild(logEntry);
-            logDiv.scrollTop = logDiv.scrollHeight;
-            
-            console.log(entry);
-            logCount++;
-            
-            if (logCount > 100) {
-                logDiv.removeChild(logDiv.firstChild);
-                logCount--;
+        // AllTourism 모듈을 직접 포함 (간단 버전)
+        let apiKey = '';
+        
+        function API키저장() {
+            apiKey = document.getElementById('apiKey').value;
+            if (apiKey) {
+                alert('✅ API 키가 저장되었습니다!');
+                localStorage.setItem('tourism_api_key', apiKey);
+            } else {
+                alert('❌ API 키를 입력해주세요!');
             }
         }
 
-        function clearLogs() {
-            document.getElementById('diagnosticLog').innerHTML = '로그가 지워졌습니다.\n';
-            logCount = 0;
-        }
-
-        async function startEmergencyDiag() {
-            log('info', '🚨 응급 진단 시작');
-            
-            const urlsToTest = [
-                'https://healingk.vercel.app',
-                'https://healingk.vercel.app/api',
-                'https://healingk.vercel.app/api/health',
-                'https://healingk.vercel.app/api/tour',
-                'https://your-blog.com',
-                'https://www.your-blog.com'
-            ];
-
-            for (const url of urlsToTest) {
-                await testUrl(url);
-                await delay(500);
+        // 페이지 로드 시 저장된 API 키 불러오기
+        window.onload = function() {
+            const savedKey = localStorage.getItem('tourism_api_key');
+            if (savedKey) {
+                document.getElementById('apiKey').value = savedKey;
+                apiKey = savedKey;
             }
-            
-            log('success', '✅ 응급 진단 완료');
         }
 
-        async function testUrl(url) {
-            log('info', `🔍 테스트 중: ${url}`);
-            
+        function 버튼비활성화(buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<span class="loading">⏳</span> 테스트 중...';
+        }
+
+        function 버튼활성화(buttonElement, text) {
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = text;
+        }
+
+        // 가상 API 호출 (실제로는 한국관광공사 API를 호출)
+        async function 관광공사API호출(endpoint, params) {
+            if (!apiKey) {
+                throw new Error('API 키를 먼저 입력해주세요!');
+            }
+
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const baseUrl = 'https://apis.data.go.kr/B551011/KorService2';
+                const url = `${baseUrl}/${endpoint}`;
                 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json, text/html, */*',
-                        'Cache-Control': 'no-cache'
-                    },
-                    signal: controller.signal
+                const queryParams = new URLSearchParams({
+                    serviceKey: apiKey,
+                    MobileOS: 'ETC',
+                    MobileApp: 'AllTourism-Test',
+                    _type: 'json',
+                    ...params
                 });
+
+                const response = await fetch(`${url}?${queryParams}`);
                 
-                clearTimeout(timeoutId);
-                
-                const contentType = response.headers.get('content-type') || 'unknown';
-                log('success', `✅ ${url} - Status: ${response.status}, Type: ${contentType}`);
-                
-                // 응답 내용 확인
-                const text = await response.text();
-                
-                if (contentType.includes('application/json')) {
-                    try {
-                        const data = JSON.parse(text);
-                        log('success', `📊 JSON 응답: ${JSON.stringify(data, null, 2).substring(0, 200)}...`);
-                        updateServerStatus(url, 'online', data);
-                    } catch (e) {
-                        log('error', `❌ JSON 파싱 실패: ${e.message}`);
-                    }
-                } else {
-                    log('warning', `⚠️ HTML 응답 감지: ${text.substring(0, 100)}...`);
-                    updateServerStatus(url, 'html', text.substring(0, 200));
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
+                
+                const data = await response.json();
+                
+                // API 응답 검증
+                if (!data.response) {
+                    throw new Error('API 응답이 올바르지 않습니다');
+                }
+                
+                if (data.response.header.resultCode !== '0000') {
+                    throw new Error(`API 오류: ${data.response.header.resultMsg}`);
+                }
+                
+                return data;
                 
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    log('error', `⏱️ ${url} - 타임아웃 (10초)`);
-                } else {
-                    log('error', `❌ ${url} - 오류: ${error.message}`);
+                if (error.message.includes('CORS')) {
+                    throw new Error('🔒 CORS 오류: 브라우저 보안 정책으로 인해 직접 API 호출이 제한됩니다. 서버를 통해 테스트해주세요.');
                 }
-                updateServerStatus(url, 'offline', error.message);
+                throw error;
             }
         }
 
-        async function scanAllEndpoints() {
-            log('info', '🔍 모든 가능한 엔드포인트 스캔 시작');
-            
-            const baseUrls = [
-                'https://healingk.vercel.app',
-                'https://your-blog.com'
-            ];
-            
-            const endpoints = [
-                '/api/health',
-                '/api/tour',
-                '/api/test',
-                '/health',
-                '/tour',
-                '/api',
-                '/'
-            ];
-            
-            const foundEndpoints = [];
-            
-            for (const baseUrl of baseUrls) {
-                for (const endpoint of endpoints) {
-                    const fullUrl = baseUrl + endpoint;
-                    try {
-                        const response = await fetch(fullUrl, { 
-                            method: 'HEAD',
-                            headers: { 'Cache-Control': 'no-cache' }
-                        });
-                        
-                        if (response.ok) {
-                            foundEndpoints.push(fullUrl);
-                            log('success', `✅ 발견: ${fullUrl} (${response.status})`);
-                        }
-                    } catch (e) {
-                        // 조용히 실패
-                    }
-                    await delay(100);
-                }
-            }
-            
-            updateEndpointList(foundEndpoints);
-            log('info', `📋 스캔 완료: ${foundEndpoints.length}개 엔드포인트 발견`);
-        }
-
-        async function testOriginalApi() {
-            log('info', '🧪 한국관광공사 원본 API 직접 테스트');
-            
-            // 실제 한국관광공사 API 테스트 (API 키 없이)
-            const testUrl = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2?serviceKey=test&MobileOS=ETC&MobileApp=TestApp&_type=json&numOfRows=1';
+        async function 시스템테스트() {
+            const result = document.getElementById('systemResult');
+            const button = event.target;
+            버튼비활성화(button);
             
             try {
-                const response = await fetch(testUrl);
-                const text = await response.text();
-                
-                log('info', `🏛️ 원본 API 응답 상태: ${response.status}`);
-                log('info', `📄 응답 내용: ${text.substring(0, 300)}...`);
-                
-                if (text.includes('SERVICE_ACCESS_DENIED_ERROR')) {
-                    log('warning', '⚠️ API 키 문제로 접근 거부 (정상적인 API 엔드포인트)');
-                } else if (text.includes('KorService2')) {
-                    log('success', '✅ KorService2 엔드포인트 확인됨');
-                } else {
-                    log('error', '❌ 예상치 못한 응답');
-                }
-                
-            } catch (error) {
-                log('error', `❌ 원본 API 테스트 실패: ${error.message}`);
-            }
-        }
-
-        async function testManualUrl() {
-            const url = document.getElementById('manualUrl').value;
-            const paramsText = document.getElementById('testParams').value;
-            
-            if (!url) {
-                log('error', '❌ URL을 입력하세요');
-                return;
-            }
-            
-            log('info', `🔧 수동 테스트: ${url}`);
-            
-            try {
-                let options = {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
+                // 간단한 시스템 체크
+                const systemInfo = {
+                    browser: navigator.userAgent,
+                    language: navigator.language,
+                    timestamp: new Date().toISOString(),
+                    memory: performance.memory ? {
+                        used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                        total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)
+                    } : 'Not available'
                 };
                 
-                if (paramsText.trim()) {
-                    try {
-                        const params = JSON.parse(paramsText);
-                        options.method = 'POST';
-                        options.body = JSON.stringify(params);
-                        log('info', `📝 POST 파라미터: ${JSON.stringify(params)}`);
-                    } catch (e) {
-                        log('warning', '⚠️ 파라미터를 GET 쿼리로 처리');
-                        const urlObj = new URL(url);
-                        const params = new URLSearchParams(paramsText);
-                        params.forEach((value, key) => {
-                            urlObj.searchParams.append(key, value);
-                        });
-                        url = urlObj.toString();
-                    }
-                }
-                
-                const response = await fetch(url, options);
-                const text = await response.text();
-                
-                log('success', `✅ 응답 상태: ${response.status}`);
-                log('info', `📄 응답: ${text.substring(0, 500)}...`);
-                
-                try {
-                    const data = JSON.parse(text);
-                    updateResponseAnalysis(data);
-                } catch (e) {
-                    log('warning', '⚠️ JSON이 아닌 응답 받음');
-                    updateResponseAnalysis({ type: 'html', content: text.substring(0, 200) });
-                }
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 시스템 체크 성공!</h4>
+                    <pre>${JSON.stringify(systemInfo, null, 2)}</pre>
+                `;
                 
             } catch (error) {
-                log('error', `❌ 수동 테스트 실패: ${error.message}`);
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 시스템 체크 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '시스템 체크');
+        }
+
+        async function 캐시테스트() {
+            const result = document.getElementById('systemResult');
+            
+            try {
+                // 로컬 스토리지를 이용한 간단한 캐시 테스트
+                const testKey = 'test-cache-' + Date.now();
+                const testData = { message: 'Hello Cache!', timestamp: Date.now() };
+                
+                localStorage.setItem(testKey, JSON.stringify(testData));
+                const retrieved = JSON.parse(localStorage.getItem(testKey));
+                localStorage.removeItem(testKey);
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 캐시 테스트 성공!</h4>
+                    <p>저장한 데이터: ${JSON.stringify(testData)}</p>
+                    <p>불러온 데이터: ${JSON.stringify(retrieved)}</p>
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 캐시 테스트 실패</h4><p>${error.message}</p>`;
             }
         }
 
-        function updateServerStatus(url, status, data) {
-            const statusDiv = document.getElementById('serverStatus');
-            const indicator = status === 'online' ? 'status-online' : 
-                            status === 'html' ? 'status-unknown' : 'status-offline';
+        async function 언어테스트() {
+            const result = document.getElementById('systemResult');
             
-            statusDiv.innerHTML += `
-                <div style="margin: 0.5rem 0;">
-                    <span class="status-indicator ${indicator}"></span>
-                    ${url} - ${status}
-                </div>
-            `;
+            try {
+                const messages = {
+                    ko: '안녕하세요! 한국관광공사 API 테스트입니다.',
+                    en: 'Hello! This is Korea Tourism API test.',
+                    ja: 'こんにちは！韓国観光公社APIテストです。',
+                    'zh-cn': '您好！这是韩国旅游公社API测试。'
+                };
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 다국어 테스트 성공!</h4>
+                    <pre>${JSON.stringify(messages, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 다국어 테스트 실패</h4><p>${error.message}</p>`;
+            }
         }
 
-        function updateEndpointList(endpoints) {
-            const listDiv = document.getElementById('endpointList');
-            listDiv.innerHTML = endpoints.length > 0 ? 
-                endpoints.map(ep => `<div>✅ ${ep}</div>`).join('') :
-                '<div>❌ 사용 가능한 엔드포인트 없음</div>';
+        async function 서울관광지테스트() {
+            const result = document.getElementById('seoulResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('areaBasedList2', {
+                    areaCode: '1',      // 서울
+                    numOfRows: '5',
+                    pageNo: '1',
+                    arrange: 'C'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 서울 관광지 검색 성공!</h4>
+                    <p>📊 찾은 관광지: ${items.length}개</p>
+                    ${items.length > 0 ? `
+                        <p>🏷️ 첫 번째: ${items[0].title}</p>
+                        <p>📍 주소: ${items[0].addr1 || '주소 정보 없음'}</p>
+                        <details>
+                            <summary>전체 데이터 보기</summary>
+                            <pre>${JSON.stringify(items[0], null, 2)}</pre>
+                        </details>
+                    ` : '<p>데이터가 없습니다.</p>'}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 서울 관광지 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
         }
 
-        function updateResponseAnalysis(data) {
-            const analysisDiv = document.getElementById('responseAnalysis');
-            analysisDiv.innerHTML = `
-                <div>📊 응답 분석:</div>
-                <div style="font-family: monospace; font-size: 11px; margin-top: 0.5rem;">
-                    ${JSON.stringify(data, null, 2).substring(0, 300)}...
-                </div>
-            `;
+        async function 키워드테스트() {
+            const result = document.getElementById('keywordResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('searchKeyword2', {
+                    keyword: '경복궁',
+                    numOfRows: '3',
+                    pageNo: '1',
+                    arrange: 'C'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 키워드 검색 성공!</h4>
+                    <p>🔍 "경복궁" 검색 결과: ${items.length}개</p>
+                    ${items.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ${item.title}</strong><br>
+                            📍 ${item.addr1 || '주소 정보 없음'}<br>
+                            📞 ${item.tel || '전화번호 없음'}
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 키워드 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
         }
 
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+        async function 위치테스트() {
+            const result = document.getElementById('locationResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('locationBasedList2', {
+                    mapX: '127.0276',   // 강남역 경도
+                    mapY: '37.4979',    // 강남역 위도
+                    radius: '1000',     // 1km
+                    numOfRows: '3',
+                    pageNo: '1'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 위치 기반 검색 성공!</h4>
+                    <p>📍 강남역 1km 반경 내 관광지: ${items.length}개</p>
+                    ${items.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ${item.title}</strong><br>
+                            📏 거리: ${item.dist ? Math.round(item.dist) + 'm' : '정보 없음'}<br>
+                            📍 ${item.addr1 || '주소 정보 없음'}
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 위치 기반 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
         }
 
-        // 초기화
-        log('info', '🚀 Emergency Diagnostic Tool v3.0 초기화 완료');
-        log('info', '📋 사용법: 응급 진단 시작 → 모든 엔드포인트 스캔 → 원본 API 테스트');
+        async function 배치테스트() {
+            const result = document.getElementById('batchResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                // 먼저 몇 개의 contentId를 가져온 후 상세 정보 조회
+                const listData = await 관광공사API호출('areaBasedList2', {
+                    areaCode: '1',
+                    numOfRows: '3',
+                    pageNo: '1'
+                });
+                
+                const items = listData.response.body.items.item || [];
+                const contentIds = items.slice(0, 2).map(item => item.contentid);
+                
+                if (contentIds.length === 0) {
+                    throw new Error('테스트할 contentId를 가져올 수 없습니다');
+                }
+                
+                // 각 contentId에 대해 상세 정보 조회
+                const detailPromises = contentIds.map(async (contentId) => {
+                    try {
+                        const detailData = await 관광공사API호출('detailCommon2', {
+                            contentId: contentId,
+                            defaultYN: 'Y',
+                            firstImageYN: 'Y',
+                            areacodeYN: 'Y',
+                            catcodeYN: 'Y',
+                            addrinfoYN: 'Y',
+                            mapinfoYN: 'Y',
+                            overviewYN: 'Y'
+                        });
+                        return { contentId, success: true, data: detailData.response.body.items.item[0] };
+                    } catch (error) {
+                        return { contentId, success: false, error: error.message };
+                    }
+                });
+                
+                const results = await Promise.all(detailPromises);
+                const successCount = results.filter(r => r.success).length;
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 배치 테스트 완료!</h4>
+                    <p>📊 총 ${results.length}개 중 ${successCount}개 성공</p>
+                    ${results.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ContentID: ${item.contentId}</strong><br>
+                            ${item.success ? 
+                                `✅ 성공: ${item.data.title}<br>📍 ${item.data.addr1 || '주소 없음'}` : 
+                                `❌ 실패: ${item.error}`
+                            }
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 배치 테스트 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 AllTourism API 초간단 테스트</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-card { 
+            background: rgba(255,255,255,0.2);
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .success { 
+            background: rgba(40, 167, 69, 0.3); 
+            border-color: rgba(40, 167, 69, 0.5);
+        }
+        .error { 
+            background: rgba(220, 53, 69, 0.3); 
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+        button { 
+            padding: 12px 25px; 
+            margin: 8px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        button:hover { 
+            background: #218838; 
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        pre { 
+            background: rgba(0,0,0,0.3); 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .loading { 
+            display: inline-block; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        .setup-box {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            width: 300px;
+            margin: 5px;
+        }
+        input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 AllTourism API 초간단 테스트</h1>
+        <p>한국관광공사 API를 브라우저에서 직접 테스트해보세요!</p>
+
+        <!-- API 키 설정 -->
+        <div class="setup-box">
+            <h3>⚙️ 1단계: API 키 입력</h3>
+            <input type="text" id="apiKey" placeholder="여기에 TOURISM_API_KEY를 입력하세요" />
+            <button onclick="API키저장()">저장</button>
+            <p>💡 <a href="https://www.data.go.kr/data/15101578/openapi.do" target="_blank" style="color: #ffc107;">API 키 발급받기</a></p>
+        </div>
+
+        <!-- 테스트 버튼들 -->
+        <div class="test-card">
+            <h3>🧪 내장 테스트</h3>
+            <button onclick="시스템테스트()">시스템 체크</button>
+            <button onclick="캐시테스트()">캐시 테스트</button>
+            <button onclick="언어테스트()">다국어 테스트</button>
+            <div id="systemResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>🏛️ 서울 관광지 검색</h3>
+            <button onclick="서울관광지테스트()">테스트 실행</button>
+            <div id="seoulResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>🔍 키워드 검색 (경복궁)</h3>
+            <button onclick="키워드테스트()">테스트 실행</button>
+            <div id="keywordResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>📍 위치 기반 검색 (강남역 1km)</h3>
+            <button onclick="위치테스트()">테스트 실행</button>
+            <div id="locationResult"></div>
+        </div>
+
+        <div class="test-card">
+            <h3>📦 배치 테스트 (여러 관광지 한번에)</h3>
+            <button onclick="배치테스트()">테스트 실행</button>
+            <div id="batchResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // AllTourism 모듈을 직접 포함 (간단 버전)
+        let apiKey = '';
+        
+        function API키저장() {
+            apiKey = document.getElementById('apiKey').value;
+            if (apiKey) {
+                alert('✅ API 키가 저장되었습니다!');
+                localStorage.setItem('tourism_api_key', apiKey);
+            } else {
+                alert('❌ API 키를 입력해주세요!');
+            }
+        }
+
+        // 페이지 로드 시 저장된 API 키 불러오기
+        window.onload = function() {
+            const savedKey = localStorage.getItem('tourism_api_key');
+            if (savedKey) {
+                document.getElementById('apiKey').value = savedKey;
+                apiKey = savedKey;
+            }
+        }
+
+        function 버튼비활성화(buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<span class="loading">⏳</span> 테스트 중...';
+        }
+
+        function 버튼활성화(buttonElement, text) {
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = text;
+        }
+
+        // 가상 API 호출 (실제로는 한국관광공사 API를 호출)
+        async function 관광공사API호출(endpoint, params) {
+            if (!apiKey) {
+                throw new Error('API 키를 먼저 입력해주세요!');
+            }
+
+            try {
+                const baseUrl = 'https://apis.data.go.kr/B551011/KorService2';
+                const url = `${baseUrl}/${endpoint}`;
+                
+                const queryParams = new URLSearchParams({
+                    serviceKey: apiKey,
+                    MobileOS: 'ETC',
+                    MobileApp: 'AllTourism-Test',
+                    _type: 'json',
+                    ...params
+                });
+
+                const response = await fetch(`${url}?${queryParams}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // API 응답 검증
+                if (!data.response) {
+                    throw new Error('API 응답이 올바르지 않습니다');
+                }
+                
+                if (data.response.header.resultCode !== '0000') {
+                    throw new Error(`API 오류: ${data.response.header.resultMsg}`);
+                }
+                
+                return data;
+                
+            } catch (error) {
+                if (error.message.includes('CORS')) {
+                    throw new Error('🔒 CORS 오류: 브라우저 보안 정책으로 인해 직접 API 호출이 제한됩니다. 서버를 통해 테스트해주세요.');
+                }
+                throw error;
+            }
+        }
+
+        async function 시스템테스트() {
+            const result = document.getElementById('systemResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                // 간단한 시스템 체크
+                const systemInfo = {
+                    browser: navigator.userAgent,
+                    language: navigator.language,
+                    timestamp: new Date().toISOString(),
+                    memory: performance.memory ? {
+                        used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                        total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)
+                    } : 'Not available'
+                };
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 시스템 체크 성공!</h4>
+                    <pre>${JSON.stringify(systemInfo, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 시스템 체크 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '시스템 체크');
+        }
+
+        async function 캐시테스트() {
+            const result = document.getElementById('systemResult');
+            
+            try {
+                // 로컬 스토리지를 이용한 간단한 캐시 테스트
+                const testKey = 'test-cache-' + Date.now();
+                const testData = { message: 'Hello Cache!', timestamp: Date.now() };
+                
+                localStorage.setItem(testKey, JSON.stringify(testData));
+                const retrieved = JSON.parse(localStorage.getItem(testKey));
+                localStorage.removeItem(testKey);
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 캐시 테스트 성공!</h4>
+                    <p>저장한 데이터: ${JSON.stringify(testData)}</p>
+                    <p>불러온 데이터: ${JSON.stringify(retrieved)}</p>
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 캐시 테스트 실패</h4><p>${error.message}</p>`;
+            }
+        }
+
+        async function 언어테스트() {
+            const result = document.getElementById('systemResult');
+            
+            try {
+                const messages = {
+                    ko: '안녕하세요! 한국관광공사 API 테스트입니다.',
+                    en: 'Hello! This is Korea Tourism API test.',
+                    ja: 'こんにちは！韓国観光公社APIテストです。',
+                    'zh-cn': '您好！这是韩国旅游公社API测试。'
+                };
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 다국어 테스트 성공!</h4>
+                    <pre>${JSON.stringify(messages, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 다국어 테스트 실패</h4><p>${error.message}</p>`;
+            }
+        }
+
+        async function 서울관광지테스트() {
+            const result = document.getElementById('seoulResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('areaBasedList2', {
+                    areaCode: '1',      // 서울
+                    numOfRows: '5',
+                    pageNo: '1',
+                    arrange: 'C'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 서울 관광지 검색 성공!</h4>
+                    <p>📊 찾은 관광지: ${items.length}개</p>
+                    ${items.length > 0 ? `
+                        <p>🏷️ 첫 번째: ${items[0].title}</p>
+                        <p>📍 주소: ${items[0].addr1 || '주소 정보 없음'}</p>
+                        <details>
+                            <summary>전체 데이터 보기</summary>
+                            <pre>${JSON.stringify(items[0], null, 2)}</pre>
+                        </details>
+                    ` : '<p>데이터가 없습니다.</p>'}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 서울 관광지 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
+        }
+
+        async function 키워드테스트() {
+            const result = document.getElementById('keywordResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('searchKeyword2', {
+                    keyword: '경복궁',
+                    numOfRows: '3',
+                    pageNo: '1',
+                    arrange: 'C'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 키워드 검색 성공!</h4>
+                    <p>🔍 "경복궁" 검색 결과: ${items.length}개</p>
+                    ${items.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ${item.title}</strong><br>
+                            📍 ${item.addr1 || '주소 정보 없음'}<br>
+                            📞 ${item.tel || '전화번호 없음'}
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 키워드 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
+        }
+
+        async function 위치테스트() {
+            const result = document.getElementById('locationResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                const data = await 관광공사API호출('locationBasedList2', {
+                    mapX: '127.0276',   // 강남역 경도
+                    mapY: '37.4979',    // 강남역 위도
+                    radius: '1000',     // 1km
+                    numOfRows: '3',
+                    pageNo: '1'
+                });
+                
+                const items = data.response.body.items.item || [];
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 위치 기반 검색 성공!</h4>
+                    <p>📍 강남역 1km 반경 내 관광지: ${items.length}개</p>
+                    ${items.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ${item.title}</strong><br>
+                            📏 거리: ${item.dist ? Math.round(item.dist) + 'm' : '정보 없음'}<br>
+                            📍 ${item.addr1 || '주소 정보 없음'}
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 위치 기반 검색 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
+        }
+
+        async function 배치테스트() {
+            const result = document.getElementById('batchResult');
+            const button = event.target;
+            버튼비활성화(button);
+            
+            try {
+                // 먼저 몇 개의 contentId를 가져온 후 상세 정보 조회
+                const listData = await 관광공사API호출('areaBasedList2', {
+                    areaCode: '1',
+                    numOfRows: '3',
+                    pageNo: '1'
+                });
+                
+                const items = listData.response.body.items.item || [];
+                const contentIds = items.slice(0, 2).map(item => item.contentid);
+                
+                if (contentIds.length === 0) {
+                    throw new Error('테스트할 contentId를 가져올 수 없습니다');
+                }
+                
+                // 각 contentId에 대해 상세 정보 조회
+                const detailPromises = contentIds.map(async (contentId) => {
+                    try {
+                        const detailData = await 관광공사API호출('detailCommon2', {
+                            contentId: contentId,
+                            defaultYN: 'Y',
+                            firstImageYN: 'Y',
+                            areacodeYN: 'Y',
+                            catcodeYN: 'Y',
+                            addrinfoYN: 'Y',
+                            mapinfoYN: 'Y',
+                            overviewYN: 'Y'
+                        });
+                        return { contentId, success: true, data: detailData.response.body.items.item[0] };
+                    } catch (error) {
+                        return { contentId, success: false, error: error.message };
+                    }
+                });
+                
+                const results = await Promise.all(detailPromises);
+                const successCount = results.filter(r => r.success).length;
+                
+                result.className = 'success';
+                result.innerHTML = `
+                    <h4>✅ 배치 테스트 완료!</h4>
+                    <p>📊 총 ${results.length}개 중 ${successCount}개 성공</p>
+                    ${results.map((item, index) => `
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                            <strong>${index + 1}. ContentID: ${item.contentId}</strong><br>
+                            ${item.success ? 
+                                `✅ 성공: ${item.data.title}<br>📍 ${item.data.addr1 || '주소 없음'}` : 
+                                `❌ 실패: ${item.error}`
+                            }
+                        </div>
+                    `).join('')}
+                `;
+                
+            } catch (error) {
+                result.className = 'error';
+                result.innerHTML = `<h4>❌ 배치 테스트 실패</h4><p>${error.message}</p>`;
+            }
+            
+            버튼활성화(button, '테스트 실행');
+        }
     </script>
 </body>
 </html>
