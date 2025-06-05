@@ -5,11 +5,10 @@ const isNode = typeof window === 'undefined';
 const hasProcess = typeof process !== 'undefined';
 
 // 안전한 의존성 로딩
-let nodeFetch, AbortControllerPolyfill;
 if (isNode && typeof fetch === 'undefined') {
   try {
-    nodeFetch = require('node-fetch');
-    AbortControllerPolyfill = require('abort-controller');
+    const nodeFetch = require('node-fetch');
+    const AbortControllerPolyfill = require('abort-controller');
     global.fetch = nodeFetch;
     global.AbortController = AbortControllerPolyfill;
   } catch (error) {
@@ -173,15 +172,6 @@ class RateLimitError extends TourismApiError {
   }
 }
 
-class DependencyError extends TourismApiError {
-  constructor(dependency, originalError, i18n = null) {
-    super('DEPENDENCY_ERROR', 'system', 503, { dependency, originalError: originalError.message }, {}, i18n);
-    this.name = 'DependencyError';
-    this.dependency = dependency;
-    this.originalError = originalError;
-  }
-}
-
 // ===== 상수 관리자 =====
 class ConstantsManager {
   constructor() {
@@ -329,8 +319,7 @@ class ConfigManager {
     this.config = {
       version: '1.2.0',
       environment: (hasProcess && process.env.NODE_ENV) || 'development',
-      // ✅ TOURISM_API_KEY로 변경
-      serviceKey: (hasProcess && process.env.TOURISM_API_KEY) || '',
+      serviceKey: (hasProcess && process.env.TOURISM_API_KEY) || '', // ✅ TOURISM_API_KEY
       baseUrl: 'https://apis.data.go.kr/B551011/KorService1',
       maxConcurrent: 10,
       apiTimeout: 30000,
@@ -354,8 +343,7 @@ class ConfigManager {
     if (!hasProcess) return;
 
     const envMappings = {
-      // ✅ TOURISM_API_KEY로 변경
-      TOURISM_API_KEY: 'serviceKey',
+      TOURISM_API_KEY: 'serviceKey', // ✅ TOURISM_API_KEY
       API_TIMEOUT: 'apiTimeout',
       MAX_CONCURRENT: 'maxConcurrent',
       RATE_LIMIT_PER_MINUTE: 'rateLimitPerMinute',
@@ -769,192 +757,68 @@ class RateLimiter {
   }
 }
 
-// ===== 향상된 동시성 제어 유틸리티 =====
-class EnhancedSemaphore {
-  constructor(maxConcurrent, name = 'semaphore') {
-    this.maxConcurrent = Math.max(1, SafeUtils.safeParseInt(maxConcurrent, 10));
-    this.currentConcurrent = 0;
-    this.queue = [];
-    this.name = name;
-    this.stats = {
-      totalAcquired: 0,
-      totalReleased: 0,
-      maxQueueSize: 0,
-      averageWaitTime: 0
-    };
-    this._destroyed = false;
-  }
-
-  async acquire() {
-    if (this._destroyed) {
-      throw new Error(`Semaphore ${this.name} has been destroyed`);
-    }
-
-    const acquireTime = Date.now();
-
-    return new Promise((resolve, reject) => {
-      const request = { resolve, reject, timestamp: acquireTime };
-
-      if (this.currentConcurrent < this.maxConcurrent) {
-        this.currentConcurrent++;
-        this.stats.totalAcquired++;
-        resolve();
-      } else {
-        this.queue.push(request);
-        this.stats.maxQueueSize = Math.max(this.stats.maxQueueSize, this.queue.length);
-
-        const timeout = setTimeout(() => {
-          const index = this.queue.indexOf(request);
-          if (index > -1) {
-            this.queue.splice(index, 1);
-            reject(new Error(`Semaphore acquire timeout after 30s for ${this.name}`));
-          }
-        }, 30000);
-
-        request.timeout = timeout;
-      }
-    });
-  }
-
-  release() {
-    if (this._destroyed) return;
-
-    this.currentConcurrent = Math.max(0, this.currentConcurrent - 1);
-    this.stats.totalReleased++;
-
-    if (this.queue.length > 0) {
-      const next = this.queue.shift();
-      if (next && next.timeout) {
-        clearTimeout(next.timeout);
-      }
-
-      if (next) {
-        this.currentConcurrent++;
-        this.stats.totalAcquired++;
-
-        const waitTime = Date.now() - next.timestamp;
-        this.stats.averageWaitTime = (this.stats.averageWaitTime + waitTime) / 2;
-
-        next.resolve();
-      }
-    }
-  }
-
-  async execute(fn, timeoutMs = 30000) {
-    if (this._destroyed) {
-      throw new Error(`Semaphore ${this.name} has been destroyed`);
-    }
-
-    await this.acquire();
-
-    let timeoutId;
-    try {
-      if (timeoutMs > 0) {
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(new Error(`Semaphore execute timeout after ${timeoutMs}ms`));
-          }, timeoutMs);
-        });
-
-        return await Promise.race([fn(), timeoutPromise]);
-      } else {
-        return await fn();
-      }
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
-      this.release();
-    }
-  }
-
-  getStats() {
-    return {
-      ...this.stats,
-      currentConcurrent: this.currentConcurrent,
-      queueSize: this.queue.length,
-      maxConcurrent: this.maxConcurrent,
-      utilization: (this.currentConcurrent / this.maxConcurrent) * 100
-    };
-  }
-
-  destroy() {
-    this._destroyed = true;
-
-    while (this.queue.length > 0) {
-      const request = this.queue.shift();
-      if (request.timeout) clearTimeout(request.timeout);
-      request.reject(new Error(`Semaphore ${this.name} destroyed`));
-    }
-
-    this.currentConcurrent = 0;
-  }
-}
-
 // ===== HTTP 클라이언트 =====
 class HttpClient {
   constructor(container) {
     this.container = container;
     this.configManager = container.get('config');
     this.logger = container.get('logger');
-    this.semaphore = new EnhancedSemaphore(
-      this.configManager.get('maxConcurrent'),
-      'httpClient'
-    );
+    this.maxConcurrent = this.configManager.get('maxConcurrent');
+    this.currentConcurrent = 0;
   }
 
   async getTourismData(operation, params) {
-    return await this.semaphore.execute(async () => {
-      const startTime = Date.now();
-      const timeout = this.configManager.get('apiTimeout');
+    const startTime = Date.now();
+    const timeout = this.configManager.get('apiTimeout');
 
-      try {
-        const url = this.buildUrl(operation, params);
+    try {
+      const url = this.buildUrl(operation, params);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        this.logger.debug('HTTP request starting', { operation, url });
+      this.logger.debug('HTTP request starting', { operation, url });
 
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'AllTourism-Enterprise/1.2.0'
-          },
-          signal: controller.signal
-        });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'AllTourism-Enterprise/1.2.0'
+        },
+        signal: controller.signal
+      });
 
-        clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const responseTime = Date.now() - startTime;
-
-        this.logger.debug('HTTP request completed', {
-          operation,
-          responseTime,
-          statusCode: response.status
-        });
-
-        this.logger.metric('http_request_duration', responseTime, { operation, success: true });
-
-        return data;
-      } catch (error) {
-        const responseTime = Date.now() - startTime;
-
-        if (error.name === 'AbortError') {
-          this.logger.error('HTTP request timeout', { operation, timeout });
-          this.logger.metric('http_request_duration', responseTime, { operation, success: false, error: 'timeout' });
-          throw new ApiTimeoutError(timeout, operation, this.container.get('i18n'));
-        }
-
-        this.logger.error('HTTP request failed', { operation, error: error.message });
-        this.logger.metric('http_request_duration', responseTime, { operation, success: false, error: 'network' });
-        throw new TourismApiError('HTTP_ERROR', operation, 503, { originalError: error.message }, {}, this.container.get('i18n'));
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    });
+
+      const data = await response.json();
+      const responseTime = Date.now() - startTime;
+
+      this.logger.debug('HTTP request completed', {
+        operation,
+        responseTime,
+        statusCode: response.status
+      });
+
+      this.logger.metric('http_request_duration', responseTime, { operation, success: true });
+
+      return data;
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+
+      if (error.name === 'AbortError') {
+        this.logger.error('HTTP request timeout', { operation, timeout });
+        this.logger.metric('http_request_duration', responseTime, { operation, success: false, error: 'timeout' });
+        throw new ApiTimeoutError(timeout, operation, this.container.get('i18n'));
+      }
+
+      this.logger.error('HTTP request failed', { operation, error: error.message });
+      this.logger.metric('http_request_duration', responseTime, { operation, success: false, error: 'network' });
+      throw new TourismApiError('HTTP_ERROR', operation, 503, { originalError: error.message }, {}, this.container.get('i18n'));
+    }
   }
 
   buildUrl(operation, params) {
@@ -996,7 +860,6 @@ class HttpClient {
   }
 
   destroy() {
-    this.semaphore.destroy();
     this.logger.info('HTTP client destroyed');
   }
 }
@@ -1041,56 +904,6 @@ class GeoUtils {
     return degrees * (Math.PI / 180);
   }
 
-  static getBearing(lat1, lon1, lat2, lon2) {
-    try {
-      const dLon = this.toRadians(lon2 - lon1);
-      const lat1Rad = this.toRadians(lat1);
-      const lat2Rad = this.toRadians(lat2);
-
-      const y = Math.sin(dLon) * Math.cos(lat2Rad);
-      const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
-                Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
-
-      const bearing = Math.atan2(y, x) * 180 / Math.PI;
-      return (bearing + 360) % 360;
-    } catch {
-      return null;
-    }
-  }
-
-  static getDirectionText(bearing, lang = 'ko') {
-    if (typeof bearing !== 'number' || isNaN(bearing)) return null;
-
-    const directions = {
-      ko: ['북', '북동', '동', '남동', '남', '남서', '서', '북서'],
-      en: ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'],
-      ja: ['北', '北東', '東', '南東', '南', '南西', '西', '北西'],
-      zh: ['北', '东北', '东', '东南', '南', '西南', '西', '西北']
-    };
-
-    const index = Math.round(bearing / 45) % 8;
-    return directions[lang] ? directions[lang][index] : directions.ko[index];
-  }
-
-  static isInKorea(lat, lng) {
-    try {
-      const bounds = {
-        north: 38.6, south: 33.0,
-        east: 131.9, west: 124.6
-      };
-
-      const numLat = SafeUtils.safeParseFloat(lat);
-      const numLng = SafeUtils.safeParseFloat(lng);
-
-      if (isNaN(numLat) || isNaN(numLng)) return false;
-
-      return numLat >= bounds.south && numLat <= bounds.north &&
-             numLng >= bounds.west && numLng <= bounds.east;
-    } catch {
-      return false;
-    }
-  }
-
   static addDistanceInfo(items, userLat, userLng, radius = null) {
     if (!items || !Array.isArray(items)) return items;
     if (!userLat || !userLng) return items;
@@ -1105,29 +918,22 @@ class GeoUtils {
         if (!item) return item;
 
         let distance = null;
-        let bearing = null;
         let distanceText = null;
-        let directionText = null;
 
         if (item.mapx && item.mapy) {
           distance = this.calculateDistance(userLatNum, userLngNum, item.mapy, item.mapx);
           if (distance !== null) {
             distance = Math.round(distance * 100) / 100;
-            bearing = this.getBearing(userLatNum, userLngNum, item.mapy, item.mapx);
             distanceText = this.formatDistance(distance);
-            directionText = this.getDirectionText(bearing);
           }
         }
 
         return {
           ...item,
           distance,
-          bearing,
           meta: {
             ...item.meta,
-            distanceText,
-            directionText,
-            distanceCategory: this.getDistanceCategory(distance)
+            distanceText
           }
         };
       });
@@ -1165,16 +971,6 @@ class GeoUtils {
     } catch (error) {
       return `${distance}km`;
     }
-  }
-
-  static getDistanceCategory(distance) {
-    if (distance === null || isNaN(distance)) return 'unknown';
-
-    if (distance <= 0.5) return 'very_close';
-    if (distance <= 2) return 'close';
-    if (distance <= 10) return 'nearby';
-    if (distance <= 50) return 'far';
-    return 'very_far';
   }
 }
 
@@ -1230,8 +1026,7 @@ class ServiceContainer {
 
     const initOrder = [
       'constants', 'i18n', 'config', 'logger',
-      'cache', 'rateLimiter', 'validator',
-      'httpClient', 'security', 'performanceMonitor'
+      'cache', 'rateLimiter', 'validator', 'httpClient'
     ];
 
     initOrder.forEach(serviceName => {
@@ -1513,14 +1308,7 @@ class InputValidator {
     });
 
     this.schemas.set('detailCommon', {
-      contentId: { type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true },
-      defaultYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      firstImageYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      areacodeYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      catcodeYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      addrinfoYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      mapinfoYN: { type: 'string', enum: ['Y', 'N'], sanitize: true },
-      overviewYN: { type: 'string', enum: ['Y', 'N'], sanitize: true }
+      contentId: { type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true }
     });
 
     this.schemas.set('searchKeyword', {
@@ -2057,6 +1845,31 @@ class AllTourismAPI {
   }
 }
 
+// ===== 헬스체크 함수 =====
+async function healthCheck() {
+  try {
+    const api = new AllTourismAPI();
+    const status = api.getSystemStatus();
+    
+    return {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: '1.2.0',
+      uptime: Date.now() - SERVICE_START_TIME,
+      environment: hasProcess ? process.env.NODE_ENV || 'development' : 'browser',
+      apiKeyConfigured: status.system ? !!api.container.get('config').hasValidApiKey() : false,
+      services: status.services || []
+    };
+  } catch (error) {
+    return {
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      version: '1.2.0'
+    };
+  }
+}
+
 // ===== CORS 처리 함수 =====
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -2065,8 +1878,8 @@ function setCorsHeaders(res) {
   res.setHeader('Access-Control-Max-Age', '86400');
 }
 
-// ===== Vercel API Handler =====
-async function createVercelHandler(req, res) {
+// ===== 메인 Vercel Handler =====
+module.exports = async (req, res) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const startTime = Date.now();
 
@@ -2150,78 +1963,12 @@ async function createVercelHandler(req, res) {
     const statusCode = error.statusCode || 500;
     res.status(statusCode).json(errorResponse);
   }
-}
-
-// ===== 헬스체크 함수 =====
-async function healthCheck() {
-  try {
-    const api = new AllTourismAPI();
-    const status = api.getSystemStatus();
-    
-    return {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      version: '1.2.0',
-      uptime: Date.now() - SERVICE_START_TIME,
-      environment: hasProcess ? process.env.NODE_ENV || 'development' : 'browser',
-      apiKeyConfigured: status.system ? !!api.container.get('config').hasValidApiKey() : false,
-      services: status.services || []
-    };
-  } catch (error) {
-    return {
-      status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString(),
-      version: '1.2.0'
-    };
-  }
-}
-
-// ===== 전역 내보내기 ===== (파일 끝부분)
-if (typeof module !== 'undefined' && module.exports) {
-  // ✅ 명확한 내보내기 구조
-  module.exports = createVercelHandler;           // 기본 핸들러
-  module.exports.default = createVercelHandler;   // ES6 default
-  module.exports.handler = createVercelHandler;   // 명시적 핸들러
-  module.exports.AllTourismAPI = AllTourismAPI;   // API 클래스
-  module.exports.healthCheck = healthCheck;       // 헬스체크 함수
-  module.exports.TourismApiError = TourismApiError;
-  module.exports.ValidationError = ValidationError;
-  module.exports.ApiTimeoutError = ApiTimeoutError;
-  module.exports.RateLimitError = RateLimitError;
-} else if (typeof window !== 'undefined') {
-  // 브라우저 환경
-  window.AllTourismAPI = AllTourismAPI;
-  window.TourismApiError = TourismApiError;
-  window.ValidationError = ValidationError;
-  window.ApiTimeoutError = ApiTimeoutError;
-  window.RateLimitError = RateLimitError;
-}
-배포 방법
-1. Vercel API 라우트 생성
-api/tourism.js 파일로 저장:
-
-Copyconst handler = require('../tourism.js').default;
-module.exports = handler;
-또는 api/index.js:
-
-Copyconst { handler } = require('../tourism.js');
-module.exports = handler;
-2. 헬스체크 엔드포인트
-api/health.js:
-
-Copyconst { healthCheck } = require('../tourism.js');
-
-module.exports = async (req, res) => {
-  try {
-    const health = await healthCheck();
-    const statusCode = health.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json(health);
-  } catch (error) {
-    res.status(503).json({
-      status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
 };
+
+// ===== 헬스체크 및 기타 export =====
+module.exports.healthCheck = healthCheck;
+module.exports.AllTourismAPI = AllTourismAPI;
+module.exports.TourismApiError = TourismApiError;
+module.exports.ValidationError = ValidationError;
+module.exports.ApiTimeoutError = ApiTimeoutError;
+module.exports.RateLimitError = RateLimitError;
