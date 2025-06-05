@@ -2177,13 +2177,14 @@ async function healthCheck() {
   }
 }
 
-// ===== 전역 내보내기 =====
+// ===== 전역 내보내기 ===== (파일 끝부분)
 if (typeof module !== 'undefined' && module.exports) {
-  // Node.js/Vercel 환경
-  module.exports = AllTourismAPI;
-  module.exports.default = createVercelHandler;
-  module.exports.handler = createVercelHandler;
-  module.exports.healthCheck = healthCheck;
+  // ✅ 명확한 내보내기 구조
+  module.exports = createVercelHandler;           // 기본 핸들러
+  module.exports.default = createVercelHandler;   // ES6 default
+  module.exports.handler = createVercelHandler;   // 명시적 핸들러
+  module.exports.AllTourismAPI = AllTourismAPI;   // API 클래스
+  module.exports.healthCheck = healthCheck;       // 헬스체크 함수
   module.exports.TourismApiError = TourismApiError;
   module.exports.ValidationError = ValidationError;
   module.exports.ApiTimeoutError = ApiTimeoutError;
