@@ -1,4 +1,4 @@
-// ===== alltourism-core.js - 한국관광공사 API 핵심 클래스들 =====
+// ===== AllTourism Enterprise Core - Vercel 최적화 통합 버전 =====
 'use strict';
 
 /**
@@ -9,24 +9,26 @@
  * @property {number} rss - RSS 메모리 (바이트)
  */
 
-// ===== 런타임 환경 감지 및 안전한 폴리필 =====
-const RuntimeEnvironment = {
-    isNode: typeof window === 'undefined' && typeof global !== 'undefined',
+// ===== 런타임 환경 감지 및 안전한 폴리필 (Vercel 호환) =====
+export const RuntimeEnvironment = {
+    isNode: typeof globalThis !== 'undefined' && globalThis.process?.versions?.node,
     isBrowser: typeof window !== 'undefined',
     isWebWorker: typeof importScripts === 'function',
+    isVercel: typeof process !== 'undefined' && process.env.VERCEL === '1',
+    isEdgeRuntime: typeof EdgeRuntime !== 'undefined',
 
-    /**
-     * Node.js 환경에서 필요한 폴리필을 설정합니다
-     * @returns {Promise<void>}
-     */
     async setupPolyfills() {
-        if (this.isNode) {
+        if (this.isEdgeRuntime || this.isVercel) return;
+        if (this.isBrowser) return;
+
+        if (this.isNode && typeof fetch === 'undefined') {
             try {
-                if (typeof fetch === 'undefined') {
-                    const { default: fetch } = await import('node-fetch');
-                    const { default: AbortController } = await import('abort-controller');
-                    global.fetch = fetch;
-                    global.AbortController = AbortController;
+                const nodeFetch = await import('node-fetch');
+                globalThis.fetch = nodeFetch.default;
+                
+                if (typeof AbortController === 'undefined') {
+                    const abortController = await import('abort-controller');
+                    globalThis.AbortController = abortController.default;
                 }
             } catch (error) {
                 console.warn('Node.js fetch polyfill failed:', error.message);
@@ -35,84 +37,75 @@ const RuntimeEnvironment = {
         }
     },
 
-    /**
-     * 환경변수 값을 안전하게 가져옵니다
-     * @param {string} key - 환경변수 키
-     * @param {*} defaultValue - 기본값
-     * @returns {*} 환경변수 값 또는 기본값
-     */
     getEnvironmentVariable(key, defaultValue = null) {
-        if (!key || typeof key !== 'string') {
-            return defaultValue;
-        }
+        if (!key || typeof key !== 'string') return defaultValue;
 
-        // Node.js 환경
-        if (this.isNode && typeof process !== 'undefined' && process.env) {
-            const value = process.env[key];
-            return value !== undefined ? value : defaultValue;
-        }
+        try {
+            if ((this.isNode || this.isVercel || this.isEdgeRuntime) && 
+                typeof process !== 'undefined' && process.env) {
+                const value = process.env[key];
+                return value !== undefined ? value : defaultValue;
+            }
 
-        // 브라우저 환경
-        if (this.isBrowser && typeof window !== 'undefined' && window.APP_CONFIG) {
-            const value = window.APP_CONFIG[key];
-            return value !== undefined ? value : defaultValue;
-        }
+            if (this.isBrowser && typeof window !== 'undefined' && window.APP_CONFIG) {
+                const value = window.APP_CONFIG[key];
+                return value !== undefined ? value : defaultValue;
+            }
 
-        // 웹워커 환경
-        if (this.isWebWorker && typeof self !== 'undefined' && self.APP_CONFIG) {
-            const value = self.APP_CONFIG[key];
-            return value !== undefined ? value : defaultValue;
+            if (this.isWebWorker && typeof self !== 'undefined' && self.APP_CONFIG) {
+                const value = self.APP_CONFIG[key];
+                return value !== undefined ? value : defaultValue;
+            }
+        } catch (error) {
+            console.warn(`Error accessing environment variable ${key}:`, error);
         }
 
         return defaultValue;
     },
 
-    /**
-     * 메모리 사용량을 가져옵니다
-     * @returns {MemoryUsage} 메모리 사용량 정보
-     */
     getMemoryUsage() {
-        // Node.js 환경
-        if (this.isNode && typeof process !== 'undefined' && process.memoryUsage) {
-            return process.memoryUsage();
+        try {
+            if (this.isNode && typeof process !== 'undefined' && 
+                typeof process.memoryUsage === 'function') {
+                return process.memoryUsage();
+            }
+
+            if (this.isBrowser && 
+                typeof performance !== 'undefined' && 
+                performance.memory) {
+                return {
+                    heapUsed: performance.memory.usedJSHeapSize || 0,
+                    heapTotal: performance.memory.totalJSHeapSize || 0,
+                    external: 0,
+                    rss: 0
+                };
+            }
+        } catch (error) {
+            console.warn('Memory usage unavailable:', error);
         }
 
-        // 브라우저 환경
-        if (this.isBrowser && performance && performance.memory) {
-            return {
-                heapUsed: performance.memory.usedJSHeapSize || 0,
-                heapTotal: performance.memory.totalJSHeapSize || 0,
-                external: 0,
-                rss: 0
-            };
-        }
-
-        // 기본값
         return { heapUsed: 0, heapTotal: 0, external: 0, rss: 0 };
     }
 };
 
 // ===== 서비스 시작 시간 추적 =====
-const SERVICE_START_TIME = Date.now();
+export const SERVICE_START_TIME = Date.now();
 
-// ===== 리소스 관리자 =====
-class ResourceManager {
+// ===== 리소스 관리자 (Vercel 호환) =====
+export class ResourceManager {
     constructor() {
         this.intervals = new Set();
         this.timeouts = new Set();
         this.destroyed = false;
         this.lastCleanup = Date.now();
+        this.isServerless = RuntimeEnvironment.isVercel || RuntimeEnvironment.isEdgeRuntime;
     }
 
-    /**
-     * setInterval을 추적하여 관리합니다
-     * @param {Function} callback - 콜백 함수
-     * @param {number} delay - 지연 시간 (ms)
-     * @returns {number|null} interval ID 또는 null
-     */
     setInterval(callback, delay) {
-        if (this.destroyed || typeof callback !== 'function' || delay < 0) {
-            return null;
+        if (this.destroyed || typeof callback !== 'function' || delay < 0) return null;
+
+        if (this.isServerless) {
+            console.warn('⚠️ Using setInterval in serverless environment may not work as expected');
         }
 
         const id = setInterval(() => {
@@ -120,6 +113,7 @@ class ResourceManager {
                 callback();
             } catch (error) {
                 console.error('ResourceManager: Interval callback error:', error);
+                if (this.isServerless) this.clearInterval(id);
             }
         }, Math.max(0, delay));
 
@@ -127,16 +121,8 @@ class ResourceManager {
         return id;
     }
 
-    /**
-     * setTimeout을 추적하여 관리합니다
-     * @param {Function} callback - 콜백 함수
-     * @param {number} delay - 지연 시간 (ms)
-     * @returns {number|null} timeout ID 또는 null
-     */
     setTimeout(callback, delay) {
-        if (this.destroyed || typeof callback !== 'function' || delay < 0) {
-            return null;
-        }
+        if (this.destroyed || typeof callback !== 'function' || delay < 0) return null;
 
         const id = setTimeout(() => {
             this.timeouts.delete(id);
@@ -151,10 +137,6 @@ class ResourceManager {
         return id;
     }
 
-    /**
-     * interval을 정리합니다
-     * @param {number} id - interval ID
-     */
     clearInterval(id) {
         if (typeof id === 'number') {
             clearInterval(id);
@@ -162,10 +144,6 @@ class ResourceManager {
         }
     }
 
-    /**
-     * timeout을 정리합니다
-     * @param {number} id - timeout ID
-     */
     clearTimeout(id) {
         if (typeof id === 'number') {
             clearTimeout(id);
@@ -173,27 +151,15 @@ class ResourceManager {
         }
     }
 
-    /**
-     * 모든 리소스를 정리하고 관리자를 파괴합니다
-     */
     destroy() {
         if (this.destroyed) return;
 
-        // 안전한 정리
         this.intervals.forEach(id => {
-            try {
-                clearInterval(id);
-            } catch (error) {
-                console.warn('Error clearing interval:', error);
-            }
+            try { clearInterval(id); } catch (error) { console.warn('Error clearing interval:', error); }
         });
 
         this.timeouts.forEach(id => {
-            try {
-                clearTimeout(id);
-            } catch (error) {
-                console.warn('Error clearing timeout:', error);
-            }
+            try { clearTimeout(id); } catch (error) { console.warn('Error clearing timeout:', error); }
         });
 
         this.intervals.clear();
@@ -201,47 +167,32 @@ class ResourceManager {
         this.destroyed = true;
     }
 
-    /**
-     * 관리자가 파괴되었는지 확인합니다
-     * @returns {boolean} 파괴 여부
-     */
-    isDestroyed() {
-        return this.destroyed;
-    }
+    isDestroyed() { return this.destroyed; }
 
-    /**
-     * 리소스 통계를 가져옵니다
-     * @returns {Object} 리소스 통계
-     */
     getStats() {
         return {
             intervals: this.intervals.size,
             timeouts: this.timeouts.size,
             destroyed: this.destroyed,
-            uptime: Date.now() - this.lastCleanup
+            uptime: Date.now() - this.lastCleanup,
+            isServerless: this.isServerless
         };
     }
 }
 
-// ===== 의존성 주입 컨테이너 =====
-class ServiceContainer {
+// ===== 의존성 주입 컨테이너 (Vercel 최적화) =====
+export class ServiceContainer {
     constructor() {
         this.services = new Map();
         this.singletons = new Map();
         this.initialized = false;
         this.resourceManager = new ResourceManager();
         this.initializationTime = null;
+        this.isServerless = RuntimeEnvironment.isVercel || RuntimeEnvironment.isEdgeRuntime;
     }
 
-    /**
-     * 서비스를 등록합니다
-     * @param {string} name - 서비스 이름
-     * @param {Function} factory - 팩토리 함수
-     * @param {boolean} singleton - 싱글톤 여부
-     * @returns {ServiceContainer} 체이닝을 위한 자기 참조
-     */
     register(name, factory, singleton = true) {
-        if (this.initialized) {
+        if (this.initialized && !this.isServerless) {
             throw new Error(`Cannot register service '${name}' after container initialization`);
         }
 
@@ -257,11 +208,6 @@ class ServiceContainer {
         return this;
     }
 
-    /**
-     * 서비스를 가져옵니다
-     * @param {string} name - 서비스 이름
-     * @returns {*} 서비스 인스턴스
-     */
     get(name) {
         if (!this.services.has(name)) {
             throw new Error(`Service '${name}' not registered. Available services: ${Array.from(this.services.keys()).join(', ')}`);
@@ -283,10 +229,6 @@ class ServiceContainer {
         return service.factory(this);
     }
 
-    /**
-     * 컨테이너를 초기화합니다
-     * @returns {Promise<ServiceContainer>} 초기화된 컨테이너
-     */
     async initialize() {
         if (this.initialized) return this;
 
@@ -306,7 +248,8 @@ class ServiceContainer {
                         this.get(serviceName);
                     } catch (error) {
                         console.error(`Failed to initialize service '${serviceName}':`, error);
-                        throw error;
+                        if (!this.isServerless) throw error;
+                        console.warn(`Skipping failed service '${serviceName}' in serverless environment`);
                     }
                 }
             }
@@ -320,19 +263,9 @@ class ServiceContainer {
         }
     }
 
-    /**
-     * 컨테이너 초기화 여부를 확인합니다
-     * @returns {boolean} 초기화 여부
-     */
-    isInitialized() {
-        return this.initialized;
-    }
+    isInitialized() { return this.initialized; }
 
-    /**
-     * 컨테이너와 모든 서비스를 정리합니다
-     */
     destroy() {
-        // 싱글톤 서비스들을 안전하게 정리
         this.singletons.forEach((service, name) => {
             if (service && typeof service.destroy === 'function') {
                 try {
@@ -349,45 +282,33 @@ class ServiceContainer {
         this.initializationTime = null;
     }
 
-    /**
-     * 컨테이너 통계를 가져옵니다
-     * @returns {Object} 컨테이너 통계
-     */
     getStats() {
         return {
             registered: this.services.size,
             singletons: this.singletons.size,
             initialized: this.initialized,
             initializationTime: this.initializationTime,
-            resourceManager: this.resourceManager.getStats()
+            resourceManager: this.resourceManager.getStats(),
+            isServerless: this.isServerless
         };
     }
 }
 
-// ===== 동시성 제어 유틸리티 =====
-class Semaphore {
+// ===== 동시성 제어 유틸리티 (Vercel 최적화) =====
+export class Semaphore {
     constructor(maxConcurrent) {
         this.maxConcurrent = Math.max(1, parseInt(maxConcurrent) || 1);
         this.currentConcurrent = 0;
         this.queue = [];
         this.destroyed = false;
-        this.stats = {
-            acquired: 0,
-            released: 0,
-            queued: 0,
-            timeouts: 0
-        };
+        this.stats = { acquired: 0, released: 0, queued: 0, timeouts: 0 };
+        this.isServerless = RuntimeEnvironment.isVercel || RuntimeEnvironment.isEdgeRuntime;
     }
 
-    /**
-     * 세마포어를 획득합니다
-     * @param {number} timeout - 타임아웃 (ms)
-     * @returns {Promise<void>}
-     */
     async acquire(timeout = 30000) {
-        if (this.destroyed) {
-            throw new Error('Semaphore has been destroyed');
-        }
+        if (this.destroyed) throw new Error('Semaphore has been destroyed');
+
+        const actualTimeout = this.isServerless ? Math.min(timeout, 10000) : timeout;
 
         return new Promise((resolve, reject) => {
             const request = { resolve, reject, timestamp: Date.now() };
@@ -400,24 +321,20 @@ class Semaphore {
                 this.queue.push(request);
                 this.stats.queued++;
 
-                // 타임아웃 설정
-                if (timeout > 0) {
+                if (actualTimeout > 0) {
                     setTimeout(() => {
                         const index = this.queue.indexOf(request);
                         if (index !== -1) {
                             this.queue.splice(index, 1);
                             this.stats.timeouts++;
-                            reject(new Error(`Semaphore acquire timeout after ${timeout}ms`));
+                            reject(new Error(`Semaphore acquire timeout after ${actualTimeout}ms`));
                         }
-                    }, timeout);
+                    }, actualTimeout);
                 }
             }
         });
     }
 
-    /**
-     * 세마포어를 해제합니다
-     */
     release() {
         if (this.destroyed) return;
 
@@ -432,16 +349,8 @@ class Semaphore {
         }
     }
 
-    /**
-     * 함수를 세마포어로 보호하여 실행합니다
-     * @param {Function} fn - 실행할 함수
-     * @param {number} timeout - 타임아웃 (ms)
-     * @returns {Promise<*>} 함수 실행 결과
-     */
     async execute(fn, timeout = 30000) {
-        if (this.destroyed) {
-            throw new Error('Semaphore has been destroyed');
-        }
+        if (this.destroyed) throw new Error('Semaphore has been destroyed');
 
         await this.acquire(timeout);
         try {
@@ -451,28 +360,20 @@ class Semaphore {
         }
     }
 
-    /**
-     * 세마포어를 파괴합니다
-     */
     destroy() {
         this.destroyed = true;
-        this.queue.forEach(({ reject }) => {
-            reject(new Error('Semaphore destroyed'));
-        });
+        this.queue.forEach(({ reject }) => reject(new Error('Semaphore destroyed')));
         this.queue = [];
         this.currentConcurrent = 0;
     }
 
-    /**
-     * 세마포어 통계를 가져옵니다
-     * @returns {Object} 통계 정보
-     */
     getStats() {
         return {
             maxConcurrent: this.maxConcurrent,
             currentConcurrent: this.currentConcurrent,
             queueLength: this.queue.length,
             destroyed: this.destroyed,
+            isServerless: this.isServerless,
             ...this.stats,
             efficiency: this.stats.acquired > 0 ? 
                 ((this.stats.acquired - this.stats.timeouts) / this.stats.acquired * 100).toFixed(2) + '%' : '0%'
@@ -481,16 +382,9 @@ class Semaphore {
 }
 
 // ===== Accept-Language 파서 =====
-class LanguageNegotiator {
-    /**
-     * Accept-Language 헤더를 파싱합니다
-     * @param {string} acceptLanguageHeader - Accept-Language 헤더 값
-     * @returns {Array<Object>} 파싱된 언어 목록
-     */
+export class LanguageNegotiator {
     static parseAcceptLanguage(acceptLanguageHeader) {
-        if (!acceptLanguageHeader || typeof acceptLanguageHeader !== 'string') {
-            return [];
-        }
+        if (!acceptLanguageHeader || typeof acceptLanguageHeader !== 'string') return [];
 
         try {
             return acceptLanguageHeader
@@ -513,38 +407,21 @@ class LanguageNegotiator {
         }
     }
 
-    /**
-     * 최적의 언어 매치를 찾습니다
-     * @param {string} acceptLanguageHeader - Accept-Language 헤더 값
-     * @param {Set<string>} supportedLanguages - 지원하는 언어 목록
-     * @returns {string|null} 매치된 언어 또는 null
-     */
     static getBestMatch(acceptLanguageHeader, supportedLanguages) {
-        if (!supportedLanguages || !(supportedLanguages instanceof Set)) {
-            return null;
-        }
+        if (!supportedLanguages || !(supportedLanguages instanceof Set)) return null;
 
         const preferences = this.parseAcceptLanguage(acceptLanguageHeader);
 
         for (const preference of preferences) {
             const lang = preference.language;
 
-            // 정확한 매치 (예: ko-KR)
-            if (supportedLanguages.has(lang)) {
-                return lang;
-            }
+            if (supportedLanguages.has(lang)) return lang;
 
-            // 기본 언어 매치 (예: ko-KR -> ko)
             const primaryLang = lang.split('-')[0];
-            if (supportedLanguages.has(primaryLang)) {
-                return primaryLang;
-            }
+            if (supportedLanguages.has(primaryLang)) return primaryLang;
 
-            // 확장 매치 (예: ko -> ko-KR)
             for (const supported of supportedLanguages) {
-                if (supported.startsWith(primaryLang + '-')) {
-                    return supported;
-                }
+                if (supported.startsWith(primaryLang + '-')) return supported;
             }
         }
 
@@ -553,7 +430,7 @@ class LanguageNegotiator {
 }
 
 // ===== 다국어 지원 시스템 =====
-class InternationalizationManager {
+export class InternationalizationManager {
     constructor() {
         this.defaultLanguage = 'ko';
         this.currentLanguage = 'ko';
@@ -568,11 +445,7 @@ class InternationalizationManager {
         this.setupMessages();
     }
 
-    /**
-     * 다국어 메시지를 설정합니다
-     */
     setupMessages() {
-        // 한국어 메시지
         this.messages.set('ko', {
             VALIDATION_ERROR: '입력값 검증 실패',
             API_TIMEOUT: 'API 요청 시간 초과: {timeout}ms',
@@ -597,10 +470,10 @@ class InternationalizationManager {
             CONFIG_VALIDATION_FAILED: '설정 검증 실패',
             API_ERROR: 'API 호출 오류: {message}',
             SERVICE_UNAVAILABLE: '서비스를 사용할 수 없습니다',
-            INTERNAL_ERROR: '내부 서버 오류가 발생했습니다'
+            INTERNAL_ERROR: '내부 서버 오류가 발생했습니다',
+            SERVERLESS_WARNING: 'Serverless 환경에서 일부 기능이 제한될 수 있습니다'
         });
 
-        // 영어 메시지
         this.messages.set('en', {
             VALIDATION_ERROR: 'Validation failed',
             API_TIMEOUT: 'API request timeout: {timeout}ms',
@@ -625,10 +498,10 @@ class InternationalizationManager {
             CONFIG_VALIDATION_FAILED: 'Configuration validation failed',
             API_ERROR: 'API call error: {message}',
             SERVICE_UNAVAILABLE: 'Service unavailable',
-            INTERNAL_ERROR: 'Internal server error occurred'
+            INTERNAL_ERROR: 'Internal server error occurred',
+            SERVERLESS_WARNING: 'Some features may be limited in serverless environment'
         });
 
-        // 일본어 메시지
         this.messages.set('ja', {
             VALIDATION_ERROR: 'バリデーションエラー',
             API_TIMEOUT: 'APIリクエストタイムアウト: {timeout}ms',
@@ -643,10 +516,10 @@ class InternationalizationManager {
             NETWORK_ERROR: 'ネットワーク接続エラーが発生しました',
             API_ERROR: 'API呼び出しエラー: {message}',
             SERVICE_UNAVAILABLE: 'サービスが利用できません',
-            INTERNAL_ERROR: '内部サーバーエラーが発生しました'
+            INTERNAL_ERROR: '内部サーバーエラーが発生しました',
+            SERVERLESS_WARNING: 'サーバーレス環境では一部機能が制限される場合があります'
         });
 
-        // 중국어 메시지
         this.messages.set('zh-cn', {
             VALIDATION_ERROR: '验证失败',
             API_TIMEOUT: 'API请求超时: {timeout}ms',
@@ -661,26 +534,16 @@ class InternationalizationManager {
             NETWORK_ERROR: '发生网络连接错误',
             API_ERROR: 'API调用错误: {message}',
             SERVICE_UNAVAILABLE: '服务不可用',
-            INTERNAL_ERROR: '发生内部服务器错误'
+            INTERNAL_ERROR: '发生内部服务器错误',
+            SERVERLESS_WARNING: '在无服务器环境中某些功能可能受到限制'
         });
     }
 
-    /**
-     * Accept-Language 헤더에서 언어를 설정합니다
-     * @param {string} acceptLanguageHeader - Accept-Language 헤더 값
-     */
     setLanguageFromHeader(acceptLanguageHeader) {
         const bestMatch = LanguageNegotiator.getBestMatch(acceptLanguageHeader, this.supportedLanguages);
-        if (bestMatch) {
-            this.currentLanguage = bestMatch;
-        }
+        if (bestMatch) this.currentLanguage = bestMatch;
     }
 
-    /**
-     * 현재 언어를 설정합니다
-     * @param {string} lang - 언어 코드
-     * @returns {boolean} 설정 성공 여부
-     */
     setLanguage(lang) {
         if (typeof lang === 'string' && this.supportedLanguages.has(lang.toLowerCase())) {
             this.currentLanguage = lang.toLowerCase();
@@ -689,72 +552,35 @@ class InternationalizationManager {
         return false;
     }
 
-    /**
-     * 메시지를 가져옵니다
-     * @param {string} code - 메시지 코드
-     * @param {Object} params - 매개변수
-     * @returns {string} 지역화된 메시지
-     */
     getMessage(code, params = {}) {
-        if (!code || typeof code !== 'string') {
-            return code || '';
-        }
+        if (!code || typeof code !== 'string') return code || '';
 
         const message = this._getMessageWithFallback(code);
 
-        // 매개변수 치환
         return Object.entries(params).reduce((msg, [key, value]) => {
             const placeholder = new RegExp(`{${key}}`, 'g');
             return msg.replace(placeholder, String(value || ''));
         }, message);
     }
 
-    /**
-     * 폴백 체인을 사용하여 메시지를 가져옵니다
-     * @param {string} code - 메시지 코드
-     * @returns {string} 메시지
-     * @private
-     */
     _getMessageWithFallback(code) {
-        // 현재 언어에서 메시지 찾기
         const currentMessages = this.messages.get(this.currentLanguage);
-        if (currentMessages && currentMessages[code]) {
-            return currentMessages[code];
-        }
+        if (currentMessages && currentMessages[code]) return currentMessages[code];
 
-        // 폴백 체인에서 찾기
         const fallbacks = this.fallbackChain.get(this.currentLanguage) || [];
         for (const fallbackLang of fallbacks) {
             const fallbackMessages = this.messages.get(fallbackLang);
-            if (fallbackMessages && fallbackMessages[code]) {
-                return fallbackMessages[code];
-            }
+            if (fallbackMessages && fallbackMessages[code]) return fallbackMessages[code];
         }
 
-        // 기본 언어에서 찾기
         const defaultMessages = this.messages.get(this.defaultLanguage);
-        if (defaultMessages && defaultMessages[code]) {
-            return defaultMessages[code];
-        }
+        if (defaultMessages && defaultMessages[code]) return defaultMessages[code];
 
-        // 모든 방법이 실패하면 코드 자체 반환
         return code;
     }
 
-    /**
-     * 지원하는 언어 목록을 가져옵니다
-     * @returns {Array<string>} 지원 언어 목록
-     */
-    getSupportedLanguages() {
-        return Array.from(this.supportedLanguages);
-    }
+    getSupportedLanguages() { return Array.from(this.supportedLanguages); }
 
-    /**
-     * 언어를 추가합니다
-     * @param {string} lang - 언어 코드
-     * @param {Object} messages - 메시지 객체
-     * @param {Array<string>} fallbacks - 폴백 언어 목록
-     */
     addLanguage(lang, messages, fallbacks = []) {
         if (!lang || typeof lang !== 'string' || !messages || typeof messages !== 'object') {
             throw new Error('Invalid language or messages');
@@ -770,15 +596,12 @@ class InternationalizationManager {
 }
 
 // ===== 상수 관리 시스템 =====
-class ConstantsManager {
+export class ConstantsManager {
     constructor() {
         this.initializeConstants();
         this.validateConstants();
     }
 
-    /**
-     * 상수들을 초기화합니다
-     */
     initializeConstants() {
         this.SUPPORTED_OPERATIONS = [
             'areaCode', 'categoryCode', 'areaBasedList', 'locationBasedList',
@@ -821,181 +644,76 @@ class ConstantsManager {
         this.API_BASE_URL = 'https://apis.data.go.kr/B551011/KorService2';
 
         this.API_ENDPOINTS = {
-            areaCode: 'areaCode2',
-            categoryCode: 'categoryCode2',
-            areaBasedList: 'areaBasedList2',
-            locationBasedList: 'locationBasedList2',
-            searchKeyword: 'searchKeyword2',
-            searchFestival: 'searchFestival2',
-            searchStay: 'searchStay2',
-            detailCommon: 'detailCommon2',
-            detailIntro: 'detailIntro2',
-            detailInfo: 'detailInfo2',
-            detailImage: 'detailImage2',
-            areaBasedSyncList: 'areaBasedSyncList2',
-            detailPetTour: 'detailPetTour2',
-            ldongCode: 'ldongCode2',
-            lclsSystmCode: 'lclsSystmCode2'
+            areaCode: 'areaCode2', categoryCode: 'categoryCode2', areaBasedList: 'areaBasedList2',
+            locationBasedList: 'locationBasedList2', searchKeyword: 'searchKeyword2', searchFestival: 'searchFestival2',
+            searchStay: 'searchStay2', detailCommon: 'detailCommon2', detailIntro: 'detailIntro2',
+            detailInfo: 'detailInfo2', detailImage: 'detailImage2', areaBasedSyncList: 'areaBasedSyncList2',
+            detailPetTour: 'detailPetTour2', ldongCode: 'ldongCode2', lclsSystmCode: 'lclsSystmCode2'
         };
 
         this.DEFAULT_CONFIG = {
-            apiKey: null,
-            appName: 'AllTourism-Enterprise',
-            version: '2.0.0',
-            allowedOrigins: [
-                'https://your-blog.com',
-                'https://www.your-blog.com',
-                'https://your-travel-site.com'
-            ],
-            allowedApiKeys: [],
-            rateLimitPerMinute: 1000,
-            maxCacheSize: 5000,
-            maxMemorySize: 50 * 1024 * 1024, // 50MB
-            cacheTtl: 30 * 60 * 1000, // 30분
-            apiTimeout: 15000,
-            retryAttempts: 3,
-            retryDelay: 1000,
-            maxConcurrent: 10,
-            enableMetrics: false,
-            enableCompression: true,
-            enableBatching: true,
-            maxBatchSize: 5,
-            environment: 'development',
-            logLevel: 'info',
-            defaultLanguage: 'ko',
-            memoryCheckInterval: 30000,
-            memoryThreshold: 0.9,
-            securityEnabled: true,
-            developmentOrigins: [
-                'http://localhost:3000',
-                'http://localhost:8080',
-                'http://127.0.0.1:3000',
-                'http://127.0.0.1:8080'
-            ]
+            apiKey: null, appName: 'AllTourism-Enterprise', version: '2.0.0',
+            allowedOrigins: ['https://your-blog.com', 'https://www.your-blog.com', 'https://your-travel-site.com'],
+            allowedApiKeys: [], rateLimitPerMinute: 1000, maxCacheSize: 5000, maxMemorySize: 50 * 1024 * 1024,
+            cacheTtl: 30 * 60 * 1000, apiTimeout: 15000, retryAttempts: 3, retryDelay: 1000, maxConcurrent: 10,
+            enableMetrics: false, enableCompression: true, enableBatching: true, maxBatchSize: 5,
+            environment: 'development', logLevel: 'info', defaultLanguage: 'ko', memoryCheckInterval: 30000,
+            memoryThreshold: 0.9, securityEnabled: true,
+            developmentOrigins: ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'],
+            vercelTimeout: 10000, vercelMaxConcurrent: 5, vercelCacheTtl: 10 * 60 * 1000
         };
     }
 
-    /**
-     * 상수들의 유효성을 검증합니다
-     */
     validateConstants() {
         if (!this.API_BASE_URL || !this.API_ENDPOINTS) {
             throw new Error('Essential constants not initialized');
         }
-
         if (!Array.isArray(this.SUPPORTED_OPERATIONS) || this.SUPPORTED_OPERATIONS.length === 0) {
             throw new Error('SUPPORTED_OPERATIONS must be a non-empty array');
         }
-
         if (!this.CONTENT_TYPE_MAP || Object.keys(this.CONTENT_TYPE_MAP).length === 0) {
             throw new Error('CONTENT_TYPE_MAP cannot be empty');
         }
     }
 
-    /**
-     * 상수를 가져옵니다
-     * @param {string} category - 카테고리
-     * @param {string} key - 키 (선택사항)
-     * @returns {*} 상수 값
-     */
     get(category, key = null) {
-        if (!category || typeof category !== 'string') {
-            return null;
-        }
-
+        if (!category || typeof category !== 'string') return null;
         const categoryValue = this[category];
-        if (categoryValue === undefined) {
-            return null;
-        }
-
-        if (key === null) {
-            return categoryValue;
-        }
-
+        if (categoryValue === undefined) return null;
+        if (key === null) return categoryValue;
         return categoryValue && categoryValue[key];
     }
 
-    /**
-     * 오퍼레이션이 유효한지 확인합니다
-     * @param {string} operation - 오퍼레이션 이름
-     * @returns {boolean} 유효성 여부
-     */
     isValidOperation(operation) {
         return typeof operation === 'string' && this.SUPPORTED_OPERATIONS.includes(operation);
     }
 
-    /**
-     * 콘텐츠 타입명을 가져옵니다
-     * @param {string} contentTypeId - 콘텐츠 타입 ID
-     * @param {string} lang - 언어 코드
-     * @returns {string} 콘텐츠 타입명
-     */
     getContentTypeName(contentTypeId, lang = 'ko') {
         const contentType = this.CONTENT_TYPE_MAP[contentTypeId];
-        if (!contentType) {
-            return this._getDefaultByLanguage(lang, 'other');
-        }
-
+        if (!contentType) return this._getDefaultByLanguage(lang, 'other');
         return this._getLocalizedValue(contentType, lang) || contentType.name;
     }
 
-    /**
-     * 지역명을 가져옵니다
-     * @param {string} areaCode - 지역 코드
-     * @param {string} lang - 언어 코드
-     * @returns {string} 지역명
-     */
     getAreaName(areaCode, lang = 'ko') {
         const area = this.AREA_CODE_MAP[areaCode];
-        if (!area) {
-            return this._getDefaultByLanguage(lang, 'other');
-        }
-
+        if (!area) return this._getDefaultByLanguage(lang, 'other');
         return this._getLocalizedValue(area, lang) || area.name;
     }
 
-    /**
-     * 지역화된 값을 가져옵니다
-     * @param {Object} obj - 객체
-     * @param {string} lang - 언어 코드
-     * @returns {string} 지역화된 값
-     * @private
-     */
     _getLocalizedValue(obj, lang) {
-        const langMap = {
-            'ko': 'name',
-            'en': 'en',
-            'ja': 'ja',
-            'zh-cn': 'zhCn'
-        };
-
+        const langMap = { 'ko': 'name', 'en': 'en', 'ja': 'ja', 'zh-cn': 'zhCn' };
         const prop = langMap[lang] || 'name';
         return obj[prop];
     }
 
-    /**
-     * 언어별 기본값을 가져옵니다
-     * @param {string} lang - 언어 코드
-     * @param {string} type - 타입
-     * @returns {string} 기본값
-     * @private
-     */
     _getDefaultByLanguage(lang, type) {
         const defaults = {
-            'ko': { other: '기타' },
-            'en': { other: 'Other' },
-            'ja': { other: 'その他' },
-            'zh-cn': { other: '其他' }
+            'ko': { other: '기타' }, 'en': { other: 'Other' },
+            'ja': { other: 'その他' }, 'zh-cn': { other: '其他' }
         };
-
         return (defaults[lang] && defaults[lang][type]) || defaults['ko'][type];
     }
 
-    /**
-     * API URL을 생성합니다
-     * @param {string} endpoint - 엔드포인트 이름
-     * @returns {string} 완전한 API URL
-     */
     getApiUrl(endpoint) {
         if (!this.API_ENDPOINTS[endpoint]) {
             throw new Error(`Unknown API endpoint: ${endpoint}`);
@@ -1004,8 +722,8 @@ class ConstantsManager {
     }
 }
 
-// ===== 설정 관리 시스템 =====
-class ConfigManager {
+// ===== 설정 관리 시스템 (Vercel 최적화) =====
+export class ConfigManager {
     constructor(container) {
         this.container = container;
         this.config = {};
@@ -1013,6 +731,7 @@ class ConfigManager {
         this.subscribers = new Set();
         this.environmentOverrides = new Map();
         this.initialized = false;
+        this.isServerless = RuntimeEnvironment.isVercel || RuntimeEnvironment.isEdgeRuntime;
 
         this.registerValidators();
         this.setupEnvironmentOverrides();
@@ -1021,66 +740,36 @@ class ConfigManager {
         this.initialized = true;
     }
 
-    /**
-     * 정수 값을 기본값과 함께 파싱합니다
-     * @param {*} value - 파싱할 값
-     * @param {number} defaultValue - 기본값
-     * @returns {number} 파싱된 정수
-     */
     parseIntWithDefault(value, defaultValue) {
         if (typeof value === 'number') return Math.floor(value);
         const parsed = parseInt(value);
         return isNaN(parsed) ? defaultValue : parsed;
     }
 
-    /**
-     * 실수 값을 기본값과 함께 파싱합니다
-     * @param {*} value - 파싱할 값
-     * @param {number} defaultValue - 기본값
-     * @returns {number} 파싱된 실수
-     */
     parseFloatWithDefault(value, defaultValue) {
         if (typeof value === 'number') return value;
         const parsed = parseFloat(value);
         return isNaN(parsed) ? defaultValue : parsed;
     }
 
-    /**
-     * 불리언 값을 기본값과 함께 파싱합니다
-     * @param {*} value - 파싱할 값
-     * @param {boolean} defaultValue - 기본값
-     * @returns {boolean} 파싱된 불리언
-     */
     parseBooleanWithDefault(value, defaultValue) {
         if (typeof value === 'boolean') return value;
-        if (typeof value === 'string') {
-            return value.toLowerCase() === 'true';
-        }
+        if (typeof value === 'string') return value.toLowerCase() === 'true';
         return defaultValue;
     }
 
-    /**
-     * 배열을 파싱합니다
-     * @param {*} envVar - 환경변수 값
-     * @returns {Array|null} 파싱된 배열
-     */
     parseArray(envVar) {
         if (!envVar) return null;
         if (Array.isArray(envVar)) return envVar;
         return envVar.split(',').map(item => item.trim()).filter(item => item.length > 0);
     }
 
-    /**
-     * 설정을 로드합니다
-     * @returns {Object} 로드된 설정
-     */
     loadConfig() {
         const constants = this.container ? this.container.get('constants') : new ConstantsManager();
         const defaultConfig = { ...constants.DEFAULT_CONFIG };
-
         const apiKey = RuntimeEnvironment.getEnvironmentVariable('TOURISM_API_KEY') || defaultConfig.apiKey;
 
-        return {
+        const config = {
             ...defaultConfig,
             apiKey: apiKey,
             allowedOrigins: this.parseArray(RuntimeEnvironment.getEnvironmentVariable('ALLOWED_ORIGINS')) || defaultConfig.allowedOrigins,
@@ -1104,43 +793,49 @@ class ConfigManager {
             memoryThreshold: this.parseFloatWithDefault(RuntimeEnvironment.getEnvironmentVariable('MEMORY_THRESHOLD'), defaultConfig.memoryThreshold),
             securityEnabled: this.parseBooleanWithDefault(RuntimeEnvironment.getEnvironmentVariable('SECURITY_ENABLED'), defaultConfig.securityEnabled)
         };
+
+        if (this.isServerless) {
+            config.apiTimeout = Math.min(config.apiTimeout, defaultConfig.vercelTimeout);
+            config.maxConcurrent = Math.min(config.maxConcurrent, defaultConfig.vercelMaxConcurrent);
+            config.cacheTtl = Math.min(config.cacheTtl, defaultConfig.vercelCacheTtl);
+            config.enableMetrics = false;
+            config.memoryCheckInterval = 0;
+        }
+
+        return config;
     }
 
-    /**
-     * 환경별 오버라이드를 설정합니다
-     */
     setupEnvironmentOverrides() {
         this.environmentOverrides.set('production', {
             allowedOrigins: (origins) => origins.filter(origin => 
-                !origin.includes('localhost') && !origin.includes('127.0.0.1')
-            ),
-            enableMetrics: true,
-            logLevel: 'warn',
-            securityEnabled: true,
-            retryAttempts: 5
+                !origin.includes('localhost') && !origin.includes('127.0.0.1')),
+            enableMetrics: !this.isServerless, logLevel: 'warn', securityEnabled: true, retryAttempts: 5
         });
 
         this.environmentOverrides.set('development', {
-            enableMetrics: false,
-            logLevel: 'debug',
-            securityEnabled: false
+            enableMetrics: false, logLevel: 'debug', securityEnabled: false
         });
 
         this.environmentOverrides.set('test', {
-            enableMetrics: false,
-            logLevel: 'error',
-            rateLimitPerMinute: 10000,
-            cacheTtl: 60000
+            enableMetrics: false, logLevel: 'error', rateLimitPerMinute: 10000, cacheTtl: 60000
         });
+
+        if (this.isServerless) {
+            this.environmentOverrides.set('vercel', {
+                enableMetrics: false, memoryCheckInterval: 0, apiTimeout: 10000,
+                maxConcurrent: 5, cacheTtl: 10 * 60 * 1000, enableBatching: false
+            });
+        }
     }
 
-    /**
-     * 환경별 오버라이드를 적용합니다
-     * @param {Object} config - 설정 객체
-     */
     applyEnvironmentOverrides(config) {
         const env = config.environment;
-        const overrides = this.environmentOverrides.get(env);
+        let overrides = this.environmentOverrides.get(env);
+
+        if (this.isServerless) {
+            const vercelOverrides = this.environmentOverrides.get('vercel');
+            if (vercelOverrides) overrides = { ...overrides, ...vercelOverrides };
+        }
 
         if (overrides) {
             Object.entries(overrides).forEach(([key, value]) => {
@@ -1153,9 +848,6 @@ class ConfigManager {
         }
     }
 
-    /**
-     * 검증자들을 등록합니다
-     */
     registerValidators() {
         this.validators.set('allowedOrigins', (value) => {
             if (!Array.isArray(value)) return false;
@@ -1174,7 +866,8 @@ class ConfigManager {
 
         this.validators.set('apiTimeout', (value) => {
             const num = parseInt(value);
-            return !isNaN(num) && num >= 1000 && num <= 300000;
+            const maxTimeout = this.isServerless ? 10000 : 300000;
+            return !isNaN(num) && num >= 1000 && num <= maxTimeout;
         });
 
         this.validators.set('cacheTtl', (value) => {
@@ -1184,7 +877,8 @@ class ConfigManager {
 
         this.validators.set('maxConcurrent', (value) => {
             const num = parseInt(value);
-            return !isNaN(num) && num > 0 && num <= 100;
+            const maxConcurrent = this.isServerless ? 5 : 100;
+            return !isNaN(num) && num > 0 && num <= maxConcurrent;
         });
 
         this.validators.set('memoryThreshold', (value) => {
@@ -1197,23 +891,11 @@ class ConfigManager {
         });
     }
 
-    /**
-     * 설정 값을 가져옵니다
-     * @param {string} key - 설정 키
-     * @returns {*} 설정 값
-     */
     get(key) {
-        if (!key || typeof key !== 'string') {
-            return undefined;
-        }
+        if (!key || typeof key !== 'string') return undefined;
         return this.config[key];
     }
 
-    /**
-     * 설정 값을 설정합니다
-     * @param {string} key - 설정 키
-     * @param {*} value - 설정 값
-     */
     set(key, value) {
         if (!key || typeof key !== 'string') {
             throw new Error('Config key must be a non-empty string');
@@ -1228,30 +910,15 @@ class ConfigManager {
         const oldValue = this.config[key];
         this.config[key] = value;
 
-        if (this.initialized) {
-            this.notifySubscribers(key, value, oldValue);
-        }
+        if (this.initialized) this.notifySubscribers(key, value, oldValue);
     }
 
-    /**
-     * 설정 변경을 구독합니다
-     * @param {Function} callback - 콜백 함수
-     * @returns {Function} 구독 해제 함수
-     */
     subscribe(callback) {
-        if (typeof callback !== 'function') {
-            throw new Error('Callback must be a function');
-        }
+        if (typeof callback !== 'function') throw new Error('Callback must be a function');
         this.subscribers.add(callback);
         return () => this.subscribers.delete(callback);
     }
 
-    /**
-     * 구독자들에게 변경사항을 알립니다
-     * @param {string} key - 변경된 키
-     * @param {*} newValue - 새 값
-     * @param {*} oldValue - 이전 값
-     */
     notifySubscribers(key, newValue, oldValue) {
         this.subscribers.forEach(callback => {
             try {
@@ -1262,10 +929,6 @@ class ConfigManager {
         });
     }
 
-    /**
-     * 설정을 검증합니다
-     * @returns {boolean} 검증 성공 여부
-     */
     validateConfig() {
         const errors = [];
         const warnings = [];
@@ -1276,72 +939,45 @@ class ConfigManager {
             warnings.push('API 키가 너무 짧습니다. 유효한 키인지 확인하세요');
         }
 
-        if (this.config.rateLimitPerMinute <= 0) {
-            errors.push('rateLimitPerMinute은 0보다 커야 합니다');
+        if (this.config.rateLimitPerMinute <= 0) errors.push('rateLimitPerMinute은 0보다 커야 합니다');
+        if (this.config.maxCacheSize <= 0) errors.push('maxCacheSize는 0보다 커야 합니다');
+        if (this.config.apiTimeout < 1000) errors.push('apiTimeout은 1000ms 이상이어야 합니다');
+
+        if (this.isServerless) {
+            if (this.config.apiTimeout > 10000) {
+                warnings.push('Serverless 환경에서는 10초 이하의 타임아웃을 권장합니다');
+            }
+            if (this.config.maxConcurrent > 5) {
+                warnings.push('Serverless 환경에서는 낮은 동시성 제한을 권장합니다');
+            }
         }
 
-        if (this.config.maxCacheSize <= 0) {
-            errors.push('maxCacheSize는 0보다 커야 합니다');
-        } else if (this.config.maxCacheSize > 50000) {
-            warnings.push('캐시 크기가 큽니다. 메모리 사용량을 확인하세요');
-        }
-
-        if (this.config.apiTimeout < 1000) {
-            errors.push('apiTimeout은 1000ms 이상이어야 합니다');
-        }
-
-        if (this.config.memoryThreshold > 0.95) {
-            warnings.push('메모리 임계값이 높습니다. 시스템 안정성에 영향을 줄 수 있습니다');
-        }
-
-        if (warnings.length > 0) {
-            console.warn('Configuration warnings:', warnings);
-        }
-
-        if (errors.length > 0) {
-            throw new Error(`설정 검증 실패: ${errors.join(', ')}`);
-        }
+        if (warnings.length > 0) console.warn('Configuration warnings:', warnings);
+        if (errors.length > 0) throw new Error(`설정 검증 실패: ${errors.join(', ')}`);
 
         return true;
     }
 
-    /**
-     * 초기화 여부를 확인합니다
-     * @returns {boolean} 초기화 여부
-     */
-    isInitialized() {
-        return this.initialized;
-    }
+    isInitialized() { return this.initialized; }
 
-    /**
-     * 유효한 API 키가 있는지 확인합니다
-     * @returns {boolean} API 키 유효성
-     */
     hasValidApiKey() {
         return !!(this.config.apiKey && 
                  typeof this.config.apiKey === 'string' && 
                  this.config.apiKey.trim().length >= 20);
     }
 
-    /**
-     * 설정 관리자를 정리합니다
-     */
+    isServerlessEnvironment() { return this.isServerless; }
+
     destroy() {
         this.subscribers.clear();
         this.initialized = false;
     }
 
-    /**
-     * 모든 설정을 가져옵니다
-     * @returns {Object} 설정 객체 복사본
-     */
-    getAllConfig() {
-        return { ...this.config };
-    }
+    getAllConfig() { return { ...this.config }; }
 }
 
-// ===== 로깅 시스템 =====
-class Logger {
+// ===== 로깅 시스템 (Vercel 최적화) =====
+export class Logger {
     constructor(container) {
         this.container = container;
         this.configManager = container ? container.get('config') : null;
@@ -1350,50 +986,39 @@ class Logger {
         this.metricsBuffer = [];
         this.maxMetricsBuffer = 1000;
         this.resourceManager = container?.resourceManager || new ResourceManager();
+        this.isServerless = RuntimeEnvironment.isVercel || RuntimeEnvironment.isEdgeRuntime;
 
+        if (this.isServerless) this.maxMetricsBuffer = 100;
         this.setupConfigSubscription();
     }
 
-    /**
-     * 설정 변경을 구독합니다
-     */
     setupConfigSubscription() {
         if (this.configManager) {
             this.configManager.subscribe((key, newValue) => {
-                if (key === 'logLevel') {
-                    this.logLevel = newValue;
-                }
+                if (key === 'logLevel') this.logLevel = newValue;
             });
         }
     }
 
-    /**
-     * 로그 레벨이 출력 가능한지 확인합니다
-     * @param {string} level - 로그 레벨
-     * @returns {boolean} 출력 가능 여부
-     */
     shouldLog(level) {
         return this.logLevels[level] >= this.logLevels[this.logLevel];
     }
 
-    /**
-     * 로그 메시지를 포맷합니다
-     * @param {string} level - 로그 레벨
-     * @param {string} message - 메시지
-     * @param {Object} data - 추가 데이터
-     * @returns {Object} 포맷된 로그 객체
-     */
     formatMessage(level, message, data = {}) {
         const timestamp = new Date().toISOString();
 
         const baseInfo = {
-            timestamp,
-            level: level.toUpperCase(),
-            message: String(message || ''),
+            timestamp, level: level.toUpperCase(), message: String(message || ''),
             uptime: this.getPreciseUptime()
         };
 
-        if (RuntimeEnvironment.isNode) {
+        if (this.isServerless) {
+            baseInfo.runtime = 'serverless';
+            if (RuntimeEnvironment.isVercel) baseInfo.platform = 'vercel';
+            if (RuntimeEnvironment.isEdgeRuntime) baseInfo.runtime = 'edge';
+        }
+
+        if (RuntimeEnvironment.isNode && typeof process !== 'undefined') {
             baseInfo.pid = process.pid;
         }
 
@@ -1408,21 +1033,11 @@ class Logger {
         return baseInfo;
     }
 
-    /**
-     * 데이터를 안전하게 정리합니다
-     * @param {*} data - 정리할 데이터
-     * @returns {*} 정리된 데이터
-     * @private
-     */
     _sanitizeData(data) {
         try {
-            // 순환 참조 제거 및 민감한 정보 필터링
             return JSON.parse(JSON.stringify(data, (key, value) => {
-                // 민감한 키 필터링
                 const sensitiveKeys = ['password', 'apikey', 'token', 'secret', 'key'];
-                if (sensitiveKeys.some(k => key.toLowerCase().includes(k))) {
-                    return '[FILTERED]';
-                }
+                if (sensitiveKeys.some(k => key.toLowerCase().includes(k))) return '[FILTERED]';
                 return value;
             }));
         } catch (error) {
@@ -1430,52 +1045,26 @@ class Logger {
         }
     }
 
-    /**
-     * 정확한 업타임을 가져옵니다
-     * @returns {number} 업타임 (밀리초)
-     */
-    getPreciseUptime() {
-        return Date.now() - SERVICE_START_TIME;
-    }
+    getPreciseUptime() { return Date.now() - SERVICE_START_TIME; }
 
-    /**
-     * 디버그 로그를 출력합니다
-     * @param {string} message - 메시지
-     * @param {Object} data - 추가 데이터
-     */
     debug(message, data) {
         if (this.shouldLog('debug')) {
             console.debug('🔍', JSON.stringify(this.formatMessage('debug', message, data)));
         }
     }
 
-    /**
-     * 정보 로그를 출력합니다
-     * @param {string} message - 메시지
-     * @param {Object} data - 추가 데이터
-     */
     info(message, data) {
         if (this.shouldLog('info')) {
             console.log('ℹ️', JSON.stringify(this.formatMessage('info', message, data)));
         }
     }
 
-    /**
-     * 경고 로그를 출력합니다
-     * @param {string} message - 메시지
-     * @param {Object} data - 추가 데이터
-     */
     warn(message, data) {
         if (this.shouldLog('warn')) {
             console.warn('⚠️', JSON.stringify(this.formatMessage('warn', message, data)));
         }
     }
 
-    /**
-     * 에러 로그를 출력합니다
-     * @param {string} message - 메시지
-     * @param {Error|Object} error - 에러 객체
-     */
     error(message, error) {
         if (this.shouldLog('error')) {
             const errorData = this._processError(error);
@@ -1483,20 +1072,9 @@ class Logger {
         }
     }
 
-    /**
-     * 에러 객체를 처리합니다
-     * @param {*} error - 에러
-     * @returns {Object} 처리된 에러 데이터
-     * @private
-     */
     _processError(error) {
         if (error instanceof Error) {
-            return {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-                code: error.code
-            };
+            return { name: error.name, message: error.message, stack: error.stack, code: error.code };
         }
 
         if (typeof error === 'object' && error !== null) {
@@ -1506,19 +1084,11 @@ class Logger {
         return { error: String(error) };
     }
 
-    /**
-     * 메트릭을 기록합니다
-     * @param {string} metricName - 메트릭 이름
-     * @param {number} value - 값
-     * @param {Object} tags - 태그
-     */
     metric(metricName, value, tags = {}) {
-        if (this.configManager?.get('enableMetrics')) {
+        if (this.configManager?.get('enableMetrics') && !this.isServerless) {
             const metricData = {
-                metric: metricName,
-                value: parseFloat(value) || 0,
-                tags: this._sanitizeData(tags),
-                timestamp: Date.now()
+                metric: metricName, value: parseFloat(value) || 0,
+                tags: this._sanitizeData(tags), timestamp: Date.now()
             };
 
             this.metricsBuffer.push(metricData);
@@ -1531,51 +1101,121 @@ class Logger {
         }
     }
 
-    /**
-     * 수집된 메트릭을 가져옵니다
-     * @returns {Array} 메트릭 배열
-     */
-    getMetrics() {
-        return [...this.metricsBuffer];
-    }
+    getMetrics() { return [...this.metricsBuffer]; }
+    clearMetrics() { this.metricsBuffer = []; }
 
-    /**
-     * 메트릭을 정리합니다
-     */
-    clearMetrics() {
-        this.metricsBuffer = [];
-    }
-
-    /**
-     * 메트릭 통계를 가져옵니다
-     * @returns {Object} 메트릭 통계
-     */
     getMetricsStats() {
         const now = Date.now();
         const last5Min = this.metricsBuffer.filter(m => now - m.timestamp < 5 * 60 * 1000);
         const last1Hour = this.metricsBuffer.filter(m => now - m.timestamp < 60 * 60 * 1000);
 
         return {
-            total: this.metricsBuffer.length,
-            last5Minutes: last5Min.length,
-            lastHour: last1Hour.length,
+            total: this.metricsBuffer.length, last5Minutes: last5Min.length, lastHour: last1Hour.length,
             oldestTimestamp: this.metricsBuffer.length > 0 ? 
                 Math.min(...this.metricsBuffer.map(m => m.timestamp)) : null,
             newestTimestamp: this.metricsBuffer.length > 0 ? 
-                Math.max(...this.metricsBuffer.map(m => m.timestamp)) : null
+                Math.max(...this.metricsBuffer.map(m => m.timestamp)) : null,
+            isServerless: this.isServerless
         };
     }
 
-    /**
-     * 로거를 정리합니다
-     */
+    destroy() { this.clearMetrics(); }
+}
+
+// ===== Vercel API Handler 헬퍼 함수 =====
+export class VercelHandler {
+    constructor() {
+        this.container = null;
+        this.initialized = false;
+    }
+
+    async initialize() {
+        if (this.initialized) return this.container;
+
+        this.container = new ServiceContainer();
+        
+        this.container
+            .register('constants', () => new ConstantsManager())
+            .register('config', (c) => new ConfigManager(c))
+            .register('i18n', () => new InternationalizationManager())
+            .register('logger', (c) => new Logger(c));
+
+        await this.container.initialize();
+        this.initialized = true;
+        return this.container;
+    }
+
+    async createHandler(handlerFunction) {
+        return async (req, res) => {
+            try {
+                // CORS 헤더 설정
+                res.setHeader('Access-Control-Allow-Credentials', true);
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+                res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+                if (req.method === 'OPTIONS') {
+                    res.status(200).end();
+                    return;
+                }
+
+                const container = await this.initialize();
+                const logger = container.get('logger');
+                const i18n = container.get('i18n');
+
+                // Accept-Language 헤더 처리
+                if (req.headers['accept-language']) {
+                    i18n.setLanguageFromHeader(req.headers['accept-language']);
+                }
+
+                logger.info('API request received', { 
+                    method: req.method, 
+                    url: req.url,
+                    userAgent: req.headers['user-agent'],
+                    language: i18n.currentLanguage
+                });
+
+                await handlerFunction(req, res, container);
+
+            } catch (error) {
+                console.error('Vercel Handler Error:', error);
+                res.status(500).json({ 
+                    success: false,
+                    error: 'Internal Server Error',
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        };
+    }
+
     destroy() {
-        this.clearMetrics();
+        if (this.container) {
+            this.container.destroy();
+            this.container = null;
+        }
+        this.initialized = false;
     }
 }
 
-// 모듈 내보내기
-module.exports = {
+// ===== 기본 내보내기 및 편의 함수 =====
+export const createVercelHandler = () => new VercelHandler();
+
+export const createTourismAPI = async () => {
+    const container = new ServiceContainer();
+    
+    container
+        .register('constants', () => new ConstantsManager())
+        .register('config', (c) => new ConfigManager(c))
+        .register('i18n', () => new InternationalizationManager())
+        .register('logger', (c) => new Logger(c));
+
+    await container.initialize();
+    return container;
+};
+
+// 기본 내보내기
+export default {
     RuntimeEnvironment,
     SERVICE_START_TIME,
     ResourceManager,
@@ -1585,5 +1225,8 @@ module.exports = {
     InternationalizationManager,
     ConstantsManager,
     ConfigManager,
-    Logger
+    Logger,
+    VercelHandler,
+    createVercelHandler,
+    createTourismAPI
 };
