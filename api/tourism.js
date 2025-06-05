@@ -4,7 +4,7 @@
 const isNode = typeof window === 'undefined';
 const hasProcess = typeof process !== 'undefined';
 
-// 안전한 의존성 로딩
+// 안전한 의존성 로딩 
 let nodeFetch, AbortControllerPolyfill;
 if (isNode && typeof fetch === 'undefined') {
     try {
