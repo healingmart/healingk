@@ -1,23 +1,20 @@
+// 절대 경로로 tourism.js 찾기
 const path = require('path');
 
-// 안전한 모듈 로딩
 let healthCheck;
 try {
-  const tourismModule = require(path.join(process.cwd(), 'tourism.js'));
+  // Vercel에서 루트 tourism.js 파일 찾기
+  const tourismPath = path.join(process.cwd(), 'tourism.js');
+  const tourismModule = require(tourismPath);
   healthCheck = tourismModule.healthCheck;
 } catch (error) {
-  console.error('Failed to load tourism module for health check:', error);
-  try {
-    const tourismModule = require('../tourism.js');
-    healthCheck = tourismModule.healthCheck;
-  } catch (fallbackError) {
-    console.error('Fallback health check load failed:', fallbackError);
-  }
+  console.error('Failed to load tourism.js:', error);
+  healthCheck = null;
 }
 
 module.exports = async (req, res) => {
   try {
-    // CORS 헤더 설정
+    // CORS 헤더
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -32,7 +29,7 @@ module.exports = async (req, res) => {
     if (healthCheck && typeof healthCheck === 'function') {
       health = await healthCheck();
     } else {
-      // 기본 헬스체크
+      // 기본 헬스체크 (tourism.js 로드 실패 시)
       health = {
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -42,7 +39,12 @@ module.exports = async (req, res) => {
         node: process.version,
         platform: process.platform,
         uptime: process.uptime(),
-        memory: process.memoryUsage()
+        memory: {
+          rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
+          heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+        },
+        note: 'Basic health check (tourism.js module loading issue)'
       };
     }
 
