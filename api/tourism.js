@@ -1,6 +1,6 @@
 'use strict';
 
-// ===== 런타임 환경 감지 및 안전한 폴리필 =====
+// ===== 런타임 환경 감지 및 안전한 폴리필 ===== 
 const isNode = typeof window === 'undefined';
 const hasProcess = typeof process !== 'undefined';
 
