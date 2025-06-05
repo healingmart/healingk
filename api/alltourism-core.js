@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * @typedef {Object} MemoryUsage
+ * @typedef {Object} MemoryUsage 
  * @property {number} heapUsed - 사용 중인 힙 메모리 (바이트)
  * @property {number} heapTotal - 총 힙 메모리 (바이트)
  * @property {number} external - 외부 메모리 (바이트)
