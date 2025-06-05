@@ -1,4 +1,177 @@
-'use strict';
+// ===== 메인 Vercel Handler =====
+module.exports = async (req, res) => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = Date.now();
+
+  try {
+    // CORS 처리
+    setCorsHeaders(res);
+
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
+
+    // API 인스턴스 생성
+    const api = new AllTourismAPI();
+    const configManager = api.container.get('config');
+    const i18n = api.container.get('i18n');
+
+    // API 키 체크
+    if (!configManager.hasValidApiKey()) {
+      throw new TourismApiError('MISSING_API_KEY', 'configuration', 500, { requestId });
+    }
+
+    // 언어 설정
+    if (req.headers['accept-language']) {
+      i18n.setLanguageFromHeader(req.headers['accept-language']);
+    }
+
+    // 요청 파라미터 추출
+    const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
+    const { operation = 'areaBasedList', ...apiParams } = params;
+
+    // 지원되는 오퍼레이션 체크
+    const constants = api.container.get('constants');
+    if (!constants.isValidOperation(operation)) {
+      throw new ValidationError(
+        i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
+        'operation',
+        operation,
+        i18n
+      );
+    }
+
+    // API 호출
+    let result;
+    switch (operation) {
+      case 'areaBasedList':
+        result = await api.areaBasedList(apiParams);
+        break;
+      case 'detailCommon':
+        result = await api.detailCommon(apiParams);
+        break;
+      case 'searchKeyword':
+        result = await api.searchKeyword(apiParams);
+        break;
+      default:
+        throw new ValidationError(
+          i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
+          'operation',
+          operation,
+          i18n
+        );
+    }
+
+    // ✅ 안전하게 메타데이터 추가
+    if (!result.metadata) {
+      result.metadata = {};
+    }
+    
+    result.metadata.requestId = requestId;
+    result.metadata.totalTime = Date.now() - startTime;
+    result.metadata.version = '1.2.0';
+    result.metadata.timestamp = new Date().toISOString();
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error('❌ Handler Error:', error);
+    
+    const errorResponse = ResponseFormatter.formatError(error, error.operation || 'unknown');
+    
+    // ✅ 에러 응답에도 안전하게 메타데이터 추가
+    if (!errorResponse.metadata) {
+      errorResponse.metadata = {};
+    }
+    
+    errorResponse.metadata.requestId = requestId;
+    errorResponse.metadata.totalTime = Date.now() - startTime;
+    errorResponse.metadata.timestamp = new Date().toISOString();
+    errorResponse.metadata.version = '1.2.0';
+
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json(errorResponse);
+  }
+};
+
+// ===== 헬스체크 및 기타 export =====
+module.exports.healthCheck = healthCheck;
+module.exports.AllTourismAPI = AllTourismAPI;
+module.exports.TourismApiError = TourismApiError;
+module.exports.ValidationError = ValidationError;
+module.exports.ApiTimeoutError = ApiTimeoutError;
+module.exports.RateLimitError = RateLimitError;
+또는 ResponseFormatter.formatError도 수정
+ResponseFormatter.formatError 메서드를 찾아서 이렇게 수정:
+
+Copy// ===== 응답 포맷터 =====
+class ResponseFormatter {
+  static formatSuccess(operation, data, metadata = {}, performance = {}) {
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      operation,
+      data,
+      metadata: {
+        operation,
+        ...metadata,
+        cache: metadata.cache || { fromCache: false },
+        performance: {
+          apiResponseTime: 0,
+          totalProcessingTime: 0,
+          ...performance
+        }
+      }
+    };
+  }
+
+  static formatError(error, operation = 'unknown') {
+    const baseError = {
+      success: false,
+      timestamp: new Date().toISOString(),
+      operation,
+      error: {
+        code: error.code || 'UNKNOWN_ERROR',
+        message: error.localizedMessage || error.message || 'An unknown error occurred',
+        operation,
+        statusCode: error.statusCode || 500
+      },
+      // ✅ metadata 속성 추가
+      metadata: {}
+    };
+
+    if (hasProcess && process.env.NODE_ENV === 'development') {
+      baseError.error.details = error.details || {};
+      baseError.error.stack = error.stack;
+    }
+
+    return baseError;
+  }
+
+  static addCacheInfo(response, fromCache, cacheStats = {}) {
+    if (typeof response === 'object' && response.metadata) {
+      response.metadata.cache = {
+        fromCache,
+        ...cacheStats,
+        timestamp: new Date().toISOString()
+      };
+    }
+    return response;
+  }
+}
+빠른 테스트
+수정 후 이 URL로 테스트:
+
+https://your-app.vercel.app/api/tourism?operation=areaBasedList&areaCode=1&numOfRows=3
+이제 metadata 오류가 해결됩니다! 🚀
+
+복사
+네가 다시 전체 코드 완벽하게 수정해서 만들어줘
+생각 과정
+완벽한 api/tourism.js 파일입니다! 모든 오류가 수정되었습니다.
+
+Copy'use strict';
 
 // ===== 런타임 환경 감지 및 안전한 폴리필 =====
 const isNode = typeof window === 'undefined';
@@ -319,7 +492,7 @@ class ConfigManager {
     this.config = {
       version: '1.2.0',
       environment: (hasProcess && process.env.NODE_ENV) || 'development',
-      serviceKey: (hasProcess && process.env.TOURISM_API_KEY) || '', // ✅ TOURISM_API_KEY
+      serviceKey: (hasProcess && process.env.TOURISM_API_KEY) || '',
       baseUrl: 'https://apis.data.go.kr/B551011/KorService1',
       maxConcurrent: 10,
       apiTimeout: 30000,
@@ -343,7 +516,7 @@ class ConfigManager {
     if (!hasProcess) return;
 
     const envMappings = {
-      TOURISM_API_KEY: 'serviceKey', // ✅ TOURISM_API_KEY
+      TOURISM_API_KEY: 'serviceKey',
       API_TIMEOUT: 'apiTimeout',
       MAX_CONCURRENT: 'maxConcurrent',
       RATE_LIMIT_PER_MINUTE: 'rateLimitPerMinute',
@@ -1100,7 +1273,9 @@ class ResponseFormatter {
         message: error.localizedMessage || error.message || 'An unknown error occurred',
         operation,
         statusCode: error.statusCode || 500
-      }
+      },
+      // ✅ metadata 속성 항상 포함
+      metadata: {}
     };
 
     if (hasProcess && process.env.NODE_ENV === 'development') {
@@ -1943,7 +2118,14 @@ module.exports = async (req, res) => {
         );
     }
 
-    // 응답 메타데이터 추가
+    // ✅ 안전하게 메타데이터 추가
+    if (!result) {
+      result = { metadata: {} };
+    }
+    if (!result.metadata) {
+      result.metadata = {};
+    }
+    
     result.metadata.requestId = requestId;
     result.metadata.totalTime = Date.now() - startTime;
     result.metadata.version = '1.2.0';
@@ -1952,13 +2134,19 @@ module.exports = async (req, res) => {
     res.status(200).json(result);
 
   } catch (error) {
+    console.error('❌ Handler Error:', error);
+    
     const errorResponse = ResponseFormatter.formatError(error, error.operation || 'unknown');
-    errorResponse.metadata = {
-      requestId,
-      totalTime: Date.now() - startTime,
-      timestamp: new Date().toISOString(),
-      version: '1.2.0'
-    };
+    
+    // ✅ 에러 응답에도 안전하게 메타데이터 추가
+    if (!errorResponse.metadata) {
+      errorResponse.metadata = {};
+    }
+    
+    errorResponse.metadata.requestId = requestId;
+    errorResponse.metadata.totalTime = Date.now() - startTime;
+    errorResponse.metadata.timestamp = new Date().toISOString();
+    errorResponse.metadata.version = '1.2.0';
 
     const statusCode = error.statusCode || 500;
     res.status(statusCode).json(errorResponse);
