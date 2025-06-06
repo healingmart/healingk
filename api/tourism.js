@@ -1,183 +1,8 @@
-// ===== 메인 Vercel Handler =====
-module.exports = async (req, res) => {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const startTime = Date.now();
+'use strict';
 
-  try {
-    // CORS 처리
-    setCorsHeaders(res);
-
-    if (req.method === 'OPTIONS') {
-      res.status(200).end();
-      return;
-    }
-
-    // API 인스턴스 생성
-    const api = new AllTourismAPI();
-    const configManager = api.container.get('config');
-    const i18n = api.container.get('i18n');
-
-    // API 키 체크
-    if (!configManager.hasValidApiKey()) {
-      throw new TourismApiError('MISSING_API_KEY', 'configuration', 500, { requestId });
-    }
-
-    // 언어 설정
-    if (req.headers['accept-language']) {
-      i18n.setLanguageFromHeader(req.headers['accept-language']);
-    }
-
-    // 요청 파라미터 추출
-    const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
-    const { operation = 'areaBasedList', ...apiParams } = params;
-
-    // 지원되는 오퍼레이션 체크
-    const constants = api.container.get('constants');
-    if (!constants.isValidOperation(operation)) {
-      throw new ValidationError(
-        i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-        'operation',
-        operation,
-        i18n
-      );
-    }
-
-    // API 호출
-    let result;
-    switch (operation) {
-      case 'areaBasedList':
-        result = await api.areaBasedList(apiParams);
-        break;
-      case 'detailCommon':
-        result = await api.detailCommon(apiParams);
-        break;
-      case 'searchKeyword':
-        result = await api.searchKeyword(apiParams);
-        break;
-      default:
-        throw new ValidationError(
-          i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-          'operation',
-          operation,
-          i18n
-        );
-    }
-
-    // ✅ 안전하게 메타데이터 추가
-    if (!result.metadata) {
-      result.metadata = {};
-    }
-    
-    result.metadata.requestId = requestId;
-    result.metadata.totalTime = Date.now() - startTime;
-    result.metadata.version = '1.2.0';
-    result.metadata.timestamp = new Date().toISOString();
-
-    res.status(200).json(result);
-
-  } catch (error) {
-    console.error('❌ Handler Error:', error);
-    
-    const errorResponse = ResponseFormatter.formatError(error, error.operation || 'unknown');
-    
-    // ✅ 에러 응답에도 안전하게 메타데이터 추가
-    if (!errorResponse.metadata) {
-      errorResponse.metadata = {};
-    }
-    
-    errorResponse.metadata.requestId = requestId;
-    errorResponse.metadata.totalTime = Date.now() - startTime;
-    errorResponse.metadata.timestamp = new Date().toISOString();
-    errorResponse.metadata.version = '1.2.0';
-
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json(errorResponse);
-  }
-};
-
-// ===== 헬스체크 및 기타 export =====
-module.exports.healthCheck = healthCheck;
-module.exports.AllTourismAPI = AllTourismAPI;
-module.exports.TourismApiError = TourismApiError;
-module.exports.ValidationError = ValidationError;
-module.exports.ApiTimeoutError = ApiTimeoutError;
-module.exports.RateLimitError = RateLimitError;
-또는 ResponseFormatter.formatError도 수정
-ResponseFormatter.formatError 메서드를 찾아서 이렇게 수정:
-
-Copy// ===== 응답 포맷터 =====
-class ResponseFormatter {
-  static formatSuccess(operation, data, metadata = {}, performance = {}) {
-    return {
-      success: true,
-      timestamp: new Date().toISOString(),
-      operation,
-      data,
-      metadata: {
-        operation,
-        ...metadata,
-        cache: metadata.cache || { fromCache: false },
-        performance: {
-          apiResponseTime: 0,
-          totalProcessingTime: 0,
-          ...performance
-        }
-      }
-    };
-  }
-
-  static formatError(error, operation = 'unknown') {
-    const baseError = {
-      success: false,
-      timestamp: new Date().toISOString(),
-      operation,
-      error: {
-        code: error.code || 'UNKNOWN_ERROR',
-        message: error.localizedMessage || error.message || 'An unknown error occurred',
-        operation,
-        statusCode: error.statusCode || 500
-      },
-      // ✅ metadata 속성 추가
-      metadata: {}
-    };
-
-    if (hasProcess && process.env.NODE_ENV === 'development') {
-      baseError.error.details = error.details || {};
-      baseError.error.stack = error.stack;
-    }
-
-    return baseError;
-  }
-
-  static addCacheInfo(response, fromCache, cacheStats = {}) {
-    if (typeof response === 'object' && response.metadata) {
-      response.metadata.cache = {
-        fromCache,
-        ...cacheStats,
-        timestamp: new Date().toISOString()
-      };
-    }
-    return response;
-  }
-}
-빠른 테스트
-수정 후 이 URL로 테스트:
-
-https://your-app.vercel.app/api/tourism?operation=areaBasedList&areaCode=1&numOfRows=3
-이제 metadata 오류가 해결됩니다! 🚀
-
-복사
-네가 다시 전체 코드 완벽하게 수정해서 만들어줘
-생각 과정
-완벽한 api/tourism.js 파일입니다! 모든 오류가 수정되었습니다.
-
-Copy'use strict';
-
-// ===== 런타임 환경 감지 및 안전한 폴리필 =====
 const isNode = typeof window === 'undefined';
 const hasProcess = typeof process !== 'undefined';
 
-// 안전한 의존성 로딩
 if (isNode && typeof fetch === 'undefined') {
   try {
     const nodeFetch = require('node-fetch');
@@ -185,15 +10,13 @@ if (isNode && typeof fetch === 'undefined') {
     global.fetch = nodeFetch;
     global.AbortController = AbortControllerPolyfill;
   } catch (error) {
-    console.error('❌ Required dependencies missing. Install with: npm install node-fetch@2 abort-controller');
+    console.error('Required dependencies missing. Install with: npm install node-fetch@2 abort-controller');
     throw new Error(`Missing dependencies: ${error.message}`);
   }
 }
 
-// ===== 서비스 시작 시간 추적 =====
 const SERVICE_START_TIME = Date.now();
 
-// ===== 안전한 유틸리티 함수들 =====
 class SafeUtils {
   static safeParseInt(value, defaultValue = 0, radix = 10) {
     if (value === null || value === undefined || value === '') {
@@ -294,7 +117,6 @@ class SafeUtils {
   }
 }
 
-// ===== 에러 클래스들 =====
 class TourismApiError extends Error {
   constructor(message, operation, statusCode = 500, details = {}, data = {}, i18n = null) {
     super(message);
@@ -345,7 +167,6 @@ class RateLimitError extends TourismApiError {
   }
 }
 
-// ===== 상수 관리자 =====
 class ConstantsManager {
   constructor() {
     this.SUPPORTED_OPERATIONS = [
@@ -399,7 +220,6 @@ class ConstantsManager {
   }
 }
 
-// ===== 다국어 지원 관리자 =====
 class InternationalizationManager {
   constructor() {
     this.currentLanguage = 'ko';
@@ -485,7 +305,6 @@ class InternationalizationManager {
   }
 }
 
-// ===== 설정 관리자 =====
 class ConfigManager {
   constructor(container) {
     this.container = container;
@@ -594,7 +413,6 @@ class ConfigManager {
   }
 }
 
-// ===== 로거 클래스 =====
 class Logger {
   constructor(container) {
     this.container = container;
@@ -700,7 +518,6 @@ class Logger {
   }
 }
 
-// ===== 고급 캐시 시스템 =====
 class AdvancedCache {
   constructor(container) {
     this.container = container;
@@ -852,7 +669,6 @@ class AdvancedCache {
   }
 }
 
-// ===== 레이트 리미터 =====
 class RateLimiter {
   constructor(container) {
     this.container = container;
@@ -930,7 +746,6 @@ class RateLimiter {
   }
 }
 
-// ===== HTTP 클라이언트 =====
 class HttpClient {
   constructor(container) {
     this.container = container;
@@ -1037,7 +852,6 @@ class HttpClient {
   }
 }
 
-// ===== 지리 유틸리티 =====
 class GeoUtils {
   static calculateDistance(lat1, lon1, lat2, lon2) {
     try {
@@ -1147,7 +961,6 @@ class GeoUtils {
   }
 }
 
-// ===== 서비스 컨테이너 =====
 class ServiceContainer {
   constructor() {
     this.services = new Map();
@@ -1242,7 +1055,6 @@ class ServiceContainer {
   }
 }
 
-// ===== 응답 포맷터 =====
 class ResponseFormatter {
   static formatSuccess(operation, data, metadata = {}, performance = {}) {
     return {
@@ -1274,7 +1086,6 @@ class ResponseFormatter {
         operation,
         statusCode: error.statusCode || 500
       },
-      // ✅ metadata 속성 항상 포함
       metadata: {}
     };
 
@@ -1298,7 +1109,6 @@ class ResponseFormatter {
   }
 }
 
-// ===== API 응답 처리기 =====
 class ApiResponseProcessor {
   static extractItems(apiResponse) {
     try {
@@ -1443,7 +1253,6 @@ class ApiResponseProcessor {
   }
 }
 
-// ===== 입력 검증 시스템 =====
 class InputValidator {
   constructor(container) {
     this.container = container;
@@ -1705,7 +1514,6 @@ class InputValidator {
   }
 }
 
-// ===== 메인 API 클래스 =====
 class AllTourismAPI {
   constructor(config = {}) {
     this.container = new ServiceContainer();
@@ -1956,7 +1764,6 @@ class AllTourismAPI {
     }
   }
 
-  // 시스템 상태 조회
   getSystemStatus() {
     try {
       const logger = this.container.get('logger');
@@ -1981,7 +1788,6 @@ class AllTourismAPI {
     }
   }
 
-  // 캐시 관리
   clearCache() {
     try {
       const cache = this.container.get('cache');
@@ -1992,7 +1798,6 @@ class AllTourismAPI {
     }
   }
 
-  // 언어 설정
   setLanguage(language) {
     try {
       const i18n = this.container.get('i18n');
@@ -2008,7 +1813,6 @@ class AllTourismAPI {
     }
   }
 
-  // 리소스 정리
   destroy() {
     try {
       this.container.destroy();
@@ -2020,7 +1824,6 @@ class AllTourismAPI {
   }
 }
 
-// ===== 헬스체크 함수 =====
 async function healthCheck() {
   try {
     const api = new AllTourismAPI();
@@ -2045,7 +1848,6 @@ async function healthCheck() {
   }
 }
 
-// ===== CORS 처리 함수 =====
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -2053,13 +1855,11 @@ function setCorsHeaders(res) {
   res.setHeader('Access-Control-Max-Age', '86400');
 }
 
-// ===== 메인 Vercel Handler =====
 module.exports = async (req, res) => {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const startTime = Date.now();
 
   try {
-    // CORS 처리
     setCorsHeaders(res);
 
     if (req.method === 'OPTIONS') {
@@ -2067,26 +1867,21 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // API 인스턴스 생성
     const api = new AllTourismAPI();
     const configManager = api.container.get('config');
     const i18n = api.container.get('i18n');
 
-    // API 키 체크
     if (!configManager.hasValidApiKey()) {
       throw new TourismApiError('MISSING_API_KEY', 'configuration', 500, { requestId });
     }
 
-    // 언어 설정
     if (req.headers['accept-language']) {
       i18n.setLanguageFromHeader(req.headers['accept-language']);
     }
 
-    // 요청 파라미터 추출
     const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
     const { operation = 'areaBasedList', ...apiParams } = params;
 
-    // 지원되는 오퍼레이션 체크
     const constants = api.container.get('constants');
     if (!constants.isValidOperation(operation)) {
       throw new ValidationError(
@@ -2097,7 +1892,6 @@ module.exports = async (req, res) => {
       );
     }
 
-    // API 호출
     let result;
     switch (operation) {
       case 'areaBasedList':
@@ -2118,7 +1912,6 @@ module.exports = async (req, res) => {
         );
     }
 
-    // ✅ 안전하게 메타데이터 추가
     if (!result) {
       result = { metadata: {} };
     }
@@ -2134,11 +1927,10 @@ module.exports = async (req, res) => {
     res.status(200).json(result);
 
   } catch (error) {
-    console.error('❌ Handler Error:', error);
+    console.error('Handler Error:', error);
     
     const errorResponse = ResponseFormatter.formatError(error, error.operation || 'unknown');
     
-    // ✅ 에러 응답에도 안전하게 메타데이터 추가
     if (!errorResponse.metadata) {
       errorResponse.metadata = {};
     }
@@ -2153,7 +1945,6 @@ module.exports = async (req, res) => {
   }
 };
 
-// ===== 헬스체크 및 기타 export =====
 module.exports.healthCheck = healthCheck;
 module.exports.AllTourismAPI = AllTourismAPI;
 module.exports.TourismApiError = TourismApiError;
