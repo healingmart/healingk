@@ -3,118 +3,688 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🇰🇷 한국관광공사 API 테스트</title>
+    <title>한국관광공사 API 클라이언트 테스트</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .button { padding: 12px 24px; margin: 8px; background: #0070f3; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .button:hover { background: #0056b3; }
-        #result { margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px; white-space: pre-wrap; font-family: monospace; max-height: 500px; overflow-y: auto; }
-        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #333;
+        }
+
+        .result {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .result pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            color: #4facfe;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🇰🇷 한국관광공사 API 테스트</h1>
-        
-        <div id="status" class="status info">
-            상태 확인 중...
+        <div class="header">
+            <h1>🇰🇷 한국관광공사 API 클라이언트</h1>
+            <p>완벽한 테스트 환경 - v2.1.0</p>
         </div>
 
-        <div>
-            <button class="button" onclick="testHealthCheck()">🩺 헬스체크</button>
-            <button class="button" onclick="testAreaBasedList()">📍 지역기반 목록 (서울)</button>
-            <button class="button" onclick="testSearchKeyword()">🔍 키워드 검색 (경복궁)</button>
-            <button class="button" onclick="testDetailCommon()">📋 상세정보</button>
-            <button class="button" onclick="clearResult()">🗑️ 결과 지우기</button>
+        <div class="content">
+            <!-- API 키 설정 -->
+            <div class="section">
+                <h2>🔑 API 키 설정</h2>
+                <div class="form-group">
+                    <label for="apiKey">한국관광공사 API 키:</label>
+                    <input type="password" id="apiKey" placeholder="여기에 API 키를 입력하세요">
+                </div>
+                <button class="btn" onclick="initializeAPI()">API 초기화</button>
+                <div id="apiStatus" class="status info" style="display:none;">
+                    API 키를 입력하고 초기화 버튼을 클릭하세요.
+                </div>
+            </div>
+
+            <!-- 기본 테스트 -->
+            <div class="section">
+                <h2>🧪 기본 API 테스트</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h3>지역별 관광정보</h3>
+                        <div class="form-group">
+                            <label>지역 코드:</label>
+                            <select id="areaCode">
+                                <option value="1">서울</option>
+                                <option value="6">부산</option>
+                                <option value="39">제주도</option>
+                                <option value="31">경기도</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>콘텐츠 타입:</label>
+                            <select id="contentType">
+                                <option value="">전체</option>
+                                <option value="12">관광지</option>
+                                <option value="14">문화시설</option>
+                                <option value="15">축제공연행사</option>
+                                <option value="32">숙박</option>
+                                <option value="39">음식점</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="testAreaBasedList()">지역별 조회</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>키워드 검색</h3>
+                        <div class="form-group">
+                            <label>검색 키워드:</label>
+                            <input type="text" id="keyword" placeholder="예: 경복궁, 한옥마을">
+                        </div>
+                        <div class="form-group">
+                            <label>검색 결과 수:</label>
+                            <select id="numOfRows">
+                                <option value="10">10개</option>
+                                <option value="20">20개</option>
+                                <option value="50">50개</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="testSearchKeyword()">키워드 검색</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>위치 기반 검색</h3>
+                        <div class="form-group">
+                            <label>위도:</label>
+                            <input type="text" id="userLat" placeholder="37.5665" value="37.5665">
+                        </div>
+                        <div class="form-group">
+                            <label>경도:</label>
+                            <input type="text" id="userLng" placeholder="126.9780" value="126.9780">
+                        </div>
+                        <div class="form-group">
+                            <label>반경(km):</label>
+                            <input type="text" id="radius" placeholder="5" value="5">
+                        </div>
+                        <button class="btn" onclick="testLocationBased()">위치 기반 검색</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>상세 정보</h3>
+                        <div class="form-group">
+                            <label>콘텐츠 ID:</label>
+                            <input type="text" id="contentId" placeholder="126508">
+                        </div>
+                        <button class="btn" onclick="testDetailCommon()">상세 정보</button>
+                        <button class="btn btn-secondary" onclick="testDetailImage()">이미지 정보</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 고급 테스트 -->
+            <div class="section">
+                <h2>🚀 고급 기능 테스트</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h3>배치 요청</h3>
+                        <p>여러 API를 동시에 호출합니다.</p>
+                        <button class="btn" onclick="testBatchRequest()">배치 요청 실행</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>시스템 상태</h3>
+                        <p>API 클라이언트의 상태를 확인합니다.</p>
+                        <button class="btn btn-secondary" onclick="testSystemStatus()">상태 확인</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>캐시 관리</h3>
+                        <p>캐시를 관리합니다.</p>
+                        <button class="btn btn-secondary" onclick="testCacheStats()">캐시 상태</button>
+                        <button class="btn btn-danger" onclick="testClearCache()">캐시 초기화</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>언어 설정</h3>
+                        <div class="form-group">
+                            <select id="language">
+                                <option value="ko">한국어</option>
+                                <option value="en">English</option>
+                                <option value="ja">日本語</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="testSetLanguage()">언어 변경</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 성능 통계 -->
+            <div class="section">
+                <h2>📊 성능 통계</h2>
+                <div class="stats" id="performanceStats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalRequests">0</div>
+                        <div class="stat-label">총 요청 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="successRequests">0</div>
+                        <div class="stat-label">성공한 요청</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="errorRequests">0</div>
+                        <div class="stat-label">실패한 요청</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgResponseTime">0ms</div>
+                        <div class="stat-label">평균 응답시간</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 결과 표시 -->
+            <div class="section">
+                <h2>📋 결과</h2>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>요청 처리 중...</p>
+                </div>
+                <div id="result" class="result">
+                    <pre>여기에 API 응답 결과가 표시됩니다.</pre>
+                </div>
+            </div>
         </div>
-        
-        <div id="result">여기에 API 응답이 표시됩니다...</div>
     </div>
 
+    <!-- API 라이브러리 로드 -->
+    <script src="../src/tourism-api.js"></script>
+
     <script>
-        const API_BASE = window.location.origin;
-        
-        // 페이지 로드 시 헬스체크 자동 실행
-        window.onload = () => {
-            testHealthCheck();
+        let api = null;
+        let stats = {
+            total: 0,
+            success: 0,
+            error: 0,
+            responseTimes: []
         };
-        
-        async function callAPI(endpoint, params = {}) {
-            const startTime = Date.now();
-            updateStatus('API 호출 중...', 'info');
+
+        // API 초기화
+        function initializeAPI() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const statusDiv = document.getElementById('apiStatus');
             
+            if (!apiKey) {
+                showStatus('error', 'API 키를 입력해주세요.');
+                return;
+            }
+
             try {
-                const url = new URL(`${API_BASE}${endpoint}`);
-                Object.entries(params).forEach(([key, value]) => {
-                    if (value) url.searchParams.append(key, value);
+                api = new AllTourismAPI({
+                    serviceKey: apiKey
                 });
                 
-                console.log('🌐 호출 URL:', url.toString());
-                
-                const response = await fetch(url);
-                const data = await response.json();
+                showStatus('success', 'API가 성공적으로 초기화되었습니다!');
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ API 준비 완료';
+            } catch (error) {
+                showStatus('error', 'API 초기화 실패: ' + error.message);
+            }
+        }
+
+        // 상태 표시
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('apiStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // 로딩 표시
+        function showLoading(show = true) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // 결과 표시
+        function showResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            showLoading(false);
+        }
+
+        // 통계 업데이트
+        function updateStats(success, responseTime) {
+            stats.total++;
+            if (success) {
+                stats.success++;
+            } else {
+                stats.error++;
+            }
+            
+            if (responseTime) {
+                stats.responseTimes.push(responseTime);
+            }
+
+            document.getElementById('totalRequests').textContent = stats.total;
+            document.getElementById('successRequests').textContent = stats.success;
+            document.getElementById('errorRequests').textContent = stats.error;
+            
+            if (stats.responseTimes.length > 0) {
+                const avg = stats.responseTimes.reduce((a, b) => a + b, 0) / stats.responseTimes.length;
+                document.getElementById('avgResponseTime').textContent = Math.round(avg) + 'ms';
+            }
+        }
+
+        // API 요청 래퍼
+        async function makeRequest(requestFunc, requestName) {
+            if (!api) {
+                showStatus('error', 'API를 먼저 초기화해주세요.');
+                return;
+            }
+
+            showLoading(true);
+            const startTime = Date.now();
+
+            try {
+                const result = await requestFunc();
                 const responseTime = Date.now() - startTime;
                 
-                if (response.ok) {
-                    updateStatus(`✅ 성공 (${responseTime}ms)`, 'success');
-                } else {
-                    updateStatus(`❌ 실패 (${response.status}) (${responseTime}ms)`, 'error');
-                }
+                updateStats(true, responseTime);
+                showResult(result);
+                showStatus('success', `${requestName} 성공! (${responseTime}ms)`);
                 
-                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-                
-                return data;
+                return result;
             } catch (error) {
                 const responseTime = Date.now() - startTime;
-                updateStatus(`💥 네트워크 오류 (${responseTime}ms): ${error.message}`, 'error');
-                document.getElementById('result').textContent = `네트워크 오류:\n${error.message}`;
+                
+                updateStats(false, responseTime);
+                showResult({ error: error.message, stack: error.stack });
+                showStatus('error', `${requestName} 실패: ${error.message}`);
+                
                 throw error;
             }
         }
-        
-        function updateStatus(message, type) {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            statusEl.className = `status ${type}`;
-        }
-        
-        async function testHealthCheck() {
-            await callAPI('/api/health');
-        }
-        
+
+        // 테스트 함수들
         async function testAreaBasedList() {
-            await callAPI('/api', {
-                operation: 'areaBasedList',
-                areaCode: '1',        // 서울
-                numOfRows: '5',
-                pageNo: '1'
-            });
+            await makeRequest(async () => {
+                return await api.areaBasedList({
+                    areaCode: document.getElementById('areaCode').value,
+                    contentTypeId: document.getElementById('contentType').value,
+                    numOfRows: '10',
+                    pageNo: '1'
+                });
+            }, '지역별 관광정보 조회');
         }
-        
+
         async function testSearchKeyword() {
-            await callAPI('/api', {
-                operation: 'searchKeyword',
-                keyword: '경복궁',
-                numOfRows: '3',
-                pageNo: '1'
-            });
+            const keyword = document.getElementById('keyword').value.trim();
+            if (!keyword) {
+                showStatus('error', '검색 키워드를 입력해주세요.');
+                return;
+            }
+
+            await makeRequest(async () => {
+                return await api.searchKeyword({
+                    keyword: keyword,
+                    numOfRows: document.getElementById('numOfRows').value,
+                    pageNo: '1'
+                });
+            }, '키워드 검색');
         }
-        
+
+        async function testLocationBased() {
+            const userLat = document.getElementById('userLat').value;
+            const userLng = document.getElementById('userLng').value;
+            const radius = document.getElementById('radius').value;
+
+            await makeRequest(async () => {
+                return await api.searchKeyword({
+                    keyword: '관광지',
+                    userLat: userLat,
+                    userLng: userLng,
+                    radius: radius,
+                    numOfRows: '20'
+                });
+            }, '위치 기반 검색');
+        }
+
         async function testDetailCommon() {
-            await callAPI('/api', {
-                operation: 'detailCommon',
-                contentId: '126508'  // 경복궁 예시 ID
+            const contentId = document.getElementById('contentId').value.trim();
+            if (!contentId) {
+                showStatus('error', '콘텐츠 ID를 입력해주세요.');
+                return;
+            }
+
+            await makeRequest(async () => {
+                return await api.detailCommon({
+                    contentId: contentId
+                });
+            }, '상세 정보 조회');
+        }
+
+        async function testDetailImage() {
+            const contentId = document.getElementById('contentId').value.trim();
+            if (!contentId) {
+                showStatus('error', '콘텐츠 ID를 입력해주세요.');
+                return;
+            }
+
+            await makeRequest(async () => {
+                return await api.detailImage({
+                    contentId: contentId
+                });
+            }, '이미지 정보 조회');
+        }
+
+        async function testBatchRequest() {
+            await makeRequest(async () => {
+                return await api.batchRequest([
+                    {
+                        operation: 'areaBasedList',
+                        params: { areaCode: '1', numOfRows: '5' }
+                    },
+                    {
+                        operation: 'searchKeyword',
+                        params: { keyword: '한옥', numOfRows: '5' }
+                    },
+                    {
+                        operation: 'areaCode',
+                        params: { numOfRows: '10' }
+                    }
+                ]);
+            }, '배치 요청');
+        }
+
+        async function testSystemStatus() {
+            await makeRequest(async () => {
+                return api.getSystemStatus();
+            }, '시스템 상태 조회');
+        }
+
+        async function testCacheStats() {
+            if (!api) {
+                showStatus('error', 'API를 먼저 초기화해주세요.');
+                return;
+            }
+
+            try {
+                const cache = api.container.get('cache');
+                const cacheStats = cache.getStats();
+                showResult({
+                    message: '캐시 통계',
+                    stats: cacheStats,
+                    topItems: cache.getTopItems(5)
+                });
+                showStatus('info', '캐시 통계를 조회했습니다.');
+            } catch (error) {
+                showStatus('error', '캐시 통계 조회 실패: ' + error.message);
+            }
+        }
+
+        async function testClearCache() {
+            await makeRequest(async () => {
+                return api.clearCache();
+            }, '캐시 초기화');
+        }
+
+        async function testSetLanguage() {
+            const language = document.getElementById('language').value;
+            
+            await makeRequest(async () => {
+                return api.setLanguage(language);
+            }, '언어 설정 변경');
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 샘플 API 키 힌트
+            const apiKeyInput = document.getElementById('apiKey');
+            apiKeyInput.addEventListener('focus', function() {
+                if (!this.value) {
+                    showStatus('info', '한국관광공사에서 발급받은 API 키를 입력하세요. (https://www.data.go.kr/)');
+                }
             });
-        }
-        
-        function clearResult() {
-            document.getElementById('result').textContent = '결과가 지워졌습니다.';
-            updateStatus('결과 초기화됨', 'info');
-        }
-    </script>
-</body>
-</html>
+
+            // 엔터 키로 API 초기화
+            apiKeyInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    initializeAPI();
+                }
+            });
+
+            // 키
