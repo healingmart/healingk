@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism API 테스트</title>
+    <title>Tourism API 테스트 (데모 버전)</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -42,11 +42,6 @@
             background: #0056b3;
             transform: translateY(-2px);
         }
-        .btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
         .result {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -58,27 +53,22 @@
             max-height: 400px;
             overflow-y: auto;
         }
-        .loading {
-            color: #007bff;
-            font-weight: bold;
-            display: none;
+        .success {
+            color: #155724;
+            background: #d4edda;
+            border-color: #c3e6cb;
         }
         .error {
             color: #dc3545;
             background: #f8d7da;
             border-color: #f5c6cb;
         }
-        .success {
-            color: #155724;
-            background: #d4edda;
-            border-color: #c3e6cb;
-        }
         .input-group {
             margin: 10px 0;
         }
         .input-group label {
             display: inline-block;
-            width: 100px;
+            width: 120px;
             font-weight: bold;
         }
         .input-group input, .input-group select {
@@ -87,27 +77,10 @@
             border-radius: 4px;
             width: 200px;
         }
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .status-item {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .status-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #495057;
-        }
-        .api-key-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
+        .demo-notice {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
             padding: 15px;
             border-radius: 6px;
             margin: 20px 0;
@@ -116,56 +89,35 @@
 </head>
 <body>
     <div class="header">
-        <h1>🚀 Tourism API 테스트 도구</h1>
-        <p>한국관광공사 API 통합 테스트 페이지</p>
+        <h1>🚀 Tourism API 데모 테스트</h1>
+        <p>API 키 없이 작동하는 데모 버전</p>
     </div>
 
-    <div class="api-key-warning">
-        <strong>⚠️ 주의사항:</strong> 
-        실제 API 호출을 위해서는 한국관광공사에서 발급받은 API 키가 필요합니다. 
-        브라우저에서 직접 API를 호출하면 CORS 오류가 발생할 수 있습니다.
-    </div>
-
-    <!-- 시스템 상태 테스트 -->
-    <div class="test-section">
-        <h2>📊 시스템 상태 확인</h2>
-        <p>API 시스템의 기본 상태와 구성 정보를 확인합니다.</p>
-        <button class="btn" onclick="testSystemStatus()">시스템 상태 확인</button>
-        <button class="btn" onclick="testConstants()">상수 정보 확인</button>
-        <button class="btn" onclick="testLanguage()">다국어 테스트</button>
-        <div id="system-result" class="result" style="display:none;"></div>
+    <div class="demo-notice">
+        <strong>💡 데모 모드:</strong> 
+        이 페이지는 API 키 없이 Tourism API의 기능을 테스트할 수 있는 데모 버전입니다.
+        실제 API 호출 대신 시뮬레이션 데이터를 사용합니다.
     </div>
 
     <!-- 기본 기능 테스트 -->
     <div class="test-section">
         <h2>🛠️ 기본 기능 테스트</h2>
-        <p>API의 유틸리티 함수들과 기본 기능을 테스트합니다.</p>
         
         <div class="input-group">
             <label>테스트 텍스트:</label>
-            <input type="text" id="test-text" value="<script>alert('test')</script>안녕하세요" placeholder="테스트할 텍스트 입력">
+            <input type="text" id="test-text" value="<script>alert('test')</script>안녕하세요!" placeholder="테스트할 텍스트 입력">
         </div>
         
         <button class="btn" onclick="testSanitization()">HTML 정화 테스트</button>
         <button class="btn" onclick="testValidation()">입력 검증 테스트</button>
         <button class="btn" onclick="testGeoUtils()">위치 계산 테스트</button>
+        <button class="btn" onclick="testConstants()">상수 데이터 테스트</button>
         <div id="utils-result" class="result" style="display:none;"></div>
     </div>
 
-    <!-- 캐시 및 성능 테스트 -->
+    <!-- API 시뮬레이션 -->
     <div class="test-section">
-        <h2>⚡ 캐시 및 성능 테스트</h2>
-        <p>캐시 시스템과 성능 모니터링 기능을 테스트합니다.</p>
-        <button class="btn" onclick="testCacheSystem()">캐시 시스템 테스트</button>
-        <button class="btn" onclick="testRateLimiter()">속도 제한 테스트</button>
-        <button class="btn" onclick="clearAllCache()">캐시 초기화</button>
-        <div id="cache-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- API 호출 시뮬레이션 -->
-    <div class="test-section">
-        <h2>🌐 API 호출 시뮬레이션</h2>
-        <p>실제 API 구조와 응답 형식을 시뮬레이션합니다.</p>
+        <h2>🌐 API 시뮬레이션</h2>
         
         <div class="input-group">
             <label>지역코드:</label>
@@ -189,122 +141,179 @@
         </div>
         
         <div class="input-group">
-            <label>키워드:</label>
+            <label>검색 키워드:</label>
             <input type="text" id="search-keyword" value="경복궁" placeholder="검색할 키워드">
         </div>
         
-        <button class="btn" onclick="simulateAreaBasedList()">지역별 목록 시뮬레이션</button>
-        <button class="btn" onclick="simulateKeywordSearch()">키워드 검색 시뮬레이션</button>
-        <button class="btn" onclick="simulateDetailInfo()">상세정보 시뮬레이션</button>
+        <button class="btn" onclick="simulateAreaBasedList()">지역별 목록 조회</button>
+        <button class="btn" onclick="simulateKeywordSearch()">키워드 검색</button>
+        <button class="btn" onclick="simulateDetailInfo()">상세 정보 조회</button>
+        <button class="btn" onclick="simulateBatchRequest()">배치 요청 테스트</button>
         <div id="api-result" class="result" style="display:none;"></div>
     </div>
 
     <!-- 에러 처리 테스트 -->
     <div class="test-section">
         <h2>🚨 에러 처리 테스트</h2>
-        <p>다양한 에러 상황과 예외 처리를 테스트합니다.</p>
-        <button class="btn" onclick="testValidationError()">검증 오류 테스트</button>
-        <button class="btn" onclick="testApiError()">API 오류 테스트</button>
-        <button class="btn" onclick="testSecurityError()">보안 오류 테스트</button>
+        <button class="btn" onclick="testValidationError()">검증 오류</button>
+        <button class="btn" onclick="testApiError()">API 오류</button>
+        <button class="btn" onclick="testRateLimitError()">속도 제한 오류</button>
         <div id="error-result" class="result" style="display:none;"></div>
     </div>
 
-    <div id="loading" class="loading">⏳ 처리 중...</div>
-
-    <!-- Tourism.js 로드 -->
-    <script src="./tourism.js"></script>
-    
     <script>
-        let api = null;
-        
-        // API 초기화 (실제 환경에서는 서버에서 처리)
-        try {
-            api = new AllTourismAPI({
-                serviceKey: 'test_key_for_demo', // 데모용
-                enableCaching: true,
-                enableRateLimiting: true,
-                logLevel: 'info'
-            });
-            console.log('✅ Tourism API 초기화 완료');
-        } catch (error) {
-            console.error('❌ API 초기화 실패:', error);
+        // Tourism API 핵심 클래스들을 간소화해서 직접 포함
+        class DemoSafeUtils {
+            static sanitizeInput(input, maxLength = 1000, options = {}) {
+                if (typeof input !== 'string') return input;
+                
+                const { removeHtml = true, preventXss = true, strictMode = false } = options;
+                let sanitized = input.slice(0, maxLength).trim();
+                
+                if (removeHtml) {
+                    sanitized = sanitized.replace(/<[^>]*>/g, '');
+                }
+                
+                if (preventXss) {
+                    const xssPatterns = [
+                        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+                        /javascript\s*:/gi,
+                        /on\w+\s*=/gi
+                    ];
+                    
+                    for (const pattern of xssPatterns) {
+                        sanitized = sanitized.replace(pattern, '');
+                    }
+                    
+                    if (strictMode) {
+                        sanitized = sanitized
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;');
+                    }
+                }
+                
+                return sanitized;
+            }
+            
+            static generateRequestId() {
+                return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
+            
+            static safeParseInt(value, defaultValue = 0) {
+                const parsed = parseInt(String(value), 10);
+                return isNaN(parsed) ? defaultValue : parsed;
+            }
+            
+            static safeParseFloat(value, defaultValue = 0.0) {
+                const parsed = parseFloat(String(value));
+                return isNaN(parsed) ? defaultValue : parsed;
+            }
         }
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
+        class DemoGeoUtils {
+            static calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // 지구 반지름 (km)
+                const dLat = this.toRadians(lat2 - lat1);
+                const dLon = this.toRadians(lon2 - lon1);
+                
+                const a = Math.sin(dLat / 2) ** 2 +
+                    Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
+                    Math.sin(dLon / 2) ** 2;
+                
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return Math.round(R * c * 1000) / 1000;
+            }
+            
+            static toRadians(degrees) {
+                return degrees * (Math.PI / 180);
+            }
+            
+            static formatDistance(distance) {
+                if (distance < 1) {
+                    return `${Math.round(distance * 1000)}m`;
+                } else {
+                    return `${Math.round(distance * 10) / 10}km`;
+                }
+            }
+            
+            static isValidCoordinate(lat, lng) {
+                const numLat = DemoSafeUtils.safeParseFloat(lat);
+                const numLng = DemoSafeUtils.safeParseFloat(lng);
+                return !isNaN(numLat) && !isNaN(numLng) &&
+                       numLat >= -90 && numLat <= 90 &&
+                       numLng >= -180 && numLng <= 180;
+            }
         }
 
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
+        class DemoValidator {
+            static validateParams(operation, params) {
+                const errors = [];
+                
+                switch (operation) {
+                    case 'searchKeyword':
+                        if (!params.keyword || params.keyword.trim() === '') {
+                            errors.push('키워드는 필수입니다');
+                        }
+                        if (params.numOfRows && isNaN(parseInt(params.numOfRows))) {
+                            errors.push('numOfRows는 숫자여야 합니다');
+                        }
+                        break;
+                        
+                    case 'areaBasedList':
+                        if (params.areaCode && !['1','2','3','4','5','6','7','8','31','32','33','34','35','36','37','38','39'].includes(params.areaCode)) {
+                            errors.push('유효하지 않은 지역코드입니다');
+                        }
+                        break;
+                        
+                    case 'detailCommon':
+                        if (!params.contentId || isNaN(parseInt(params.contentId))) {
+                            errors.push('유효한 contentId가 필요합니다');
+                        }
+                        break;
+                }
+                
+                if (errors.length > 0) {
+                    throw new Error(`검증 오류: ${errors.join(', ')}`);
+                }
+                
+                return params;
+            }
         }
+
+        const DEMO_CONSTANTS = {
+            CONTENT_TYPES: {
+                '12': { ko: '관광지', en: 'Tourist Attraction' },
+                '14': { ko: '문화시설', en: 'Cultural Facility' },
+                '15': { ko: '축제공연행사', en: 'Festival/Event' },
+                '32': { ko: '숙박', en: 'Accommodation' },
+                '39': { ko: '음식점', en: 'Restaurant' }
+            },
+            AREA_CODES: {
+                '1': { ko: '서울', en: 'Seoul' },
+                '6': { ko: '부산', en: 'Busan' },
+                '32': { ko: '강원도', en: 'Gangwon-do' },
+                '39': { ko: '제주도', en: 'Jeju-do' }
+            }
+        };
 
         function showResult(elementId, data, isError = false) {
-            hideLoading();
             const element = document.getElementById(elementId);
             element.style.display = 'block';
             element.className = `result ${isError ? 'error' : 'success'}`;
             element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
         }
 
-        // 시스템 상태 테스트
-        function testSystemStatus() {
-            showLoading();
-            try {
-                const status = api.getSystemStatus();
-                showResult('system-result', status);
-            } catch (error) {
-                showResult('system-result', { error: error.message }, true);
-            }
-        }
-
-        function testConstants() {
-            showLoading();
-            try {
-                const constants = api.container.get('constants');
-                const result = {
-                    contentTypes: constants.getAllContentTypes('ko'),
-                    areaCodes: constants.getAllAreaCodes('ko'),
-                    supportedOperations: constants.SUPPORTED_OPERATIONS
-                };
-                showResult('system-result', result);
-            } catch (error) {
-                showResult('system-result', { error: error.message }, true);
-            }
-        }
-
-        function testLanguage() {
-            showLoading();
-            try {
-                const i18n = api.container.get('i18n');
-                const results = [];
-                
-                // 언어 변경 테스트
-                ['ko', 'en', 'ja', 'zh'].forEach(lang => {
-                    i18n.setLanguage(lang);
-                    results.push({
-                        language: lang,
-                        message: i18n.getMessage('VALIDATION_ERROR'),
-                        currentLang: i18n.getCurrentLanguage()
-                    });
-                });
-                
-                showResult('system-result', { languageTests: results });
-            } catch (error) {
-                showResult('system-result', { error: error.message }, true);
-            }
-        }
-
-        // 유틸리티 테스트
+        // 기본 기능 테스트들
         function testSanitization() {
-            showLoading();
             try {
                 const testText = document.getElementById('test-text').value;
                 const results = {
                     original: testText,
-                    sanitized: SafeUtils.sanitizeInput(testText),
-                    keywordSanitized: SafeUtils.sanitizeKeyword(testText),
-                    htmlRemoved: SafeUtils.sanitizeInput(testText, 1000, { removeHtml: true }),
-                    strictMode: SafeUtils.sanitizeInput(testText, 1000, { strictMode: true })
+                    sanitized: DemoSafeUtils.sanitizeInput(testText),
+                    htmlRemoved: DemoSafeUtils.sanitizeInput(testText, 1000, { removeHtml: true }),
+                    strictMode: DemoSafeUtils.sanitizeInput(testText, 1000, { strictMode: true }),
+                    timestamp: new Date().toISOString()
                 };
                 showResult('utils-result', results);
             } catch (error) {
@@ -313,41 +322,31 @@
         }
 
         function testValidation() {
-            showLoading();
             try {
-                const validator = api.container.get('validator');
                 const testCases = [
                     {
-                        operation: 'areaBasedList',
-                        params: { areaCode: '1', numOfRows: '10' },
-                        description: '정상적인 지역 조회'
+                        operation: 'searchKeyword',
+                        params: { keyword: '경복궁', numOfRows: '10' },
+                        description: '정상적인 키워드 검색'
                     },
                     {
                         operation: 'searchKeyword',
-                        params: { keyword: '경복궁', numOfRows: 'invalid' },
-                        description: '잘못된 numOfRows'
+                        params: { keyword: '', numOfRows: 'invalid' },
+                        description: '잘못된 파라미터'
                     },
                     {
-                        operation: 'detailCommon',
-                        params: { contentId: '126508' },
-                        description: '정상적인 상세 조회'
+                        operation: 'areaBasedList',
+                        params: { areaCode: '1' },
+                        description: '정상적인 지역 조회'
                     }
                 ];
 
                 const results = testCases.map(test => {
                     try {
-                        const validated = validator.validate(test.operation, test.params);
-                        return {
-                            ...test,
-                            success: true,
-                            validated: validated
-                        };
+                        DemoValidator.validateParams(test.operation, test.params);
+                        return { ...test, success: true };
                     } catch (error) {
-                        return {
-                            ...test,
-                            success: false,
-                            error: error.message
-                        };
+                        return { ...test, success: false, error: error.message };
                     }
                 });
 
@@ -358,20 +357,25 @@
         }
 
         function testGeoUtils() {
-            showLoading();
             try {
                 const seoul = { lat: 37.5665, lng: 126.9780 };
                 const busan = { lat: 35.1796, lng: 129.0756 };
                 
+                const distance = DemoGeoUtils.calculateDistance(seoul.lat, seoul.lng, busan.lat, busan.lng);
+                
                 const results = {
-                    distance: GeoUtils.calculateDistance(seoul.lat, seoul.lng, busan.lat, busan.lng),
-                    bearing: GeoUtils.calculateBearing(seoul.lat, seoul.lng, busan.lat, busan.lng),
-                    direction: GeoUtils.getCardinalDirection(45),
-                    coordValidation: {
-                        validCoord: GeoUtils.isValidCoordinate(37.5665, 126.9780),
-                        invalidCoord: GeoUtils.isValidCoordinate(200, 300)
+                    seoulToBusan: {
+                        distance: distance,
+                        formatted: DemoGeoUtils.formatDistance(distance)
                     },
-                    formattedDistance: GeoUtils.formatDistance(325.5)
+                    coordinateValidation: {
+                        validSeoul: DemoGeoUtils.isValidCoordinate(seoul.lat, seoul.lng),
+                        invalidCoord: DemoGeoUtils.isValidCoordinate(200, 300)
+                    },
+                    calculations: {
+                        shortDistance: DemoGeoUtils.formatDistance(0.5),
+                        longDistance: DemoGeoUtils.formatDistance(1500.75)
+                    }
                 };
                 
                 showResult('utils-result', results);
@@ -380,117 +384,84 @@
             }
         }
 
-        // 캐시 테스트
-        function testCacheSystem() {
-            showLoading();
+        function testConstants() {
             try {
-                const cache = api.container.get('cache');
-                
-                // 테스트 데이터 저장
-                cache.set('test-key-1', { message: 'Hello Cache!', timestamp: Date.now() });
-                cache.set('test-key-2', { data: [1, 2, 3, 4, 5] });
-                
                 const results = {
-                    stats: cache.getStats(),
-                    testData1: cache.get('test-key-1'),
-                    testData2: cache.get('test-key-2'),
-                    nonExistent: cache.get('non-existent-key'),
-                    topItems: cache.getTopItems(5)
+                    contentTypes: DEMO_CONSTANTS.CONTENT_TYPES,
+                    areaCodes: DEMO_CONSTANTS.AREA_CODES,
+                    selectedArea: DEMO_CONSTANTS.AREA_CODES[document.getElementById('area-code').value],
+                    selectedContentType: DEMO_CONSTANTS.CONTENT_TYPES[document.getElementById('content-type').value]
                 };
                 
-                showResult('cache-result', results);
+                showResult('utils-result', results);
             } catch (error) {
-                showResult('cache-result', { error: error.message }, true);
+                showResult('utils-result', { error: error.message }, true);
             }
         }
 
-        function testRateLimiter() {
-            showLoading();
-            try {
-                const rateLimiter = api.container.get('rateLimiter');
-                const testClient = 'test-client-' + Date.now();
-                
-                const results = {
-                    initialCheck: rateLimiter.isAllowed(testClient),
-                    remainingQuota: rateLimiter.getRemainingQuota(testClient),
-                    resetTime: rateLimiter.getResetTime(testClient),
-                    stats: rateLimiter.getStats()
-                };
-                
-                // 연속 요청 테스트
-                const rapidTests = [];
-                for (let i = 0; i < 5; i++) {
-                    rapidTests.push({
-                        attempt: i + 1,
-                        allowed: rateLimiter.isAllowed(testClient),
-                        remaining: rateLimiter.getRemainingQuota(testClient)
-                    });
-                }
-                
-                results.rapidRequestTests = rapidTests;
-                showResult('cache-result', results);
-            } catch (error) {
-                showResult('cache-result', { error: error.message }, true);
-            }
-        }
-
-        function clearAllCache() {
-            showLoading();
-            try {
-                const result = api.clearCache();
-                showResult('cache-result', result);
-            } catch (error) {
-                showResult('cache-result', { error: error.message }, true);
-            }
-        }
-
-        // API 시뮬레이션
+        // API 시뮬레이션 함수들
         function simulateAreaBasedList() {
-            showLoading();
             try {
                 const areaCode = document.getElementById('area-code').value;
                 const contentTypeId = document.getElementById('content-type').value;
                 
-                // 실제 API 호출 대신 시뮬레이션 데이터 생성
+                const areaName = DEMO_CONSTANTS.AREA_CODES[areaCode]?.ko || '알 수 없음';
+                const contentTypeName = DEMO_CONSTANTS.CONTENT_TYPES[contentTypeId]?.ko || '알 수 없음';
+                
                 const simulatedResponse = {
                     success: true,
+                    timestamp: new Date().toISOString(),
                     operation: 'areaBasedList',
                     data: {
                         items: [
                             {
                                 contentid: '126508',
-                                title: '경복궁',
-                                addr1: '서울특별시 종로구 사직로 161',
+                                title: `${areaName} ${contentTypeName} 1`,
+                                addr1: `${areaName} 중구 명동길 123`,
                                 areacode: areaCode,
                                 contenttypeid: contentTypeId,
-                                firstimage: 'http://example.com/image1.jpg',
+                                firstimage: 'https://via.placeholder.com/300x200?text=Image1',
                                 mapx: '126.977041',
-                                mapy: '37.579617'
+                                mapy: '37.579617',
+                                meta: {
+                                    areaName: areaName,
+                                    contentTypeName: contentTypeName,
+                                    hasImage: true,
+                                    hasCoordinates: true
+                                }
                             },
                             {
                                 contentid: '126509',
-                                title: '창덕궁',
-                                addr1: '서울특별시 종로구 율곡로 99',
+                                title: `${areaName} ${contentTypeName} 2`,
+                                addr1: `${areaName} 종로구 종로 456`,
                                 areacode: areaCode,
                                 contenttypeid: contentTypeId,
-                                firstimage: 'http://example.com/image2.jpg',
+                                firstimage: 'https://via.placeholder.com/300x200?text=Image2',
                                 mapx: '126.991168',
-                                mapy: '37.579421'
+                                mapy: '37.579421',
+                                meta: {
+                                    areaName: areaName,
+                                    contentTypeName: contentTypeName,
+                                    hasImage: true,
+                                    hasCoordinates: true
+                                }
                             }
                         ],
                         pagination: {
                             totalCount: 2,
                             pageNo: 1,
                             numOfRows: 10,
+                            totalPages: 1,
                             hasNext: false,
                             hasPrev: false
                         }
                     },
                     metadata: {
                         operation: 'areaBasedList',
-                        requestId: SafeUtils.generateRequestId(),
+                        requestId: DemoSafeUtils.generateRequestId(),
                         timestamp: new Date().toISOString(),
-                        simulation: true
+                        simulation: true,
+                        processingTime: Math.random() * 100 + 50
                     }
                 };
                 
@@ -501,36 +472,72 @@
         }
 
         function simulateKeywordSearch() {
-            showLoading();
             try {
                 const keyword = document.getElementById('search-keyword').value;
                 
+                if (!keyword.trim()) {
+                    throw new Error('검색 키워드를 입력해주세요');
+                }
+                
                 const simulatedResponse = {
                     success: true,
+                    timestamp: new Date().toISOString(),
                     operation: 'searchKeyword',
                     data: {
                         items: [
                             {
                                 contentid: '126508',
-                                title: keyword + ' 관련 결과 1',
+                                title: `${keyword} - 메인 관광지`,
                                 addr1: '서울특별시 종로구',
-                                overview: `${keyword}에 대한 상세 설명입니다.`,
+                                overview: `${keyword}에 대한 상세한 설명입니다. 역사적 가치가 높은 장소로 많은 관광객들이 방문합니다.`,
+                                tel: '02-1234-5678',
+                                firstimage: 'https://via.placeholder.com/400x300?text=' + encodeURIComponent(keyword),
+                                mapx: '126.977041',
+                                mapy: '37.579617',
                                 meta: {
                                     hasImage: true,
                                     hasCoordinates: true,
-                                    completeness: 85
+                                    completeness: 95,
+                                    relevanceScore: 0.98
+                                }
+                            },
+                            {
+                                contentid: '126509',
+                                title: `${keyword} 주변 명소`,
+                                addr1: '서울특별시 중구',
+                                overview: `${keyword} 근처에 위치한 또 다른 관광 명소입니다.`,
+                                tel: '02-9876-5432',
+                                firstimage: 'https://via.placeholder.com/400x300?text=Related',
+                                mapx: '126.991168',
+                                mapy: '37.579421',
+                                meta: {
+                                    hasImage: true,
+                                    hasCoordinates: true,
+                                    completeness: 85,
+                                    relevanceScore: 0.75
                                 }
                             }
                         ],
+                        pagination: {
+                            totalCount: 2,
+                            pageNo: 1,
+                            numOfRows: 10,
+                            totalPages: 1,
+                            hasNext: false,
+                            hasPrev: false
+                        },
                         searchQuery: {
                             keyword: keyword,
+                            sanitizedKeyword: DemoSafeUtils.sanitizeInput(keyword),
                             filters: {}
                         }
                     },
                     metadata: {
                         operation: 'searchKeyword',
+                        requestId: DemoSafeUtils.generateRequestId(),
                         simulation: true,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        processingTime: Math.random() * 150 + 75
                     }
                 };
                 
@@ -541,30 +548,49 @@
         }
 
         function simulateDetailInfo() {
-            showLoading();
             try {
                 const simulatedResponse = {
                     success: true,
+                    timestamp: new Date().toISOString(),
                     operation: 'detailCommon',
                     data: {
                         contentid: '126508',
                         title: '경복궁',
                         addr1: '서울특별시 종로구 사직로 161',
+                        addr2: '(세종로)',
+                        zipcode: '03045',
                         tel: '02-3700-3900',
-                        overview: '조선 왕조의 법궁으로 1395년에 창건된 조선시대의 대표적인 궁궐입니다.',
+                        overview: '조선 왕조의 법궁으로 1395년(태조 4년)에 창건된 조선시대의 대표적인 궁궐입니다. 경복궁은 동양 건축의 아름다움을 잘 보여주는 곳으로, 근정전, 경회루, 향원정 등의 아름다운 건물들이 있습니다.',
                         homepage: 'http://www.royalpalace.go.kr',
+                        firstimage: 'https://via.placeholder.com/600x400?text=경복궁',
+                        firstimage2: 'https://via.placeholder.com/300x200?text=경복궁-썸네일',
+                        mapx: '126.977041',
+                        mapy: '37.579617',
+                        areacode: '1',
+                        sigungucode: '1',
+                        contenttypeid: '12',
+                        cat1: 'A02',
+                        cat2: 'A0201',
+                        cat3: 'A02010100',
+                        createdtime: '20080424143000',
+                        modifiedtime: '20231215090000',
                         meta: {
                             contentTypeName: '관광지',
                             areaName: '서울',
                             hasImage: true,
                             hasCoordinates: true,
-                            completeness: 95
+                            hasOverview: true,
+                            hasHomepage: true,
+                            completeness: 95,
+                            lastUpdated: '2023-12-15T09:00:00'
                         }
                     },
                     metadata: {
                         operation: 'detailCommon',
+                        requestId: DemoSafeUtils.generateRequestId(),
                         simulation: true,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        processingTime: Math.random() * 120 + 60
                     }
                 };
                 
@@ -574,77 +600,145 @@
             }
         }
 
-        // 에러 테스트
+        function simulateBatchRequest() {
+            try {
+                const operations = [
+                    { operation: 'areaBasedList', params: { areaCode: '1', numOfRows: '5' } },
+                    { operation: 'searchKeyword', params: { keyword: '경복궁' } },
+                    { operation: 'detailCommon', params: { contentId: '126508' } }
+                ];
+
+                const results = operations.map((op, index) => ({
+                    index,
+                    operation: op.operation,
+                    params: op.params,
+                    success: true,
+                    result: {
+                        success: true,
+                        data: { simulated: true, operation: op.operation },
+                        processingTime: Math.random() * 100 + 50
+                    }
+                }));
+
+                const batchResponse = {
+                    success: true,
+                    timestamp: new Date().toISOString(),
+                    operation: 'batch',
+                    data: {
+                        results: results,
+                        summary: {
+                            total: operations.length,
+                            successful: results.length,
+                            failed: 0,
+                            successRate: '100.00%'
+                        }
+                    },
+                    metadata: {
+                        requestId: DemoSafeUtils.generateRequestId(),
+                        batchSize: operations.length,
+                        simulation: true,
+                        totalProcessingTime: Math.random() * 300 + 150
+                    }
+                };
+
+                showResult('api-result', batchResponse);
+            } catch (error) {
+                showResult('api-result', { error: error.message }, true);
+            }
+        }
+
+        // 에러 테스트 함수들
         function testValidationError() {
-            showLoading();
             try {
                 // 의도적으로 잘못된 파라미터로 검증 오류 발생
-                const validator = api.container.get('validator');
-                validator.validate('searchKeyword', {
+                DemoValidator.validateParams('searchKeyword', {
                     keyword: '', // 빈 키워드
-                    numOfRows: 'invalid', // 잘못된 숫자
-                    areaCode: '999' // 존재하지 않는 지역코드
+                    numOfRows: 'invalid' // 잘못된 숫자
                 });
             } catch (error) {
-                showResult('error-result', {
-                    errorType: error.constructor.name,
-                    message: error.message,
-                    field: error.field,
-                    value: error.value,
-                    statusCode: error.statusCode
-                }, true);
+                const errorResponse = {
+                    success: false,
+                    timestamp: new Date().toISOString(),
+                    operation: 'validation',
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: error.message,
+                        statusCode: 400
+                    },
+                    metadata: {
+                        errorType: 'ValidationError',
+                        simulation: true
+                    }
+                };
+                showResult('error-result', errorResponse, true);
             }
         }
 
         function testApiError() {
-            showLoading();
-            try {
-                // API 에러 시뮬레이션
-                const apiError = new TourismApiError(
-                    'SIMULATED_API_ERROR',
-                    'testOperation',
-                    503,
-                    { reason: 'Service temporarily unavailable' },
-                    {},
-                    api.container.get('i18n')
-                );
-                
-                const errorResponse = ResponseFormatter.formatError(apiError, 'testOperation');
-                showResult('error-result', errorResponse, true);
-            } catch (error) {
-                showResult('error-result', { error: error.message }, true);
-            }
+            const apiErrorResponse = {
+                success: false,
+                timestamp: new Date().toISOString(),
+                operation: 'detailCommon',
+                error: {
+                    code: 'NOT_FOUND',
+                    message: '요청한 콘텐츠를 찾을 수 없습니다',
+                    statusCode: 404,
+                    details: {
+                        contentId: '999999',
+                        reason: 'Content does not exist'
+                    }
+                },
+                metadata: {
+                    errorType: 'TourismApiError',
+                    requestId: DemoSafeUtils.generateRequestId(),
+                    simulation: true
+                }
+            };
+            
+            showResult('error-result', apiErrorResponse, true);
         }
 
-        function testSecurityError() {
-            showLoading();
-            try {
-                // 보안 에러 시뮬레이션
-                const securityError = new SecurityError(
-                    'Potential XSS attack detected',
-                    { 
-                        input: '<script>alert("xss")</script>',
-                        blockedReason: 'Script tag detected'
-                    },
-                    api.container.get('i18n')
-                );
-                
-                const errorResponse = ResponseFormatter.formatError(securityError, 'security');
-                showResult('error-result', errorResponse, true);
-            } catch (error) {
-                showResult('error-result', { error: error.message }, true);
-            }
+        function testRateLimitError() {
+            const rateLimitErrorResponse = {
+                success: false,
+                timestamp: new Date().toISOString(),
+                operation: 'rateLimit',
+                error: {
+                    code: 'RATE_LIMIT_EXCEEDED',
+                    message: '요청 한도를 초과했습니다 (제한: 100/분)',
+                    statusCode: 429,
+                    details: {
+                        limit: 100,
+                        remaining: 0,
+                        resetTime: Date.now() + 60000
+                    }
+                },
+                metadata: {
+                    errorType: 'RateLimitError',
+                    requestId: DemoSafeUtils.generateRequestId(),
+                    simulation: true
+                }
+            };
+            
+            showResult('error-result', rateLimitErrorResponse, true);
         }
 
         // 페이지 로드 시 초기화
         window.addEventListener('load', function() {
-            console.log('🎯 Tourism API 테스트 페이지가 준비되었습니다!');
-            console.log('📝 모든 테스트 기능을 사용해보세요.');
+            console.log('🎯 Tourism API 데모 테스트 페이지가 준비되었습니다!');
+            console.log('✅ API 키 없이 모든 기능을 테스트할 수 있습니다.');
+            console.log('💡 이 데모는 시뮬레이션 데이터를 사용합니다.');
             
-            if (api) {
-                console.log('✅ API 인스턴스:', api);
-                console.log('📊 시스템 상태:', api.getSystemStatus());
-            }
+            // 데모 환경 정보 표시
+            const demoInfo = {
+                환경: '데모 모드',
+                API키_필요: '아니오',
+                실제_API_호출: '아니오',
+                시뮬레이션_데이터: '예',
+                지원_기능: ['HTML 정화', '입력 검증', '위치 계산', 'API 시뮬레이션', '에러 처리']
+            };
+            
+            console.table(demoInfo);
         });
     </script>
 </body>
