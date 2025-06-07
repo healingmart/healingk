@@ -3,480 +3,649 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 All Tourism API v2.1.0 - 테스트 센터</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Tourism API 테스트</title>
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .test-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            margin: 20px 0;
-            padding: 30px;
-        }
-        .api-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 15px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border-left: 5px solid #667eea;
-        }
-        .api-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-        .status-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
-        }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-error { background: #f8d7da; color: #721c24; }
-        .status-loading { background: #fff3cd; color: #856404; }
-        .result-container {
-            background: #f8f9fa;
-            border-radius: 10px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
-            margin-top: 15px;
+            background: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
             max-height: 400px;
             overflow-y: auto;
         }
-        .metric-card {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
+        .loading {
+            color: #007bff;
+            font-weight: bold;
+            display: none;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .input-group {
             margin: 10px 0;
         }
-        .hero-section {
+        .input-group label {
+            display: inline-block;
+            width: 100px;
+            font-weight: bold;
+        }
+        .input-group input, .input-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-item {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
             text-align: center;
-            color: white;
-            padding: 40px 0;
         }
-        .test-nav {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #495057;
         }
-        .test-nav a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            margin: 0 10px;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-        }
-        .test-nav a:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-        .code-block {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            overflow-x: auto;
+        .api-key-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <!-- Hero Section -->
-        <div class="hero-section">
-            <h1><i class="fas fa-rocket"></i> All Tourism API v2.1.0</h1>
-            <p class="lead">완벽한 한국관광공사 API 클라이언트 라이브러리 테스트 센터</p>
-            
-            <!-- Navigation -->
-            <div class="test-nav">
-                <a href="#basic-tests"><i class="fas fa-play"></i> 기본 테스트</a>
-                <a href="examples/basic-test.html"><i class="fas fa-search"></i> 검색 테스트</a>
-                <a href="examples/advanced-test.html"><i class="fas fa-cogs"></i> 고급 테스트</a>
-                <a href="examples/batch-test.html"><i class="fas fa-layer-group"></i> 배치 테스트</a>
-            </div>
-        </div>
-
-        <div class="container">
-            <!-- API Status -->
-            <div class="test-container">
-                <h2><i class="fas fa-heartbeat"></i> API 상태 모니터링</h2>
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="metric-card">
-                            <h4 id="api-status">확인 중...</h4>
-                            <small>API 상태</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="metric-card">
-                            <h4 id="cache-hit-rate">0%</h4>
-                            <small>캐시 히트율</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="metric-card">
-                            <h4 id="total-requests">0</h4>
-                            <small>총 요청 수</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="metric-card">
-                            <h4 id="avg-response-time">0ms</h4>
-                            <small>평균 응답시간</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Test Section -->
-            <div class="test-container" id="basic-tests">
-                <h2><i class="fas fa-flask"></i> 빠른 기능 테스트</h2>
-                
-                <!-- API Key Setup -->
-                <div class="api-card">
-                    <h4><i class="fas fa-key"></i> API 키 설정</h4>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <input type="password" id="apiKey" class="form-control" 
-                                   placeholder="한국관광공사 API 키를 입력하세요">
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-primary w-100" onclick="setApiKey()">
-                                <i class="fas fa-save"></i> 설정
-                            </button>
-                        </div>
-                    </div>
-                    <small class="text-muted">
-                        API 키는 <a href="https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15101578" target="_blank">
-                        한국관광공사 공공데이터포털</a>에서 발급받을 수 있습니다.
-                    </small>
-                </div>
-
-                <!-- Health Check -->
-                <div class="api-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4><i class="fas fa-stethoscope"></i> 헬스체크</h4>
-                        <button class="btn btn-success" onclick="runHealthCheck()">
-                            <i class="fas fa-play"></i> 실행
-                        </button>
-                    </div>
-                    <div id="health-status" class="status-badge status-loading mt-3">대기 중</div>
-                    <div id="health-result" class="result-container" style="display: none;"></div>
-                </div>
-
-                <!-- Area Based List Test -->
-                <div class="api-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4><i class="fas fa-map-marker-alt"></i> 지역별 관광정보 조회</h4>
-                        <button class="btn btn-primary" onclick="testAreaBasedList()">
-                            <i class="fas fa-search"></i> 테스트
-                        </button>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-4">
-                            <select id="contentTypeId" class="form-select">
-                                <option value="12">관광지</option>
-                                <option value="14">문화시설</option>
-                                <option value="15">축제공연행사</option>
-                                <option value="32">숙박</option>
-                                <option value="39">음식점</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="areaCode" class="form-select">
-                                <option value="1">서울</option>
-                                <option value="6">부산</option>
-                                <option value="39">제주도</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="number" id="numOfRows" class="form-control" 
-                                   value="5" min="1" max="100" placeholder="결과 수">
-                        </div>
-                    </div>
-                    <div id="area-status" class="status-badge status-loading mt-3" style="display: none;">처리 중...</div>
-                    <div id="area-result" class="result-container" style="display: none;"></div>
-                </div>
-
-                <!-- Keyword Search Test -->
-                <div class="api-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4><i class="fas fa-search"></i> 키워드 검색</h4>
-                        <button class="btn btn-info" onclick="testKeywordSearch()">
-                            <i class="fas fa-search"></i> 검색
-                        </button>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-8">
-                            <input type="text" id="keyword" class="form-control" 
-                                   value="경복궁" placeholder="검색할 키워드를 입력하세요">
-                        </div>
-                        <div class="col-md-4">
-                            <input type="number" id="keywordRows" class="form-control" 
-                                   value="5" min="1" max="100" placeholder="결과 수">
-                        </div>
-                    </div>
-                    <div id="keyword-status" class="status-badge status-loading mt-3" style="display: none;">검색 중...</div>
-                    <div id="keyword-result" class="result-container" style="display: none;"></div>
-                </div>
-
-                <!-- Location Based Test -->
-                <div class="api-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4><i class="fas fa-map-pin"></i> 위치 기반 검색</h4>
-                        <button class="btn btn-warning" onclick="testLocationBased()">
-                            <i class="fas fa-crosshairs"></i> 현재 위치로 검색
-                        </button>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-3">
-                            <input type="text" id="userLat" class="form-control" 
-                                   value="37.5665" placeholder="위도">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" id="userLng" class="form-control" 
-                                   value="126.9780" placeholder="경도">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="number" id="radius" class="form-control" 
-                                   value="5" min="1" max="20" placeholder="반경(km)">
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-secondary w-100" onclick="getCurrentLocation()">
-                                <i class="fas fa-location-arrow"></i> 현재 위치
-                            </button>
-                        </div>
-                    </div>
-                    <div id="location-status" class="status-badge status-loading mt-3" style="display: none;">검색 중...</div>
-                    <div id="location-result" class="result-container" style="display: none;"></div>
-                </div>
-
-                <!-- System Status -->
-                <div class="api-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4><i class="fas fa-chart-line"></i> 시스템 상태</h4>
-                        <div>
-                            <button class="btn btn-outline-primary me-2" onclick="getSystemStatus()">
-                                <i class="fas fa-sync"></i> 새로고침
-                            </button>
-                            <button class="btn btn-outline-danger" onclick="clearCache()">
-                                <i class="fas fa-trash"></i> 캐시 초기화
-                            </button>
-                        </div>
-                    </div>
-                    <div id="system-status" class="status-badge status-loading mt-3" style="display: none;">확인 중...</div>
-                    <div id="system-result" class="result-container" style="display: none;"></div>
-                </div>
-            </div>
-
-            <!-- Code Examples -->
-            <div class="test-container">
-                <h2><i class="fas fa-code"></i> 코드 예제</h2>
-                
-                <div class="api-card">
-                    <h4>기본 사용법</h4>
-                    <div class="code-block">
-<pre><code>// API 인스턴스 생성
-const api = new AllTourismAPI({
-    serviceKey: 'YOUR_API_KEY'
-});
-
-// 관광지 검색
-const result = await api.areaBasedList({
-    contentTypeId: '12',
-    areaCode: '1',
-    numOfRows: '10'
-});
-
-console.log(result);</code></pre>
-                    </div>
-                </div>
-
-                <div class="api-card">
-                    <h4>위치 기반 검색</h4>
-                    <div class="code-block">
-<pre><code>// 현재 위치 기준 주변 관광지
-const nearbyPlaces = await api.areaBasedList({
-    contentTypeId: '12',
-    userLat: '37.5665',
-    userLng: '126.9780',
-    radius: '5'
-});
-
-// 거리 정보가 자동으로 추가됨
-nearbyPlaces.data.items.forEach(item => {
-    console.log(`${item.title}: ${item.meta.distanceText}`);
-});</code></pre>
-                    </div>
-                </div>
-
-                <div class="api-card">
-                    <h4>배치 요청</h4>
-                    <div class="code-block">
-<pre><code>// 여러 요청을 동시에 처리
-const batchResult = await api.batchRequest([
-    { operation: 'areaBasedList', params: { contentTypeId: '12', areaCode: '1' } },
-    { operation: 'searchKeyword', params: { keyword: '경복궁' } },
-    { operation: 'areaCode', params: {} }
-]);
-
-console.log(batchResult);</code></pre>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="header">
+        <h1>🚀 Tourism API 테스트 도구</h1>
+        <p>한국관광공사 API 통합 테스트 페이지</p>
     </div>
 
-    <!-- Load API Library -->
-    <script src="../src/all-tourism-api.js"></script>
+    <div class="api-key-warning">
+        <strong>⚠️ 주의사항:</strong> 
+        실제 API 호출을 위해서는 한국관광공사에서 발급받은 API 키가 필요합니다. 
+        브라우저에서 직접 API를 호출하면 CORS 오류가 발생할 수 있습니다.
+    </div>
+
+    <!-- 시스템 상태 테스트 -->
+    <div class="test-section">
+        <h2>📊 시스템 상태 확인</h2>
+        <p>API 시스템의 기본 상태와 구성 정보를 확인합니다.</p>
+        <button class="btn" onclick="testSystemStatus()">시스템 상태 확인</button>
+        <button class="btn" onclick="testConstants()">상수 정보 확인</button>
+        <button class="btn" onclick="testLanguage()">다국어 테스트</button>
+        <div id="system-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- 기본 기능 테스트 -->
+    <div class="test-section">
+        <h2>🛠️ 기본 기능 테스트</h2>
+        <p>API의 유틸리티 함수들과 기본 기능을 테스트합니다.</p>
+        
+        <div class="input-group">
+            <label>테스트 텍스트:</label>
+            <input type="text" id="test-text" value="<script>alert('test')</script>안녕하세요" placeholder="테스트할 텍스트 입력">
+        </div>
+        
+        <button class="btn" onclick="testSanitization()">HTML 정화 테스트</button>
+        <button class="btn" onclick="testValidation()">입력 검증 테스트</button>
+        <button class="btn" onclick="testGeoUtils()">위치 계산 테스트</button>
+        <div id="utils-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- 캐시 및 성능 테스트 -->
+    <div class="test-section">
+        <h2>⚡ 캐시 및 성능 테스트</h2>
+        <p>캐시 시스템과 성능 모니터링 기능을 테스트합니다.</p>
+        <button class="btn" onclick="testCacheSystem()">캐시 시스템 테스트</button>
+        <button class="btn" onclick="testRateLimiter()">속도 제한 테스트</button>
+        <button class="btn" onclick="clearAllCache()">캐시 초기화</button>
+        <div id="cache-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- API 호출 시뮬레이션 -->
+    <div class="test-section">
+        <h2>🌐 API 호출 시뮬레이션</h2>
+        <p>실제 API 구조와 응답 형식을 시뮬레이션합니다.</p>
+        
+        <div class="input-group">
+            <label>지역코드:</label>
+            <select id="area-code">
+                <option value="1">서울</option>
+                <option value="6">부산</option>
+                <option value="32">강원도</option>
+                <option value="39">제주도</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label>콘텐츠 타입:</label>
+            <select id="content-type">
+                <option value="12">관광지</option>
+                <option value="14">문화시설</option>
+                <option value="15">축제공연행사</option>
+                <option value="32">숙박</option>
+                <option value="39">음식점</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label>키워드:</label>
+            <input type="text" id="search-keyword" value="경복궁" placeholder="검색할 키워드">
+        </div>
+        
+        <button class="btn" onclick="simulateAreaBasedList()">지역별 목록 시뮬레이션</button>
+        <button class="btn" onclick="simulateKeywordSearch()">키워드 검색 시뮬레이션</button>
+        <button class="btn" onclick="simulateDetailInfo()">상세정보 시뮬레이션</button>
+        <div id="api-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- 에러 처리 테스트 -->
+    <div class="test-section">
+        <h2>🚨 에러 처리 테스트</h2>
+        <p>다양한 에러 상황과 예외 처리를 테스트합니다.</p>
+        <button class="btn" onclick="testValidationError()">검증 오류 테스트</button>
+        <button class="btn" onclick="testApiError()">API 오류 테스트</button>
+        <button class="btn" onclick="testSecurityError()">보안 오류 테스트</button>
+        <div id="error-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div id="loading" class="loading">⏳ 처리 중...</div>
+
+    <!-- Tourism.js 로드 -->
+    <script src="./tourism.js"></script>
     
     <script>
-        let apiInstance = null;
-        let testMetrics = {
-            totalRequests: 0,
-            successfulRequests: 0,
-            totalResponseTime: 0,
-            cacheHits: 0
-        };
+        let api = null;
+        
+        // API 초기화 (실제 환경에서는 서버에서 처리)
+        try {
+            api = new AllTourismAPI({
+                serviceKey: 'test_key_for_demo', // 데모용
+                enableCaching: true,
+                enableRateLimiting: true,
+                logLevel: 'info'
+            });
+            console.log('✅ Tourism API 초기화 완료');
+        } catch (error) {
+            console.error('❌ API 초기화 실패:', error);
+        }
 
-        // API 키 설정
-        function setApiKey() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            if (!apiKey) {
-                alert('API 키를 입력해주세요.');
-                return;
-            }
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
 
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showResult(elementId, data, isError = false) {
+            hideLoading();
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // 시스템 상태 테스트
+        function testSystemStatus() {
+            showLoading();
             try {
-                apiInstance = new AllTourismAPI({
-                    serviceKey: apiKey,
-                    enableMetrics: true,
-                    enableCaching: true,
-                    logLevel: 'info'
-                });
-                
-                showSuccess('API 키가 설정되었습니다.');
-                updateMetrics();
+                const status = api.getSystemStatus();
+                showResult('system-result', status);
             } catch (error) {
-                showError('API 인스턴스 생성 실패: ' + error.message);
+                showResult('system-result', { error: error.message }, true);
             }
         }
 
-        // 헬스체크
-        async function runHealthCheck() {
-            const statusEl = document.getElementById('health-status');
-            const resultEl = document.getElementById('health-result');
-            
-            statusEl.className = 'status-badge status-loading';
-            statusEl.textContent = '확인 중...';
-            statusEl.style.display = 'block';
-            resultEl.style.display = 'none';
-
+        function testConstants() {
+            showLoading();
             try {
-                const startTime = Date.now();
-                const health = await healthCheck();
-                const responseTime = Date.now() - startTime;
-                
-                updateRequestMetrics(responseTime, true);
-                
-                statusEl.className = 'status-badge status-success';
-                statusEl.textContent = `✅ 정상 (${responseTime}ms)`;
-                
-                resultEl.innerHTML = `<pre>${JSON.stringify(health, null, 2)}</pre>`;
-                resultEl.style.display = 'block';
-                
-                document.getElementById('api-status').textContent = health.status === 'healthy' ? '정상' : '오류';
+                const constants = api.container.get('constants');
+                const result = {
+                    contentTypes: constants.getAllContentTypes('ko'),
+                    areaCodes: constants.getAllAreaCodes('ko'),
+                    supportedOperations: constants.SUPPORTED_OPERATIONS
+                };
+                showResult('system-result', result);
             } catch (error) {
-                updateRequestMetrics(0, false);
-                statusEl.className = 'status-badge status-error';
-                statusEl.textContent = '❌ 오류';
-                resultEl.innerHTML = `<div class="text-danger">오류: ${error.message}</div>`;
-                resultEl.style.display = 'block';
+                showResult('system-result', { error: error.message }, true);
             }
         }
 
-        // 지역별 관광정보 테스트
-        async function testAreaBasedList() {
-            if (!apiInstance) {
-                alert('먼저 API 키를 설정해주세요.');
-                return;
-            }
-
-            const statusEl = document.getElementById('area-status');
-            const resultEl = document.getElementById('area-result');
-            
-            statusEl.style.display = 'block';
-            resultEl.style.display = 'none';
-
+        function testLanguage() {
+            showLoading();
             try {
-                const startTime = Date.now();
-                const result = await apiInstance.areaBasedList({
-                    contentTypeId: document.getElementById('contentTypeId').value,
-                    areaCode: document.getElementById('areaCode').value,
-                    numOfRows: document.getElementById('numOfRows').value
-                });
-                const responseTime = Date.now() - startTime;
+                const i18n = api.container.get('i18n');
+                const results = [];
                 
-                updateRequestMetrics(responseTime, true, result.metadata?.cache?.fromCache);
-                
-                statusEl.className = 'status-badge status-success';
-                statusEl.textContent = `✅ 성공 (${responseTime}ms)`;
-                
-                if (result.data?.items?.length > 0) {
-                    let html = '<h5>검색 결과:</h5>';
-                    result.data.items.forEach((item, index) => {
-                        html += `
-                            <div class="border rounded p-3 mb-2">
-                                <h6>${item.title || '제목 없음'}</h6>
-                                <p class="text-muted mb-1">${item.addr1 || '주소 없음'}</p>
-                                ${item.meta?.distanceText ? `<span class="badge bg-info">${item.meta.distanceText}</span>` : ''}
-                                ${item.meta?.directionText ? `<span class="badge bg-secondary">${item.meta.directionText}</span>` : ''}
-                            </div>
-                        `;
+                // 언어 변경 테스트
+                ['ko', 'en', 'ja', 'zh'].forEach(lang => {
+                    i18n.setLanguage(lang);
+                    results.push({
+                        language: lang,
+                        message: i18n.getMessage('VALIDATION_ERROR'),
+                        currentLang: i18n.getCurrentLanguage()
                     });
-                    resultEl.innerHTML = html;
-                } else {
-                    resultEl.innerHTML = '<div class="text-warning">검색 결과가 없습니다.</div>';
+                });
+                
+                showResult('system-result', { languageTests: results });
+            } catch (error) {
+                showResult('system-result', { error: error.message }, true);
+            }
+        }
+
+        // 유틸리티 테스트
+        function testSanitization() {
+            showLoading();
+            try {
+                const testText = document.getElementById('test-text').value;
+                const results = {
+                    original: testText,
+                    sanitized: SafeUtils.sanitizeInput(testText),
+                    keywordSanitized: SafeUtils.sanitizeKeyword(testText),
+                    htmlRemoved: SafeUtils.sanitizeInput(testText, 1000, { removeHtml: true }),
+                    strictMode: SafeUtils.sanitizeInput(testText, 1000, { strictMode: true })
+                };
+                showResult('utils-result', results);
+            } catch (error) {
+                showResult('utils-result', { error: error.message }, true);
+            }
+        }
+
+        function testValidation() {
+            showLoading();
+            try {
+                const validator = api.container.get('validator');
+                const testCases = [
+                    {
+                        operation: 'areaBasedList',
+                        params: { areaCode: '1', numOfRows: '10' },
+                        description: '정상적인 지역 조회'
+                    },
+                    {
+                        operation: 'searchKeyword',
+                        params: { keyword: '경복궁', numOfRows: 'invalid' },
+                        description: '잘못된 numOfRows'
+                    },
+                    {
+                        operation: 'detailCommon',
+                        params: { contentId: '126508' },
+                        description: '정상적인 상세 조회'
+                    }
+                ];
+
+                const results = testCases.map(test => {
+                    try {
+                        const validated = validator.validate(test.operation, test.params);
+                        return {
+                            ...test,
+                            success: true,
+                            validated: validated
+                        };
+                    } catch (error) {
+                        return {
+                            ...test,
+                            success: false,
+                            error: error.message
+                        };
+                    }
+                });
+
+                showResult('utils-result', { validationTests: results });
+            } catch (error) {
+                showResult('utils-result', { error: error.message }, true);
+            }
+        }
+
+        function testGeoUtils() {
+            showLoading();
+            try {
+                const seoul = { lat: 37.5665, lng: 126.9780 };
+                const busan = { lat: 35.1796, lng: 129.0756 };
+                
+                const results = {
+                    distance: GeoUtils.calculateDistance(seoul.lat, seoul.lng, busan.lat, busan.lng),
+                    bearing: GeoUtils.calculateBearing(seoul.lat, seoul.lng, busan.lat, busan.lng),
+                    direction: GeoUtils.getCardinalDirection(45),
+                    coordValidation: {
+                        validCoord: GeoUtils.isValidCoordinate(37.5665, 126.9780),
+                        invalidCoord: GeoUtils.isValidCoordinate(200, 300)
+                    },
+                    formattedDistance: GeoUtils.formatDistance(325.5)
+                };
+                
+                showResult('utils-result', results);
+            } catch (error) {
+                showResult('utils-result', { error: error.message }, true);
+            }
+        }
+
+        // 캐시 테스트
+        function testCacheSystem() {
+            showLoading();
+            try {
+                const cache = api.container.get('cache');
+                
+                // 테스트 데이터 저장
+                cache.set('test-key-1', { message: 'Hello Cache!', timestamp: Date.now() });
+                cache.set('test-key-2', { data: [1, 2, 3, 4, 5] });
+                
+                const results = {
+                    stats: cache.getStats(),
+                    testData1: cache.get('test-key-1'),
+                    testData2: cache.get('test-key-2'),
+                    nonExistent: cache.get('non-existent-key'),
+                    topItems: cache.getTopItems(5)
+                };
+                
+                showResult('cache-result', results);
+            } catch (error) {
+                showResult('cache-result', { error: error.message }, true);
+            }
+        }
+
+        function testRateLimiter() {
+            showLoading();
+            try {
+                const rateLimiter = api.container.get('rateLimiter');
+                const testClient = 'test-client-' + Date.now();
+                
+                const results = {
+                    initialCheck: rateLimiter.isAllowed(testClient),
+                    remainingQuota: rateLimiter.getRemainingQuota(testClient),
+                    resetTime: rateLimiter.getResetTime(testClient),
+                    stats: rateLimiter.getStats()
+                };
+                
+                // 연속 요청 테스트
+                const rapidTests = [];
+                for (let i = 0; i < 5; i++) {
+                    rapidTests.push({
+                        attempt: i + 1,
+                        allowed: rateLimiter.isAllowed(testClient),
+                        remaining: rateLimiter.getRemainingQuota(testClient)
+                    });
                 }
                 
-                resultEl.style.display = 'block';
+                results.rapidRequestTests = rapidTests;
+                showResult('cache-result', results);
             } catch (error) {
-                updateRequestMetrics(0, false);
-                statusEl.className = 'status-badge status-error';
-                statusEl.textContent = '❌ 오류';
-                resultEl.innerHTML = `<div class="text-danger">오류: ${error.message}</div>`;
-                resultEl.style.display = 'block';
+                showResult('cache-result', { error: error.message }, true);
             }
         }
 
-        // 키워드 검색 테스트
-        async function testKeywordSearch() {
-            if (!apiInstance) {
-                alert('먼저 API 키를 설정해주세요.');
-                return;
-            }
-
-            const statusEl = document.getElementById('keyword-status');
-            const resultEl = document.getElementById('keyword-result');
-            
-            statusEl.style.display = 'block';
-            resultEl.style.display = 'none';
-
+        function clearAllCache() {
+            showLoading();
             try {
-                const startTime = Date.now();
-                const result = await apiInstance.searchKeyword({
-                    keyword: document.getElementById('keyword').value,
-                    numOfRows: document.getElementById('keywordRows').value
+                const result = api.clearCache();
+                showResult('cache-result', result);
+            } catch (error) {
+                showResult('cache-result', { error: error.message }, true);
+            }
+        }
+
+        // API 시뮬레이션
+        function simulateAreaBasedList() {
+            showLoading();
+            try {
+                const areaCode = document.getElementById('area-code').value;
+                const contentTypeId = document.getElementById('content-type').value;
+                
+                // 실제 API 호출 대신 시뮬레이션 데이터 생성
+                const simulatedResponse = {
+                    success: true,
+                    operation: 'areaBasedList',
+                    data: {
+                        items: [
+                            {
+                                contentid: '126508',
+                                title: '경복궁',
+                                addr1: '서울특별시 종로구 사직로 161',
+                                areacode: areaCode,
+                                contenttypeid: contentTypeId,
+                                firstimage: 'http://example.com/image1.jpg',
+                                mapx: '126.977041',
+                                mapy: '37.579617'
+                            },
+                            {
+                                contentid: '126509',
+                                title: '창덕궁',
+                                addr1: '서울특별시 종로구 율곡로 99',
+                                areacode: areaCode,
+                                contenttypeid: contentTypeId,
+                                firstimage: 'http://example.com/image2.jpg',
+                                mapx: '126.991168',
+                                mapy: '37.579421'
+                            }
+                        ],
+                        pagination: {
+                            totalCount: 2,
+                            pageNo: 1,
+                            numOfRows: 10,
+                            hasNext: false,
+                            hasPrev: false
+                        }
+                    },
+                    metadata: {
+                        operation: 'areaBasedList',
+                        requestId: SafeUtils.generateRequestId(),
+                        timestamp: new Date().toISOString(),
+                        simulation: true
+                    }
+                };
+                
+                showResult('api-result', simulatedResponse);
+            } catch (error) {
+                showResult('api-result', { error: error.message }, true);
+            }
+        }
+
+        function simulateKeywordSearch() {
+            showLoading();
+            try {
+                const keyword = document.getElementById('search-keyword').value;
+                
+                const simulatedResponse = {
+                    success: true,
+                    operation: 'searchKeyword',
+                    data: {
+                        items: [
+                            {
+                                contentid: '126508',
+                                title: keyword + ' 관련 결과 1',
+                                addr1: '서울특별시 종로구',
+                                overview: `${keyword}에 대한 상세 설명입니다.`,
+                                meta: {
+                                    hasImage: true,
+                                    hasCoordinates: true,
+                                    completeness: 85
+                                }
+                            }
+                        ],
+                        searchQuery: {
+                            keyword: keyword,
+                            filters: {}
+                        }
+                    },
+                    metadata: {
+                        operation: 'searchKeyword',
+                        simulation: true,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+                
+                showResult('api-result', simulatedResponse);
+            } catch (error) {
+                showResult('api-result', { error: error.message }, true);
+            }
+        }
+
+        function simulateDetailInfo() {
+            showLoading();
+            try {
+                const simulatedResponse = {
+                    success: true,
+                    operation: 'detailCommon',
+                    data: {
+                        contentid: '126508',
+                        title: '경복궁',
+                        addr1: '서울특별시 종로구 사직로 161',
+                        tel: '02-3700-3900',
+                        overview: '조선 왕조의 법궁으로 1395년에 창건된 조선시대의 대표적인 궁궐입니다.',
+                        homepage: 'http://www.royalpalace.go.kr',
+                        meta: {
+                            contentTypeName: '관광지',
+                            areaName: '서울',
+                            hasImage: true,
+                            hasCoordinates: true,
+                            completeness: 95
+                        }
+                    },
+                    metadata: {
+                        operation: 'detailCommon',
+                        simulation: true,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+                
+                showResult('api-result', simulatedResponse);
+            } catch (error) {
+                showResult('api-result', { error: error.message }, true);
+            }
+        }
+
+        // 에러 테스트
+        function testValidationError() {
+            showLoading();
+            try {
+                // 의도적으로 잘못된 파라미터로 검증 오류 발생
+                const validator = api.container.get('validator');
+                validator.validate('searchKeyword', {
+                    keyword: '', // 빈 키워드
+                    numOfRows: 'invalid', // 잘못된 숫자
+                    areaCode: '999' // 존재하지 않는 지역코드
+                });
+            } catch (error) {
+                showResult('error-result', {
+                    errorType: error.constructor.name,
+                    message: error.message,
+                    field: error.field,
+                    value: error.value,
+                    statusCode: error.statusCode
+                }, true);
+            }
+        }
+
+        function testApiError() {
+            showLoading();
+            try {
+                // API 에러 시뮬레이션
+                const apiError = new TourismApiError(
+                    'SIMULATED_API_ERROR',
+                    'testOperation',
+                    503,
+                    { reason: 'Service temporarily unavailable' },
+                    {},
+                    api.container.get('i18n')
+                );
+                
+                const errorResponse = ResponseFormatter.formatError(apiError, 'testOperation');
+                showResult('error-result', errorResponse, true);
+            } catch (error) {
+                showResult('error-result', { error: error.message }, true);
+            }
+        }
+
+        function testSecurityError() {
+            showLoading();
+            try {
+                // 보안 에러 시뮬레이션
+                const securityError = new SecurityError(
+                    'Potential XSS attack detected',
+                    { 
+                        input: '<script>alert("xss")</script>',
+                        blockedReason: 'Script tag detected'
+                    },
+                    api.container.get('i18n')
+                );
+                
+                const errorResponse = ResponseFormatter.formatError(securityError, 'security');
+                showResult('error-result', errorResponse, true);
+            } catch (error) {
+                showResult('error-result', { error: error.message }, true);
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', function() {
+            console.log('🎯 Tourism API 테스트 페이지가 준비되었습니다!');
+            console.log('📝 모든 테스트 기능을 사용해보세요.');
+            
+            if (api) {
+                console.log('✅ API 인스턴스:', api);
+                console.log('📊 시스템 상태:', api.getSystemStatus());
+            }
+        });
+    </script>
+</body>
+</html>
