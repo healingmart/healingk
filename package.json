@@ -1,13 +1,29 @@
 {
-  "name": "healingk",
-  "version": "1.0.0",
-  "type": "commonjs",
+  "name": "tourism-api-serverless",
+  "version": "2.1.0",
+  "description": "관광 정보 API 서버리스 함수",
   "main": "tourism.js",
-  "engines": { 
-    "node": "18.x"
+  "scripts": {
+    "start": "node tourism.js",
+    "dev": "nodemon tourism.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "engines": {
+    "node": ">=14.x"
+  },
+  "keywords": [
+    "tourism",
+    "api",
+    "serverless",
+    "vercel"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "node-fetch": "^2.6.7",
-    "abort-controller": "^3.0.0"
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
   }
 }
+
