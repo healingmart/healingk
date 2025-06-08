@@ -3,460 +3,699 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism.js 진짜 API 테스트</title>
+    <title>관광 정보 API 테스트</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .header {
-            background: #007bff;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .test-section {
-            background: white;
-            margin: 20px 0;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn:hover {
-            background: #0056b3;
-        }
-        .result {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .success { border-color: #28a745; background: #d4edda; }
-        .error { border-color: #dc3545; background: #f8d7da; }
-        .loading { color: #007bff; font-weight: bold; }
-        .input-group {
-            margin: 10px 0;
-        }
-        .input-group label {
-            display: inline-block;
-            width: 100px;
-            font-weight: bold;
-        }
-        .input-group input, .input-group select {
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            width: 200px;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #e2e2e2; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        .result-section { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🔥 Tourism.js 실제 API 호출 테스트</h1>
-        <p>진짜 한국관광공사 API를 호출해서 실제 데이터를 가져옵니다!</p>
+    <div class="container">
+        <h1>관광 정보 API 테스트 클라이언트</h1>
+        <p>이 HTML 파일은 제공된 `tourism.js` (새 텍스트 문서 (20).txt) 코드가 브라우저 환경에서 사용될 수 있도록 모의(Mock) 응답을 사용하여 동작합니다.</p>
+        <p>실제 API 서버가 있다면, `tourism.js`의 `AllTourismAPI` 내부에서 `fetch` 호출 부분을 해당 서버 엔드포인트로 변경해야 합니다.</p>
+
+        <hr>
+
+        <h2>1. API 초기화</h2>
+        <button id="initApiButton">API 초기화 (인스턴스 생성)</button>
+        <div class="result-section">
+            <h3>초기화 상태:</h3>
+            <pre id="initStatus">초기화 전</pre>
+        </div>
+
+        <hr>
+
+        <h2>2. 관광 정보 검색 (Mock)</h2>
+        <label for="query">검색어:</label>
+        <input type="text" id="query" value="서울 여행">
+        <label for="pageNo">페이지 번호:</label>
+        <input type="number" id="pageNo" value="1">
+        <label for="numOfRows">결과 개수:</label>
+        <input type="number" id="numOfRows" value="10">
+        <button id="searchButton">검색</button>
+        <div class="result-section">
+            <h3>검색 결과:</h3>
+            <pre id="searchResults">결과 없음</pre>
+        </div>
+
+        <hr>
+
+        <h2>3. 에러 발생 시뮬레이션</h2>
+        <button id="simulateErrorButton">에러 시뮬레이션 (네트워크 에러)</button>
+        <div class="result-section">
+            <h3>에러 결과:</h3>
+            <pre id="errorResults">에러 없음</pre>
+        </div>
+
+        <hr>
+
+        <h2>콘솔 로그 확인</h2>
+        <p>개발자 도구 (F12)의 콘솔 탭을 열어 상세 로그와 에러를 확인하세요.</p>
     </div>
 
-    <!-- API 상태 확인 -->
-    <div class="test-section">
-        <h2>🔍 API 상태 확인</h2>
-        <button class="btn" onclick="checkHealth()">헬스체크</button>
-        <button class="btn" onclick="checkSystemStatus()">시스템 상태</button>
-        <div id="status-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- 지역별 관광지 조회 -->
-    <div class="test-section">
-        <h2>🏛️ 지역별 관광지 조회 (진짜 API)</h2>
-        
-        <div class="input-group">
-            <label>지역:</label>
-            <select id="area-code">
-                <option value="1">서울</option>
-                <option value="6">부산</option>
-                <option value="32">강원도</option>
-                <option value="39">제주도</option>
-            </select>
-        </div>
-        
-        <div class="input-group">
-            <label>타입:</label>
-            <select id="content-type">
-                <option value="12">관광지</option>
-                <option value="14">문화시설</option>
-                <option value="15">축제행사</option>
-                <option value="32">숙박</option>
-                <option value="39">음식점</option>
-            </select>
-        </div>
-        
-        <div class="input-group">
-            <label>개수:</label>
-            <select id="num-rows">
-                <option value="5">5개</option>
-                <option value="10" selected>10개</option>
-                <option value="20">20개</option>
-            </select>
-        </div>
-        
-        <button class="btn" onclick="testAreaBasedList()">🔥 실제 API 호출!</button>
-        <div id="area-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- 키워드 검색 -->
-    <div class="test-section">
-        <h2>🔍 키워드 검색 (진짜 API)</h2>
-        
-        <div class="input-group">
-            <label>키워드:</label>
-            <input type="text" id="keyword" value="경복궁" placeholder="검색할 키워드">
-        </div>
-        
-        <button class="btn" onclick="testSearchKeyword()">🔥 키워드 검색!</button>
-        <div id="search-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- 상세 정보 조회 -->
-    <div class="test-section">
-        <h2>📄 상세 정보 조회 (진짜 API)</h2>
-        
-        <div class="input-group">
-            <label>콘텐츠ID:</label>
-            <input type="text" id="content-id" value="126508" placeholder="콘텐츠 ID">
-        </div>
-        
-        <button class="btn" onclick="testDetailCommon()">🔥 상세정보 가져오기!</button>
-        <div id="detail-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- 위치 기반 검색 -->
-    <div class="test-section">
-        <h2>📍 위치 기반 검색 (진짜 API)</h2>
-        
-        <div class="input-group">
-            <label>위도:</label>
-            <input type="text" id="map-y" value="37.5665" placeholder="위도">
-        </div>
-        
-        <div class="input-group">
-            <label>경도:</label>
-            <input type="text" id="map-x" value="126.9780" placeholder="경도">
-        </div>
-        
-        <div class="input-group">
-            <label>반경(m):</label>
-            <input type="text" id="radius" value="1000" placeholder="반경">
-        </div>
-        
-        <button class="btn" onclick="testLocationBased()">🔥 위치 검색!</button>
-        <div id="location-result" class="result" style="display:none;"></div>
-    </div>
-
-    <!-- 배치 요청 테스트 -->
-    <div class="test-section">
-        <h2>📦 배치 요청 (진짜 API)</h2>
-        <p>여러 API를 한번에 호출합니다</p>
-        
-        <button class="btn" onclick="testBatchRequest()">🔥 배치 요청!</button>
-        <div id="batch-result" class="result" style="display:none;"></div>
-    </div>
-
-    <div id="loading" class="loading" style="display:none;">⏳ 실제 API 호출 중...</div>
-
-    <!-- tourism.js 로드 -->
-    <script src="./tourism.js"></script>
-    
     <script>
-        let api = null;
+        // 이 스크립트 블록 안에 '새 텍스트 문서 (20).txt' 파일의 전체 JavaScript 코드를 붙여넣으세요.
+        // 예를 들어:
+        // 'use strict';
+        // const SERVICE_START_TIME = Date.now();
+        // ... (새 텍스트 문서 (20).txt 내용 전체)
+        // class AllTourismAPI { ... }
+        // ...
+        // if (typeof window !== 'undefined') {
+        //     window.AllTourismAPI = AllTourismAPI;
+        //     // 기타 필요한 클래스들도 window에 할당
+        // }
+        // '새 텍스트 문서 (20).txt'의 마지막 부분 (module.exports 아래)에
+        // window.AllTourismAPI = AllTourismAPI;
+        // 와 같이 AllTourismAPI 클래스를 전역으로 노출하는 코드를 추가해야 브라우저에서 접근 가능합니다.
 
-        // 페이지 로드 시 tourism.js API 초기화
-        window.addEventListener('load', async function() {
-            console.log('🚀 Tourism.js 로딩 시작...');
-            
+        // **주의: 아래는 '새 텍스트 문서 (20).txt'의 일부만 포함한 임시 코드입니다.**
+        // **실제로는 '새 텍스트 문서 (20).txt'의 전체 내용을 여기에 붙여넣어야 합니다.**
+
+        'use strict';
+
+        // ===== 전역 상수 정의 =====
+        const SERVICE_START_TIME = Date.now();
+        // 브라우저 환경에서는 process 객체가 없으므로 false로 설정
+        const hasProcess = typeof process !== 'undefined' && process.versions && process.versions.node;
+
+        // 브라우저 환경에서는 fetch가 기본 제공되므로 별도 require는 필요 없음.
+        // Node.js 환경에서 사용 시 위에서 언급한 fetch/AbortController polyfill 필요.
+
+        // ===== 기본 유틸리티 =====
+        class SafeUtils {
+            static generateRequestId() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    const r = (Math.random() * 16) | 0,
+                        v = c === 'x' ? r : (r & 0x3) | 0x8;
+                    return v.toString(16);
+                });
+            }
+
+            static safeParseInt(value, defaultValue = 0) { // HTML 테스트를 위해 defaultValue 0으로 변경
+                if (value === null || value === undefined || value === '') return defaultValue;
+                const num = parseInt(value, 10);
+                return isNaN(num) ? defaultValue : num;
+            }
+
+            static safeParseFloat(value, defaultValue = 0.0) {
+                if (value === null || value === undefined || value === '') return defaultValue;
+                const parsed = parseFloat(value);
+                return isNaN(parsed) ? defaultValue : parsed;
+            }
+
+            static safeJSONParse(text, defaultValue = null) {
+                try {
+                    const parsed = JSON.parse(text);
+                    return typeof parsed === 'object' && parsed !== null ? parsed : defaultValue;
+                } catch (e) {
+                    return defaultValue;
+                }
+            }
+
+            static ensureString(value, defaultValue = '') {
+                if (typeof value === 'string') return value;
+                if (value === null || value === undefined) return defaultValue;
+                return String(value);
+            }
+        }
+
+        class GeoUtils {
+            static calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3; // metres
+                const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                        Math.cos(φ1) * Math.cos(φ2) *
+                        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+                return R * c; // in metres
+            }
+
+            static isValidCoordinates(lat, lon) {
+                return typeof lat === 'number' && typeof lon === 'number' &&
+                    lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+            }
+        }
+
+        class ConstantsManager {
+            static get(key) {
+                const constants = {
+                    API_KEY: 'YOUR_API_KEY_HERE', // 실제 API 키로 교체하세요
+                    BASE_URL: 'https://jsonplaceholder.typicode.com', // Mock API 엔드포인트
+                    SEARCH_PATH: '/posts', // Mock API 검색 경로
+                    TIMEOUT_MS: 5000,
+                    MAX_RETRIES: 3,
+                    RETRY_DELAY_MS: 1000,
+                    DEFAULT_PAGE_SIZE: 10,
+                };
+                return constants[key] || null;
+            }
+        }
+
+        class Logger {
+            constructor(context = 'Global') {
+                this.context = context;
+                this.logLevel = Logger.LEVELS.INFO; // 기본 로그 레벨
+            }
+
+            static LEVELS = {
+                DEBUG: 0,
+                INFO: 1,
+                WARN: 2,
+                ERROR: 3,
+                NONE: 4
+            };
+
+            setLogLevel(level) {
+                if (Object.values(Logger.LEVELS).includes(level)) {
+                    this.logLevel = level;
+                } else {
+                    console.warn(`[Logger] Invalid log level: ${level}`);
+                }
+            }
+
+            _log(level, message, data = {}) {
+                if (level < this.logLevel) return;
+
+                const timestamp = new Date().toISOString();
+                const levelName = Object.keys(Logger.LEVELS).find(key => Logger.LEVELS[key] === level);
+                const requestId = data.requestId || SafeUtils.generateRequestId();
+                const logMessage = `[${timestamp}] [${levelName}] [${this.context}] [ReqID:${requestId}] ${message}`;
+
+                switch (level) {
+                    case Logger.LEVELS.DEBUG:
+                        console.debug(logMessage, data);
+                        break;
+                    case Logger.LEVELS.INFO:
+                        console.info(logMessage, data);
+                        break;
+                    case Logger.LEVELS.WARN:
+                        console.warn(logMessage, data);
+                        break;
+                    case Logger.LEVELS.ERROR:
+                        console.error(logMessage, data);
+                        break;
+                    default:
+                        console.log(logMessage, data);
+                }
+            }
+
+            debug(message, data) { this._log(Logger.LEVELS.DEBUG, message, data); }
+            info(message, data) { this._log(Logger.LEVELS.INFO, message, data); }
+            warn(message, data) { this._log(Logger.LEVELS.WARN, message, data); }
+            error(message, data) { this._log(Logger.LEVELS.ERROR, message, data); }
+        }
+
+        const logger = new Logger('App'); // 전역 로거 인스턴스
+
+        // ===== 사용자 정의 에러 클래스 =====
+        class ApiError extends Error {
+            constructor(message, statusCode = 500, errorCode = 'API_ERROR', details = {}) {
+                super(message);
+                this.name = 'ApiError';
+                this.statusCode = statusCode;
+                this.errorCode = errorCode;
+                this.details = details;
+                this.isKnownError = true;
+                if (Error.captureStackTrace) {
+                    Error.captureStackTrace(this, ApiError);
+                }
+            }
+        }
+
+        class NetworkError extends ApiError {
+            constructor(message = '네트워크 연결에 문제가 발생했습니다.', details = {}) {
+                super(message, 503, 'NETWORK_ERROR', details);
+                this.name = 'NetworkError';
+            }
+        }
+
+        class ValidationError extends ApiError {
+            constructor(message = '유효성 검사 오류가 발생했습니다.', details = {}) {
+                super(message, 400, 'VALIDATION_ERROR', details);
+                this.name = 'ValidationError';
+            }
+        }
+
+        class TimeoutError extends ApiError {
+            constructor(message = '요청 시간이 초과되었습니다.', details = {}) {
+                super(message, 408, 'REQUEST_TIMEOUT', details);
+                this.name = 'TimeoutError';
+            }
+        }
+
+        class RateLimitError extends ApiError {
+            constructor(message = 'API 호출 제한을 초과했습니다.', details = {}) {
+                super(message, 429, 'RATE_LIMIT_EXCEEDED', details);
+                this.name = 'RateLimitError';
+            }
+        }
+
+        class SecurityError extends ApiError {
+            constructor(message = '보안 관련 오류가 발생했습니다.', details = {}) {
+                super(message, 403, 'SECURITY_ERROR', details);
+                this.name = 'SecurityError';
+            }
+        }
+
+        // ===== 응답 포매터 =====
+        class ResponseFormatter {
+            static success(data, message = '요청이 성공적으로 처리되었습니다.', httpStatus = 200) {
+                return {
+                    statusCode: httpStatus,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'success',
+                        message: message,
+                        data: data
+                    })
+                };
+            }
+
+            static formatErrorResponse(error, httpStatus = 500) {
+                const errorBody = {
+                    status: 'error',
+                    message: '알 수 없는 오류가 발생했습니다.',
+                    errorCode: 'UNKNOWN_ERROR',
+                    details: {}
+                };
+
+                if (error instanceof ApiError) {
+                    errorBody.message = error.message;
+                    errorBody.errorCode = error.errorCode;
+                    errorBody.details = error.details;
+                    httpStatus = error.statusCode;
+                } else if (error instanceof Error) {
+                    errorBody.message = error.message;
+                    errorBody.details = { name: error.name, stack: error.stack };
+                }
+
+                logger.error(`Error response generated:`, { error: errorBody, originalError: error.message });
+
+                return {
+                    statusCode: httpStatus,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(errorBody)
+                };
+            }
+
+            static badRequest(message = '잘못된 요청입니다.', details = {}) {
+                return ResponseFormatter.formatErrorResponse(new ValidationError(message, details), 400);
+            }
+
+            static notFound(message = '요청한 리소스를 찾을 수 없습니다.', details = {}) {
+                return ResponseFormatter.formatErrorResponse(new ApiError(message, 404, 'NOT_FOUND', details), 404);
+            }
+
+            static serverError(message = '서버 내부 오류가 발생했습니다.', details = {}) {
+                return ResponseFormatter.formatErrorResponse(new ApiError(message, 500, 'SERVER_ERROR', details), 500);
+            }
+        }
+
+        // ===== API 응답 프로세서 =====
+        class ApiResponseProcessor {
+            static async process(response, requestId) {
+                const context = 'ApiResponseProcessor';
+                logger.info(`[${context}] Processing API response for Request ID: ${requestId}`, { status: response.status, url: response.url });
+
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        logger.warn(`[${context}] Failed to parse error response body as JSON:`, { error: e.message, status: response.status, url: response.url });
+                        throw new NetworkError(`HTTP 오류: ${response.status} ${response.statusText}`, { status: response.status, statusText: response.statusText, url: response.url });
+                    }
+
+                    const errorMessage = errorData.message || `API 오류: ${response.status} ${response.statusText}`;
+                    const errorCode = errorData.errorCode || 'API_ERROR';
+                    const details = errorData.details || {};
+
+                    switch (response.status) {
+                        case 400:
+                            throw new ValidationError(errorMessage, details);
+                        case 401:
+                        case 403:
+                            throw new SecurityError(errorMessage, details);
+                        case 404:
+                            throw new ApiError(errorMessage, 404, 'NOT_FOUND', details);
+                        case 429:
+                            throw new RateLimitError(errorMessage, details);
+                        case 503:
+                            throw new NetworkError(errorMessage, details);
+                        default:
+                            throw new ApiError(errorMessage, response.status, errorCode, details);
+                    }
+                }
+
+                try {
+                    const data = await response.json();
+                    logger.info(`[${context}] Successfully processed API response for Request ID: ${requestId}`);
+                    return data;
+                } catch (e) {
+                    logger.error(`[${context}] Failed to parse successful response body as JSON:`, { error: e.message, url: response.url });
+                    throw new ApiError('API 응답 파싱 오류', 500, 'PARSE_ERROR', { originalError: e.message });
+                }
+            }
+        }
+
+        // ===== AllTourismAPI 클래스 =====
+        class AllTourismAPI {
+            constructor(apiKey) {
+                this.apiKey = apiKey || ConstantsManager.get('API_KEY');
+                this.baseUrl = ConstantsManager.get('BASE_URL');
+                this.searchPath = ConstantsManager.get('SEARCH_PATH');
+                this.timeout = ConstantsManager.get('TIMEOUT_MS');
+                this.logger = new Logger('AllTourismAPI');
+                this.logger.info(`AllTourismAPI initialized with base URL: ${this.baseUrl}`);
+            }
+
+            async _fetchWithTimeout(url, options, requestId) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+                this.logger.debug(`[${requestId}] Fetching URL: ${url}`, { options });
+
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new TimeoutError('요청 시간이 초과되었습니다.', { url, timeout: this.timeout });
+                    }
+                    throw new NetworkError(`네트워크 오류 발생: ${error.message}`, { url, originalError: error });
+                }
+            }
+
+            async searchTourism(query, pageNo = 1, numOfRows = ConstantsManager.get('DEFAULT_PAGE_SIZE')) {
+                const requestId = SafeUtils.generateRequestId();
+                this.logger.info(`[${requestId}] Searching tourism information for query: '${query}'`, { pageNo, numOfRows });
+
+                if (!query || typeof query !== 'string') {
+                    throw new ValidationError('검색어는 필수이며 문자열이어야 합니다.');
+                }
+                if (SafeUtils.safeParseInt(pageNo, 0) <= 0) { // SafeUtils.safeParseInt의 defaultValue를 0으로 변경했으므로 이 로직이 작동함
+                    throw new ValidationError('페이지 번호는 1 이상이어야 합니다.');
+                }
+
+                // Mock API 호출 (실제 API 호출 아님)
+                const mockUrl = `${this.baseUrl}${this.searchPath}?q=${encodeURIComponent(query)}&_page=${pageNo}&_limit=${numOfRows}`;
+                this.logger.debug(`[${requestId}] Mock API URL: ${mockUrl}`);
+
+                try {
+                    // 실제 fetch를 호출하지만, 응답은 Mock API (jsonplaceholder)에서 옵니다.
+                    const response = await this._fetchWithTimeout(mockUrl, { method: 'GET' }, requestId);
+                    const processedData = await ApiResponseProcessor.process(response, requestId);
+                    
+                    // Mock 데이터 구조에 맞춰 가공
+                    const results = Array.isArray(processedData) ? processedData.map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        description: item.body,
+                        // 임의의 좌표 추가 (Mock)
+                        latitude: 37.5665 + (Math.random() - 0.5) * 0.1, 
+                        longitude: 126.9780 + (Math.random() - 0.5) * 0.1,
+                        type: 'article'
+                    })) : [];
+
+                    this.logger.info(`[${requestId}] Search completed. Found ${results.length} items.`, { resultsCount: results.length });
+                    return ResponseFormatter.success(results, '관광 정보 검색 완료');
+
+                } catch (error) {
+                    this.logger.error(`[${requestId}] Failed to search tourism info:`, { error: error.message });
+                    // API 응답 포매터를 사용하여 에러 응답 반환
+                    return ResponseFormatter.formatErrorResponse(error);
+                }
+            }
+
+            // 추가될 API 메서드 (예시)
+            async getTourismDetail(id) {
+                const requestId = SafeUtils.generateRequestId();
+                this.logger.info(`[${requestId}] Getting detail for ID: ${id}`);
+                // Mock API detail
+                const mockDetailUrl = `${this.baseUrl}${this.searchPath}/${id}`;
+                try {
+                    const response = await this._fetchWithTimeout(mockDetailUrl, { method: 'GET' }, requestId);
+                    const processedData = await ApiResponseProcessor.process(response, requestId);
+                    this.logger.info(`[${requestId}] Detail retrieved for ID: ${id}`);
+                    return ResponseFormatter.success({
+                        id: processedData.id,
+                        title: processedData.title,
+                        description: processedData.body,
+                        details: 'This is a detailed description of the tourism item.',
+                        images: ['https://via.placeholder.com/150', 'https://via.placeholder.com/200'],
+                        location: {
+                            latitude: 37.5665 + (Math.random() - 0.5) * 0.05, 
+                            longitude: 126.9780 + (Math.random() - 0.5) * 0.05,
+                        }
+                    }, '관광 정보 상세 조회 완료');
+                } catch (error) {
+                    this.logger.error(`[${requestId}] Failed to get detail for ID: ${id}:`, { error: error.message });
+                    return ResponseFormatter.formatErrorResponse(error);
+                }
+            }
+
+            // 서버리스 환경에 적합하도록 destroy 호출 방식 변경 (setTimeout 제거)
+            // 브라우저 환경에서는 destroy가 필요 없을 수 있으나, 개념적으로 자원 해제를 위해 둘 수 있음.
+            destroy() {
+                this.logger.info('AllTourismAPI instance destroyed.');
+                // 필요한 경우 여기서 리소스 정리 로직 추가
+                // (예: WebSocket 연결 해제, DB 연결 풀 닫기 등)
+            }
+        }
+
+        // ===== 브라우저 환경에서 전역으로 노출 =====
+        if (typeof window !== 'undefined') {
+            window.AllTourismAPI = AllTourismAPI;
+            window.ApiError = ApiError;
+            window.NetworkError = NetworkError;
+            window.ValidationError = ValidationError;
+            window.TimeoutError = TimeoutError;
+            window.RateLimitError = RateLimitError;
+            window.SecurityError = SecurityError;
+            window.ConstantsManager = ConstantsManager;
+            window.SafeUtils = SafeUtils;
+            window.GeoUtils = GeoUtils;
+            window.ResponseFormatter = ResponseFormatter;
+            window.ApiResponseProcessor = ApiResponseProcessor;
+            window.Logger = Logger; // Logger 클래스도 노출
+            window.logger = logger; // 전역 logger 인스턴스도 노출
+        }
+
+        // ===== 전역 에러 핸들러 (Node.js 환경에서만) =====
+        // 브라우저에서는 window.onerror, window.onunhandledrejection 사용이 일반적
+        if (hasProcess) { // hasProcess는 브라우저에서 false이므로 이 블록은 실행되지 않음
+            process.on('uncaughtException', (error) => {
+                logger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
+                if (process.env.NODE_ENV !== 'production') {
+                    process.exit(1); // 개발 환경에서는 강제 종료하여 문제 파악 용이
+                }
+                // 프로덕션에서는 로그만 남기고 서비스 유지 (단, 매우 심각한 경우 재시작 고려)
+            });
+
+            process.on('unhandledRejection', (reason, promise) => {
+                logger.error('Unhandled Rejection at:', { promise, reason: reason.message || reason, stack: reason.stack });
+            });
+
+            // SIGTERM, SIGINT는 주로 컨테이너 환경에서 종료 신호 처리
+            process.on('SIGTERM', () => {
+                logger.info('SIGTERM signal received, starting graceful shutdown...');
+                process.exit(0);
+            });
+
+            process.on('SIGINT', () => {
+                logger.info('SIGINT signal received, starting graceful shutdown...');
+                process.exit(0);
+            });
+        } else {
+            // 브라우저 환경용 전역 에러 핸들러
+            window.onerror = function(message, source, lineno, colno, error) {
+                logger.error('Global Error (onerror):', { message, source, lineno, colno, error: error ? error.message : 'N/A', stack: error ? error.stack : 'N/A' });
+                return false; // 기본 에러 처리를 계속 진행
+            };
+
+            window.onunhandledrejection = function(event) {
+                logger.error('Global Unhandled Promise Rejection:', { reason: event.reason ? event.reason.message : event.reason, stack: event.reason ? event.reason.stack : 'N/A', promise: event.promise });
+            };
+        }
+
+
+        // ===== API 버전 정보 =====
+        // (19)번 파일에 있던 버전을 다시 추가
+        const API_VERSION = '2.1.0';
+        const API_BUILD_DATE = new Date().toISOString();
+
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = {
+                AllTourismAPI,
+                ApiError,
+                NetworkError,
+                ValidationError,
+                TimeoutError,
+                RateLimitError,
+                SecurityError,
+                ConstantsManager,
+                SafeUtils,
+                GeoUtils,
+                ResponseFormatter,
+                ApiResponseProcessor,
+                Logger,
+                logger, // 전역 로거 인스턴스도 export
+                API_VERSION,
+                API_BUILD_DATE
+            };
+        }
+    </script>
+
+    <script>
+        let tourismApi;
+        const initStatusElem = document.getElementById('initStatus');
+        const searchResultsElem = document.getElementById('searchResults');
+        const errorResultsElem = document.getElementById('errorResults');
+        const queryInput = document.getElementById('query');
+        const pageNoInput = document.getElementById('pageNo');
+        const numOfRowsInput = document.getElementById('numOfRows');
+
+        document.getElementById('initApiButton').addEventListener('click', () => {
             try {
-                // 실제 tourism.js의 AllTourismAPI 클래스 사용
-                api = new AllTourismAPI();
-                console.log('✅ AllTourismAPI 인스턴스 생성 완료');
-                console.log('📡 API 인스턴스:', api);
-                
-                // 초기 상태 확인
-                await checkHealth();
-                
-            } catch (error) {
-                console.error('❌ API 초기화 실패:', error);
-                showResult('status-result', `API 초기화 실패: ${error.message}`, true);
+                // ConstantsManager.get('API_KEY')가 실제 API 키를 가져오도록 설정하거나
+                // 인스턴스화 시점에 직접 키를 전달할 수 있습니다.
+                tourismApi = new window.AllTourismAPI();
+                initStatusElem.textContent = 'API가 성공적으로 초기화되었습니다.';
+                initStatusElem.style.color = 'green';
+                console.log('AllTourismAPI 인스턴스:', tourismApi);
+                console.log('API_VERSION:', window.API_VERSION);
+                console.log('API_BUILD_DATE:', window.API_BUILD_DATE);
+            } catch (e) {
+                initStatusElem.textContent = `API 초기화 실패: ${e.message}`;
+                initStatusElem.style.color = 'red';
+                console.error('API 초기화 에러:', e);
             }
         });
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function showResult(elementId, data, isError = false) {
-            hideLoading();
-            const element = document.getElementById(elementId);
-            element.style.display = 'block';
-            element.className = `result ${isError ? 'error' : 'success'}`;
-            
-            if (typeof data === 'object') {
-                element.textContent = JSON.stringify(data, null, 2);
-            } else {
-                element.textContent = data;
+        document.getElementById('searchButton').addEventListener('click', async () => {
+            if (!tourismApi) {
+                searchResultsElem.textContent = 'API가 초기화되지 않았습니다. "API 초기화" 버튼을 먼저 클릭하세요.';
+                searchResultsElem.style.color = 'orange';
+                return;
             }
-        }
 
-        // 헬스체크
-        async function checkHealth() {
-            showLoading();
+            const query = queryInput.value;
+            const pageNo = window.SafeUtils.safeParseInt(pageNoInput.value, 1);
+            const numOfRows = window.SafeUtils.safeParseInt(numOfRowsInput.value, 10);
+
+            searchResultsElem.textContent = '검색 중...';
+            searchResultsElem.style.color = 'blue';
+
             try {
-                console.log('🔍 헬스체크 시작...');
-                
-                // 실제 healthCheck 함수 호출
-                const result = await healthCheck();
-                
-                console.log('✅ 헬스체크 완료:', result);
-                showResult('status-result', result);
-                
-            } catch (error) {
-                console.error('❌ 헬스체크 실패:', error);
-                showResult('status-result', `헬스체크 실패: ${error.message}`, true);
+                const result = await tourismApi.searchTourism(query, pageNo, numOfRows);
+                console.log('검색 결과:', result);
+                if (result.status === 'success') {
+                    searchResultsElem.textContent = JSON.stringify(result.data, null, 2);
+                    searchResultsElem.style.color = 'black';
+                } else {
+                    searchResultsElem.textContent = `API 에러: ${result.message}\n코드: ${result.errorCode}\n상세: ${JSON.stringify(result.details, null, 2)}`;
+                    searchResultsElem.style.color = 'red';
+                }
+            } catch (e) {
+                searchResultsElem.textContent = `클라이언트 처리 중 에러 발생: ${e.message}`;
+                searchResultsElem.style.color = 'red';
+                console.error('클라이언트 검색 에러:', e);
             }
-        }
+        });
 
-        // 시스템 상태 확인
-        async function checkSystemStatus() {
-            showLoading();
-            try {
-                console.log('📊 시스템 상태 확인 시작...');
-                
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                // 실제 tourism.js의 getSystemStatus 메서드 호출
-                const result = api.getSystemStatus();
-                
-                console.log('✅ 시스템 상태 확인 완료:', result);
-                showResult('status-result', result);
-                
-            } catch (error) {
-                console.error('❌ 시스템 상태 확인 실패:', error);
-                showResult('status-result', `시스템 상태 확인 실패: ${error.message}`, true);
+        document.getElementById('simulateErrorButton').addEventListener('click', async () => {
+            if (!tourismApi) {
+                errorResultsElem.textContent = 'API가 초기화되지 않았습니다. "API 초기화" 버튼을 먼저 클릭하세요.';
+                errorResultsElem.style.color = 'orange';
+                return;
             }
-        }
 
-        // 지역별 관광지 조회
-        async function testAreaBasedList() {
-            showLoading();
-            try {
-                console.log('🏛️ 지역별 관광지 조회 시작...');
-                
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                const params = {
-                    areaCode: document.getElementById('area-code').value,
-                    contentTypeId: document.getElementById('content-type').value,
-                    numOfRows: document.getElementById('num-rows').value,
-                    pageNo: '1',
-                    arrange: 'A'
-                };
-                
-                console.log('📤 API 파라미터:', params);
-                
-                // 실제 tourism.js의 areaBasedList 메서드 호출
-                const result = await api.areaBasedList(params);
-                
-                console.log('✅ 지역별 관광지 조회 완료:', result);
-                showResult('area-result', result);
-                
-            } catch (error) {
-                console.error('❌ 지역별 관광지 조회 실패:', error);
-                showResult('area-result', `API 호출 실패: ${error.message}`, true);
-            }
-        }
+            errorResultsElem.textContent = '에러 시뮬레이션 중...';
+            errorResultsElem.style.color = 'blue';
 
-        // 키워드 검색
-        async function testSearchKeyword() {
-            showLoading();
             try {
-                console.log('🔍 키워드 검색 시작...');
+                // 존재하지 않는 엔드포인트 호출 또는 네트워크 오류를 유발할 수 있는 시뮬레이션
+                // 여기서는 임의의 네트워크 에러를 던지도록 수정하여 시뮬레이션
+                // 실제 fetch를 사용하면 mockApiUrl을 잘못된 주소로 변경하여 테스트 가능
+                const result = await tourismApi.searchTourism('trigger_network_error'); 
+                // 위 호출은 실제로 mock API를 호출하지만, 우리는 NetworkError를 throw하는것처럼 시뮬레이션 할 것임.
+                // AllTourismAPI 내부 로직에서 에러를 발생시키는 방식이 아니라,
+                // 테스트를 위해 강제로 특정 에러를 발생시키는 예시입니다.
+                // (실제 코드에서는 이렇게 직접 throw하지 않음)
                 
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                const keyword = document.getElementById('keyword').value.trim();
-                if (!keyword) {
-                    throw new Error('키워드를 입력해주세요');
-                }
-                
-                const params = {
-                    keyword: keyword,
-                    numOfRows: '10',
-                    pageNo: '1',
-                    arrange: 'A'
-                };
-                
-                console.log('📤 검색 파라미터:', params);
-                
-                // 실제 tourism.js의 searchKeyword 메서드 호출
-                const result = await api.searchKeyword(params);
-                
-                console.log('✅ 키워드 검색 완료:', result);
-                showResult('search-result', result);
-                
-            } catch (error) {
-                console.error('❌ 키워드 검색 실패:', error);
-                showResult('search-result', `검색 실패: ${error.message}`, true);
-            }
-        }
-
-        // 상세 정보 조회
-        async function testDetailCommon() {
-            showLoading();
-            try {
-                console.log('📄 상세 정보 조회 시작...');
-                
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                const contentId = document.getElementById('content-id').value.trim();
-                if (!contentId) {
-                    throw new Error('콘텐츠 ID를 입력해주세요');
-                }
-                
-                const params = {
-                    contentId: contentId
-                };
-                
-                console.log('📤 상세정보 파라미터:', params);
-                
-                // 실제 tourism.js의 detailCommon 메서드 호출
-                const result = await api.detailCommon(params);
-                
-                console.log('✅ 상세 정보 조회 완료:', result);
-                showResult('detail-result', result);
-                
-            } catch (error) {
-                console.error('❌ 상세 정보 조회 실패:', error);
-                showResult('detail-result', `상세정보 조회 실패: ${error.message}`, true);
-            }
-        }
-
-        // 위치 기반 검색
-        async function testLocationBased() {
-            showLoading();
-            try {
-                console.log('📍 위치 기반 검색 시작...');
-                
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                const mapY = document.getElementById('map-y').value.trim();
-                const mapX = document.getElementById('map-x').value.trim();
-                const radius = document.getElementById('radius').value.trim();
-                
-                if (!mapY || !mapX) {
-                    throw new Error('위도와 경도를 입력해주세요');
-                }
-                
-                const params = {
-                    mapX: mapX,
-                    mapY: mapY,
-                    radius: radius || '1000',
-                    numOfRows: '10',
-                    pageNo: '1',
-                    arrange: 'A'
-                };
-                
-                console.log('📤 위치 검색 파라미터:', params);
-                
-                // 실제 tourism.js의 locationBasedList 메서드 호출
-                const result = await api.locationBasedList(params);
-                
-                console.log('✅ 위치 기반 검색 완료:', result);
-                showResult('location-result', result);
-                
-            } catch (error) {
-                console.error('❌ 위치 기반 검색 실패:', error);
-                showResult('location-result', `위치 검색 실패: ${error.message}`, true);
-            }
-        }
-
-        // 배치 요청
-        async function testBatchRequest() {
-            showLoading();
-            try {
-                console.log('📦 배치 요청 시작...');
-                
-                if (!api) {
-                    throw new Error('API 인스턴스가 없습니다');
-                }
-                
-                const operations = [
-                    {
-                        operation: 'areaBasedList',
-                        params: {
-                            areaCode: '1',
-                            contentTypeId: '12',
-                            numOfRows: '3'
-                        }
+                // tourismApi.searchTourism 내부에서 networkError를 던지도록 Mock API URL 변경
+                // ConstantsManager의 BASE_URL을 임의의 존재하지 않는 URL로 일시적으로 변경 (테스트용)
+                const originalBaseUrl = ConstantsManager.get('BASE_URL');
+                Object.defineProperty(ConstantsManager, 'get', {
+                    value: function(key) {
+                        if (key === 'BASE_URL') return 'http://invalid-url.this-will-fail';
+                        const constants = { // ConstantsManager의 내부 객체를 다시 정의해야 함
+                            API_KEY: 'YOUR_API_KEY_HERE',
+                            BASE_URL: 'https://jsonplaceholder.typicode.com',
+                            SEARCH_PATH: '/posts',
+                            TIMEOUT_MS: 5000,
+                            MAX_RETRIES: 3,
+                            RETRY_DELAY_MS: 1000,
+                            DEFAULT_PAGE_SIZE: 10,
+                        };
+                        return constants[key] || null;
                     },
-                    {
-                        operation: 'searchKeyword',
-                        params: {
-                            keyword: '경복궁',
-                            numOfRows: '2'
-                        }
+                    configurable: true // 재정의 가능하도록 설정
+                });
+
+                const simulatedResult = await tourismApi.searchTourism('dummy_query_for_error');
+
+                // 테스트 후 원래대로 복구
+                Object.defineProperty(ConstantsManager, 'get', {
+                    value: function(key) {
+                        const constants = {
+                            API_KEY: 'YOUR_API_KEY_HERE',
+                            BASE_URL: originalBaseUrl, // 원래 URL로 복구
+                            SEARCH_PATH: '/posts',
+                            TIMEOUT_MS: 5000,
+                            MAX_RETRIES: 3,
+                            RETRY_DELAY_MS: 1000,
+                            DEFAULT_PAGE_SIZE: 10,
+                        };
+                        return constants[key] || null;
                     },
-                    {
-                        operation: 'detailCommon',
-                        params: {
-                            contentId: '126508'
-                        }
-                    }
-                ];
-                
-                console.log('📤 배치 요청 파라미터:', operations);
-                
-                // 실제 tourism.js의 batchRequest 메서드 호출
-                const result = await api.batchRequest(operations);
-                
-                console.log('✅ 배치 요청 완료:', result);
-                showResult('batch-result', result);
-                
-            } catch (error) {
-                console.error('❌ 배치 요청 실패:', error);
-                showResult('batch-result', `배치 요청 실패: ${error.message}`, true);
+                    configurable: true
+                });
+
+                if (simulatedResult.status === 'error') {
+                    errorResultsElem.textContent = `에러 발생: ${simulatedResult.message}\n코드: ${simulatedResult.errorCode}\n상세: ${JSON.stringify(simulatedResult.details, null, 2)}`;
+                    errorResultsElem.style.color = 'red';
+                } else {
+                    errorResultsElem.textContent = '예상치 못한 성공적인 결과가 반환되었습니다.';
+                    errorResultsElem.style.color = 'orange';
+                }
+
+            } catch (e) {
+                errorResultsElem.textContent = `클라이언트 처리 중 에러 발생: ${e.message}\n이름: ${e.name}`;
+                errorResultsElem.style.color = 'red';
+                console.error('클라이언트 에러 시뮬레이션 중:', e);
             }
-        }
+        });
     </script>
 </body>
 </html>
