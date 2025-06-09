@@ -1978,6 +1978,7 @@ let globalHandler = null;
 /**
  * Vercel 서버리스 함수 핸들러 (최종 최적화 버전)
  */
+// vercelHandler 함수 (사용자님의 Vercel 백엔드 코드)
 async function vercelHandler(req, res) {
     try {
         // CORS 헤더 설정
@@ -1985,7 +1986,7 @@ async function vercelHandler(req, res) {
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-        // OPTIONS 요청 처리
+        // OPTIONS 요청 처리 (Preflight Request)
         if (req.method === 'OPTIONS') {
             return res.status(200).end();
         }
@@ -1996,12 +1997,20 @@ async function vercelHandler(req, res) {
         }
 
         // Vercel req/res를 AWS Lambda event/context 형식으로 변환
+        // req.url에서 쿼리 파라미터를 직접 파싱하여 operation을 정확히 추출합니다.
+        const url = new URL(req.url, `http://${req.headers.host}`); // 호스트는 URL 객체 생성을 위한 기본 URL로 사용
+        const queryParams = Object.fromEntries(url.searchParams.entries()); // 쿼리 파라미터를 객체로 변환
+
+        // 'operation' 매개변수를 직접 추출 (프론트엔드가 'operation'으로 보내므로 이 부분만 확인)
+        const operationParam = queryParams.operation;
+
         const event = {
             httpMethod: req.method,
-            queryStringParameters: req.query || {},
+            // 'operation' 매개변수를 queryStringParameters에 명시적으로 설정
+            queryStringParameters: { ...queryParams, operation: operationParam },
             body: req.body, // Vercel이 이미 파싱한 객체를 직접 사용
             headers: req.headers || {},
-            path: req.url || '/',
+            path: url.pathname || '/', // 경로만 사용 (쿼리 스트링 제외)
             requestContext: {
                 requestId: req.headers['x-vercel-id'] || SafeUtils.generateRequestId('vercel'),
                 identity: { sourceIp: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown' }
@@ -2016,7 +2025,7 @@ async function vercelHandler(req, res) {
             getRemainingTimeInMillis: () => 30000 // Vercel 기본 타임아웃 30초
         };
 
-        const result = await globalHandler.handle(event, context);
+        const result = await globalHandler.handle(event, context); // 변경된 event 객체 전달
 
         // 응답 처리
         const statusCode = result.statusCode || 200;
