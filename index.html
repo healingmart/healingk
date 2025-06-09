@@ -101,7 +101,8 @@
         }
 
         /**
-         * 범용 API 호출 함수입니다.
+         * [수정됨] 범용 API 호출 함수입니다.
+         * 서버로부터 받은 응답이 JSON이 아닐 경우를 처리하는 로직이 추가되었습니다.
          * @param {string} endpoint - 호출할 API 엔드포인트
          * @param {object} params - 쿼리 파라미터로 전송할 객체
          * @returns {Promise<any>} - API 응답 데이터
@@ -115,11 +116,19 @@
             });
 
             const response = await fetch(url);
+
+            // 응답 헤더를 확인하여 반환된 콘텐츠 타입을 체크합니다.
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                // 이 블록은 404 Not Found HTML 페이지와 같이 JSON이 아닌 응답을 받았을 때 실행됩니다.
+                throw new Error(`서버가 JSON 형식이 아닌 응답을 반환했습니다 (상태: ${response.status}). API 주소(${endpoint})가 올바르지 않거나 현재 미리보기 환경에서 사용할 수 없습니다.`);
+            }
+
             const data = await response.json();
 
+            // 응답 코드가 2xx가 아니거나, 응답 JSON 내 success가 false일 경우 에러 처리
             if (!response.ok || !data.success) {
-                // 서버에서 보낸 에러 메시지를 우선적으로 사용
-                throw new Error(data.error?.message || `HTTP Error ${response.status}`);
+                throw new Error(data.error?.message || `HTTP 오류 ${response.status}`);
             }
             return data;
         }
@@ -155,7 +164,7 @@
                 const data = await callApi(TOURISM_API_ENDPOINT, { operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
                 const items = data.data?.response?.body?.items?.item || [];
                 showStatus(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드`, 'success');
-                showCategory({id:'12', name:'관광지 테스트', icon:'🏞️'}, items, data.data.response.body.totalCount);
+                showCategory({id:'12', name:'관광지 테스트', icon:'🏞️'}, items, data.data?.response?.body?.totalCount || 0);
             } catch (e) {
                 showStatus(`❌ 단일 테스트 실패: ${e.message}`, 'error');
             } finally {
@@ -210,7 +219,7 @@
             const categoryDiv = document.createElement('div');
             categoryDiv.className = 'category bg-white rounded-xl shadow-md overflow-hidden';
             
-            const itemsHtml = items.map(item => `
+            const itemsHtml = Array.isArray(items) ? items.map(item => `
                 <div class="item border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-lg transition-shadow duration-300">
                     <img src="${item.firstimage || 'https://placehold.co/400x250/E2E8F0/A0AEC0?text=No+Image'}" 
                          onerror="this.onerror=null;this.src='https://placehold.co/400x250/E2E8F0/A0AEC0?text=Error';" 
@@ -221,12 +230,12 @@
                         <p class="text-gray-500 text-xs">ID: ${item.contentid}</p>
                     </div>
                 </div>
-            `).join('');
+            `).join('') : '';
 
             categoryDiv.innerHTML = `
                 <div class="category-header bg-gray-800 text-white p-4 flex justify-between items-center">
                     <h2 class="text-xl font-bold">${cat.icon} ${cat.name}</h2>
-                    <span class="text-sm bg-gray-600 px-2 py-1 rounded-full">${items.length} / ${totalCount}</span>
+                    <span class="text-sm bg-gray-600 px-2 py-1 rounded-full">${Array.isArray(items) ? items.length : 0} / ${totalCount}</span>
                 </div>
                 <div class="items p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     ${itemsHtml || '<p class="col-span-full text-center text-gray-500 py-8">데이터가 없습니다.</p>'}
