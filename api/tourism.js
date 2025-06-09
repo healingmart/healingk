@@ -30,10 +30,12 @@ try {
     if (NODE_ENV) {
         // Node.js 환경 (서버리스 함수)
         try {
+            // Vercel 환경에서는 isomorphic-dompurify가 설치되어 있지 않을 수 있음
+            // 따라서 try-catch로 안전하게 처리
             DOMPurify = require('isomorphic-dompurify');
             securityLibraryStatus = 'loaded_node';
         } catch (error) {
-            console.warn('isomorphic-dompurify not available in Node.js environment:', error.message);
+            console.warn('isomorphic-dompurify not available, using fallback sanitization');
             securityLibraryStatus = 'fallback_node';
         }
     } else if (BROWSER_ENV) {
@@ -2635,39 +2637,86 @@ class TourismApiHandler {
 
 // 전역 핸들러 인스턴스 (서버리스 환경에서 재사용)
 let globalHandler = null;
-
 /**
- * 서버리스 함수 엔트리포인트
- * @param {object} event - 이벤트 객체
- * @param {object} context - 컨텍스트 객체
- * @returns {Promise<object>} 응답 객체
+ * 메인 서버리스 함수 핸들러 (Vercel 최적화 버전)
+ * @param {object} req - Vercel Request 객체
+ * @param {object} res - Vercel Response 객체
+ * @returns {Promise<void>} 응답 처리
  */
-async function handler(event, context) {
+async function handler(req, res) {
     try {
+        // CORS 헤더 설정
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+        // OPTIONS 요청 처리
+        if (req.method === 'OPTIONS') {
+            return res.status(200).end();
+        }
+        
         // 전역 핸들러 인스턴스 재사용 (콜드 스타트 최적화)
         if (!globalHandler) {
             globalHandler = new TourismApiHandler();
         }
         
-        return await globalHandler.handle(event, context);
+        // Vercel req/res를 AWS Lambda event/context 형식으로 변환
+        const event = {
+            httpMethod: req.method,
+            queryStringParameters: req.query || {},
+            body: req.method === 'POST' ? JSON.stringify(req.body) : null,
+            headers: req.headers || {},
+            path: req.url || '/',
+            requestContext: {
+                requestId: req.headers['x-vercel-id'] || SafeUtils.generateRequestId('vercel')
+            }
+        };
+        
+        const context = {
+            requestId: event.requestContext.requestId,
+            functionName: 'tourism-api',
+            functionVersion: '1.0.0',
+            memoryLimitInMB: '1024',
+            getRemainingTimeInMillis: () => 30000 // Vercel 기본 타임아웃
+        };
+        
+        const result = await globalHandler.handle(event, context);
+        
+        // 응답 처리
+        const statusCode = result.statusCode || 200;
+        const headers = result.headers || {};
+        
+        // 헤더 설정
+        Object.entries(headers).forEach(([key, value]) => {
+            res.setHeader(key, value);
+        });
+        
+        // Content-Type이 설정되지 않은 경우 기본값 설정
+        if (!res.getHeader('Content-Type')) {
+            res.setHeader('Content-Type', 'application/json');
+        }
+        
+        // 응답 전송
+        if (result.body) {
+            return res.status(statusCode).send(result.body);
+        } else {
+            return res.status(statusCode).end();
+        }
+        
     } catch (error) {
         console.error('Critical handler error:', error);
         
-        return {
-            statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({
-                success: false,
-                error: {
-                    code: 'CRITICAL_ERROR',
-                    message: 'A critical error occurred',
-                    timestamp: new Date().toISOString()
-                }
-            })
-        };
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'CRITICAL_ERROR',
+                message: 'A critical error occurred',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 }
 
@@ -2679,23 +2728,25 @@ function cleanup() {
     }
 }
 
-// Node.js 환경에서 모듈 내보내기
+// Node.js 환경에서 모듈 내보내기 (Vercel 최적화)
 if (NODE_ENV && typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        handler,
-        cleanup,
-        TourismApiHandler,
-        TourismApiClient,
-        SafeUtils,
-        GeoUtils,
-        SecurityModule,
-        AdvancedCache,
-        RateLimiter,
-        ServiceContainer,
-        InternationalizationManager,
-        ResponseFormatter,
-        HttpClient
-    };
+    // Vercel 서버리스 함수 기본 export
+    module.exports = handler;
+    
+    // 추가 유틸리티들도 export (필요시 사용)
+    module.exports.handler = handler;
+    module.exports.cleanup = cleanup;
+    module.exports.TourismApiHandler = TourismApiHandler;
+    module.exports.TourismApiClient = TourismApiClient;
+    module.exports.SafeUtils = SafeUtils;
+    module.exports.GeoUtils = GeoUtils;
+    module.exports.SecurityModule = SecurityModule;
+    module.exports.AdvancedCache = AdvancedCache;
+    module.exports.RateLimiter = RateLimiter;
+    module.exports.ServiceContainer = ServiceContainer;
+    module.exports.InternationalizationManager = InternationalizationManager;
+    module.exports.ResponseFormatter = ResponseFormatter;
+    module.exports.HttpClient = HttpClient;
 }
 
 // 브라우저 환경에서 전역 객체에 할당
