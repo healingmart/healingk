@@ -301,7 +301,7 @@
                                 description: '100여종의 허브와 500여종의 야생화가 가득한 향기로운 농원. 다채로운 정원을 거닐며 향기로운 허브차를 마시는 여유를 즐길 수 있는 힐링 공간입니다.',
                                 images: [
                                     'https://placehold.co/800x600/d9a0b8/FFFFFF?text=Farm+Kamille+1',
-                                    'https://placehold.co/800x600/c782a2/FFFFFF??text=Farm+Kamille+2',
+                                    'https://placehold.co/800x600/c782a2/FFFFFF?text=Farm+Kamille+2',
                                     'https://placehold.co/800x600/b5698d/FFFFFF?text=Farm+Kamille+3'
                                 ],
                                 thumbnail: 'https://placehold.co/600x400/d9a0b8/FFFFFF?text=팜카밀레'
@@ -450,7 +450,7 @@
                 gemsGrid.innerHTML = gemsData.map(gem => `
                     <div class="animated card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer" data-id="${gem.id}">
                         <div class="relative h-48">
-                            <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CCCCCC/000000?text=Error';">
+                            <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CCCCCC/000000?text=Image+Load+Error';">
                             <div class="absolute inset-0 bg-black bg-opacity-30"></div>
                             <h3 class="absolute bottom-4 left-4 text-white text-xl font-bold">${gem.title}</h3>
                         </div>
@@ -466,7 +466,7 @@
                 img.className = 'gallery-image w-full h-full object-cover opacity-0';
                 img.onerror = function() { // onerror 속성을 JavaScript로 설정
                     this.onerror = null; // 무한 루프 방지
-                    this.src = 'https://placehold.co/800x600/CCCCCC/000000?text=Error';
+                    this.src = 'https://placehold.co/800x600/CCCCCC/000000?text=Image+Load+Error';
                 };
                 modalGallery.appendChild(img);
                 setTimeout(() => img.classList.add('opacity-100'), 50);
