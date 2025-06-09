@@ -3,54 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism API Test - 프로덕션 최종</title>
-    <!-- Tailwind CSS 로드 -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Tourism API Test - G3 Version</title>
     <style>
-        /* 커스텀 스피너 애니메이션 */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-spinner {
-            animation: spin 1s linear infinite;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 30px; }
+        button { padding: 12px 24px; margin: 8px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button:hover { background: #003d82; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        button:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+        .status { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .category-header { background: #0056b3; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; padding: 20px; }
+        .item { border: 1px solid #eee; border-radius: 8px; overflow: hidden; background: white; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .item:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .item img { width: 100%; height: 180px; object-fit: cover; }
+        .item-content { padding: 15px; }
+        .item-title { font-weight: bold; margin-bottom: 8px; color: #333; }
+        .item-addr { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .item-distance { color: #0056b3; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+        .item-id { color: #999; font-size: 0.8em; }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #0056b3; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        .test-panel { background: #fff; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .tabs { display: flex; margin-bottom: 20px; }
+        .tab { padding: 12px 20px; border-bottom: 2px solid transparent; cursor: pointer; font-weight: bold; }
+        .tab.active { border-color: #0056b3; color: #0056b3; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .json-response { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin: 10px 0; overflow: auto; max-height: 300px; font-family: monospace; }
+        .item-detail { padding: 20px; background: white; border-radius: 8px; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .metrics-table {width: 100%; border-collapse: collapse; margin: 20px 0;}
+        .metrics-table th, .metrics-table td {border: 1px solid #ddd; padding: 8px; text-align: left;}
+        .metrics-table th {background-color: #f2f2f2;}
     </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-800">
+<body>
+    <div class="container">
+        <h1>🏛️ 한국관광공사 API 테스트 (G3 버전)</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('basic-tab')">기본 테스트</div>
+            <div class="tab" onclick="showTab('detail-tab')">상세정보 테스트</div>
+            <div class="tab" onclick="showTab('location-tab')">위치기반 테스트</div>
+            <div class="tab" onclick="showTab('metrics-tab')">메트릭스</div>
+        </div>
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">🏛️ 한국관광공사 API 테스트</h1>
-            <p class="text-gray-600 mt-2">G3 프로덕션 코드를 테스트하기 위한 클라이언트 페이지입니다.</p>
-        </header>
+        <div id="basic-tab" class="tab-content active">
+            <div style="text-align: center; margin: 20px 0;">
+                <button onclick="testHealthCheck()">❤️ 헬스체크</button>
+                <button onclick="loadAll()">🏛️ 전체 카테고리 로드 (각 10개)</button>
+                <button onclick="testSingle()">🧪 단일 테스트</button>
+                <button onclick="clearResults()">🗑️ 지우기</button>
+            </div>
+            
+            <div id="status" style="display:none;"></div>
+            <div id="results"></div>
+        </div>
 
-        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-            <div class="flex flex-wrap justify-center items-center gap-4">
-                <button onclick="testHealth()" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">❤️ 헬스체크</button>
-                <button onclick="loadAll()" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">🏛️ 전체 카테고리 로드</button>
-                <button onclick="testSingle()" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">🧪 단일 테스트</button>
-                <button onclick="clearResults()" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">🗑️ 지우기</button>
+        <div id="detail-tab" class="tab-content">
+            <div class="test-panel">
+                <h3>🔎 콘텐츠 상세 정보 조회</h3>
+                <div class="input-group">
+                    <label for="contentId">콘텐츠 ID:</label>
+                    <input type="text" id="contentId" placeholder="예: 125266">
+                </div>
+                <div class="input-group">
+                    <label for="contentTypeId">콘텐츠 타입:</label>
+                    <select id="contentTypeId">
+                        <option value="12">관광지</option>
+                        <option value="14">문화시설</option>
+                        <option value="15">축제/공연/행사</option>
+                        <option value="25">여행코스</option>
+                        <option value="28">레포츠</option>
+                        <option value="32">숙박</option>
+                        <option value="38">쇼핑</option>
+                        <option value="39">음식점</option>
+                    </select>
+                </div>
+                <button onclick="getDetail()">상세 정보 조회</button>
+                <div id="detail-result"></div>
             </div>
         </div>
 
-        <!-- 상태 메시지 표시 영역 -->
-        <div id="status-container" class="p-4 mb-6 rounded-lg text-center font-semibold" style="display:none;"></div>
+        <div id="location-tab" class="tab-content">
+            <div class="test-panel">
+                <h3>📍 위치 기반 검색</h3>
+                <div class="input-group">
+                    <label for="mapX">경도(mapX):</label>
+                    <input type="text" id="mapX" placeholder="예: 126.981106" value="126.981106">
+                </div>
+                <div class="input-group">
+                    <label for="mapY">위도(mapY):</label>
+                    <input type="text" id="mapY" placeholder="예: 37.568477" value="37.568477">
+                </div>
+                <div class="input-group">
+                    <label for="radius">반경(미터):</label>
+                    <input type="number" id="radius" placeholder="예: 3000" value="3000">
+                </div>
+                <div class="input-group">
+                    <label for="loc-content-type">콘텐츠 타입:</label>
+                    <select id="loc-content-type">
+                        <option value="">전체</option>
+                        <option value="12">관광지</option>
+                        <option value="14">문화시설</option>
+                        <option value="15">축제/공연/행사</option>
+                        <option value="25">여행코스</option>
+                        <option value="28">레포츠</option>
+                        <option value="32">숙박</option>
+                        <option value="38">쇼핑</option>
+                        <option value="39">음식점</option>
+                    </select>
+                </div>
+                <button onclick="searchByLocation()">위치 기반 검색</button>
+                <div id="location-result"></div>
+            </div>
+        </div>
 
-        <!-- 결과 표시 영역 -->
-        <div id="results" class="space-y-8"></div>
+        <div id="metrics-tab" class="tab-content">
+            <div class="test-panel">
+                <h3>📊 API 메트릭스 정보</h3>
+                <button onclick="getMetrics()">메트릭스 조회</button>
+                <div id="metrics-result"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // --- API 엔드포인트 설정 ---
-        // 서버리스 환경에서는 각 기능(handler)별로 엔드포인트가 분리되는 것이 일반적입니다.
-        // G3 코드의 `handler` 함수는 이 주소로 호출됩니다.
-        const TOURISM_API_ENDPOINT = '/api/tourism'; 
-        // G3 코드의 `healthCheck` 함수는 이 주소로 호출됩니다. (Vercel 라우팅 설정에 따라 달라질 수 있음)
-        const HEALTH_API_ENDPOINT = '/api/healthCheck';
-
+        // 기본 API 경로 설정
+        const API = '/api/tourism';
+        
+        // 카테고리 정의
         const categories = [
-            {id:'12', name:'관광지', icon:'🏞️'},
+            {id:'12', name:'관광지', icon:'🏛️'},
             {id:'14', name:'문화시설', icon:'🎭'},
             {id:'15', name:'축제/공연/행사', icon:'🎪'},
             {id:'25', name:'여행코스', icon:'🗺️'},
@@ -59,213 +150,476 @@
             {id:'38', name:'쇼핑', icon:'🛍️'},
             {id:'39', name:'음식점', icon:'🍽️'}
         ];
-        
-        const statusContainer = document.getElementById('status-container');
-        const resultsContainer = document.getElementById('results');
-        const buttons = document.querySelectorAll('button');
 
-        /**
-         * 버튼 활성/비활성 상태를 제어합니다.
-         * @param {boolean} isLoading - 로딩 중 여부
-         */
-        function setButtonsLoading(isLoading) {
-            buttons.forEach(button => {
-                button.disabled = isLoading;
-            });
+        // 상태 메시지 표시 함수
+        function status(msg, type='loading') {
+            const div = document.getElementById('status');
+            div.innerHTML = msg;
+            div.className = `status ${type}`;
+            div.style.display = 'block';
         }
 
-        /**
-         * 상태 메시지를 표시합니다.
-         * @param {string} msg - 표시할 메시지 (HTML 가능)
-         * @param {'loading'|'success'|'error'} type - 메시지 종류
-         */
-        function showStatus(msg, type = 'loading') {
-            statusContainer.style.display = 'block';
-            let bgColor, textColor;
-            switch (type) {
-                case 'success':
-                    bgColor = 'bg-green-100';
-                    textColor = 'text-green-800';
-                    break;
-                case 'error':
-                    bgColor = 'bg-red-100';
-                    textColor = 'text-red-800';
-                    break;
-                default: // loading
-                    bgColor = 'bg-blue-100';
-                    textColor = 'text-blue-800';
-                    break;
-            }
-            statusContainer.className = `p-4 mb-6 rounded-lg text-center font-semibold ${bgColor} ${textColor}`;
-            statusContainer.innerHTML = `<div class="flex justify-center items-center">${msg}</div>`;
-        }
-
-        /**
-         * 범용 API 호출 함수입니다.
-         * @param {string} endpoint - 호출할 API 엔드포인트
-         * @param {object} params - 쿼리 파라미터로 전송할 객체
-         * @returns {Promise<any>} - API 응답 데이터
-         */
-        async function callApi(endpoint, params = {}) {
-            const url = new URL(endpoint, location.origin);
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    url.searchParams.set(key, value);
+        // API 호출 함수 (GET 방식)
+        async function call(params) {
+            const url = new URL(API, location.origin);
+            Object.entries(params).forEach(([k,v]) => {
+                if (v !== undefined && v !== null && v !== '') {
+                    url.searchParams.set(k, v);
                 }
             });
-
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                // 서버에서 보낸 에러 메시지를 우선적으로 사용
-                throw new Error(data.error?.message || `HTTP Error ${response.status}`);
+            
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error?.message || `API Error: ${data.error?.code || 'Unknown error'}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
             }
-            return data;
         }
         
-        /**
-         * 헬스체크 API를 테스트합니다.
-         */
-        async function testHealth() {
-            clearResults();
-            setButtonsLoading(true);
-            showStatus('<div class="loading-spinner w-5 h-5 border-blue-500 border-t-transparent border-2 rounded-full mr-3"></div>헬스체크 중...');
+        // 헬스체크 함수
+        async function testHealthCheck() {
+            status('<span class="loading-spinner"></span>헬스체크 중...');
             try {
-                // 수정: 'healthCheck' 엔드포인트를 직접 호출합니다.
-                const data = await callApi(HEALTH_API_ENDPOINT);
-                const checks = data.checks;
-                const statusMessage = `✅ 헬스체크 성공! | API 키: ${checks.apiKeyConfigured ? 'OK' : '누락!'} | 컨테이너: ${checks.serviceContainerInitialized ? 'OK' : '실패!'}`;
-                showStatus(statusMessage, 'success');
+                const data = await call({ operation: 'healthCheck' });
+                status(`✅ 연결 성공! 버전: ${data.data.version}, API키: ${data.data.checks.apiKey ? '설정됨' : '누락'}`, 'success');
             } catch (e) {
-                showStatus(`❌ 연결 실패: ${e.message}`, 'error');
-            } finally {
-                setButtonsLoading(false);
+                status(`❌ 연결 실패: ${e.message}`, 'error');
             }
         }
 
-        /**
-         * 단일 카테고리를 테스트합니다.
-         */
+        // 단일 테스트 함수
         async function testSingle() {
-            clearResults();
-            setButtonsLoading(true);
-            showStatus('<div class="loading-spinner w-5 h-5 border-indigo-500 border-t-transparent border-2 rounded-full mr-3"></div>단일 테스트 중...');
+            status('<span class="loading-spinner"></span>단일 테스트 중...');
             try {
-                const data = await callApi(TOURISM_API_ENDPOINT, { operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
-                const items = data.data?.response?.body?.items?.item || [];
-                showStatus(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드`, 'success');
-                showCategory({id:'12', name:'관광지 테스트', icon:'🏞️'}, items, data.data.response.body.totalCount);
+                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
+                const items = extractItems(data);
+                const totalCount = extractTotalCount(data);
+                
+                status(`✅ 단일 테스트 성공! ${items.length}개 아이템`, 'success');
+                showCategory({id:'12', name:'관광지 테스트', icon:'🏛️'}, items, totalCount);
             } catch (e) {
-                showStatus(`❌ 단일 테스트 실패: ${e.message}`, 'error');
-            } finally {
-                setButtonsLoading(false);
+                status(`❌ 단일 테스트 실패: ${e.message}`, 'error');
             }
         }
-
-        /**
-         * 모든 카테고리의 데이터를 로드합니다.
-         */
+        
+        // 전체 카테고리 로드 함수
         async function loadAll() {
-            clearResults();
-            setButtonsLoading(true);
-            let totalItems = 0;
-            let successCount = 0;
-
-            for (let i = 0; i < categories.length; i++) {
+            document.getElementById('results').innerHTML = '';
+            status('<span class="loading-spinner"></span>모든 카테고리 로딩 중...');
+            
+            let total = 0;
+            let success = 0;
+            
+            for(let i = 0; i < categories.length; i++) {
                 const cat = categories[i];
-                showStatus(`<div class="loading-spinner w-5 h-5 border-green-500 border-t-transparent border-2 rounded-full mr-3"></div>(${i+1}/${categories.length}) ${cat.name} 로딩 중...`);
+                status(`<span class="loading-spinner"></span>${i+1}/${categories.length} ${cat.name} 로딩 중...`);
                 
                 try {
-                    const data = await callApi(TOURISM_API_ENDPOINT, {
+                    const data = await call({
                         operation: 'areaBasedList',
                         contentTypeId: cat.id,
-                        numOfRows: '30'
+                        numOfRows: '10'
                     });
                     
-                    const items = data.data?.response?.body?.items?.item || [];
-                    const totalCount = data.data?.response?.body?.totalCount || 0;
+                    const items = extractItems(data);
+                    const totalCount = extractTotalCount(data);
                     showCategory(cat, items, totalCount);
-                    totalItems += items.length;
-                    successCount++;
-
-                    // API Rate Limit을 피하기 위해 요청 간 딜레이 추가
-                    if (i < categories.length - 1) await new Promise(r => setTimeout(r, 200));
+                    total += items.length;
+                    success++;
+                    
+                    // 요청 간격 조절
+                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 400));
                 } catch(e) {
                     showError(cat, e.message);
                 }
             }
             
-            showStatus(`✅ 로드 완료! ${successCount}/${categories.length}개 카테고리에서 총 ${totalItems}개 데이터 로드`, 'success');
-            setButtonsLoading(false);
+            status(`✅ 완료! ${success}/${categories.length} 카테고리에서 총 ${total}개 데이터 로드`, 'success');
         }
-
-        /**
-         * 카테고리별 결과를 화면에 표시합니다.
-         * @param {object} cat - 카테고리 정보
-         * @param {Array} items - 아이템 목록
-         * @param {number} totalCount - 전체 아이템 수
-         */
-        function showCategory(cat, items, totalCount) {
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'category bg-white rounded-xl shadow-md overflow-hidden';
+        
+        // 위치 기반 검색 함수
+        async function searchByLocation() {
+            const locationResult = document.getElementById('location-result');
+            locationResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>위치 기반 검색 중...</div>';
             
-            const itemsHtml = items.map(item => `
-                <div class="item border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-lg transition-shadow duration-300">
-                    <img src="${item.firstimage || 'https://placehold.co/400x250/E2E8F0/A0AEC0?text=No+Image'}" 
-                         onerror="this.onerror=null;this.src='https://placehold.co/400x250/E2E8F0/A0AEC0?text=Error';" 
-                         class="w-full h-48 object-cover" alt="${item.title || ''}">
-                    <div class="p-4">
-                        <div class="font-bold text-lg mb-2 truncate" title="${item.title || ''}">${item.title || '제목없음'}</div>
-                        <p class="text-gray-600 text-sm mb-2 truncate">📍 ${item.addr1 || '주소없음'}</p>
-                        <p class="text-gray-500 text-xs">ID: ${item.contentid}</p>
+            try {
+                const mapX = document.getElementById('mapX').value;
+                const mapY = document.getElementById('mapY').value;
+                const radius = document.getElementById('radius').value;
+                const contentTypeId = document.getElementById('loc-content-type').value;
+                
+                const data = await call({
+                    operation: 'locationBasedList',
+                    mapX,
+                    mapY,
+                    radius,
+                    contentTypeId,
+                    numOfRows: '20',
+                    arrange: 'E' // 거리순 정렬
+                });
+                
+                const items = extractItems(data);
+                
+                if (items.length === 0) {
+                    locationResult.innerHTML = '<div class="status error">조건에 맞는 결과가 없습니다.</div>';
+                    return;
+                }
+                
+                let html = '<div class="status success">✅ 검색 결과: ' + items.length + '개 항목</div>';
+                html += '<div class="items">';
+                
+                items.forEach(item => {
+                    html += `
+                        <div class="item">
+                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
+                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
+                            <div class="item-content">
+                                <div class="item-title">${item.title || '제목없음'}</div>
+                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
+                                ${item.distance ? `<div class="item-distance">🧭 ${(item.distance/1000).toFixed(2)}km</div>` : ''}
+                                <div class="item-id">ID: ${item.contentid}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                locationResult.innerHTML = html;
+                
+            } catch (e) {
+                locationResult.innerHTML = `<div class="status error">❌ 검색 실패: ${e.message}</div>`;
+            }
+        }
+        
+        // 상세 정보 조회 함수
+        async function getDetail() {
+            const detailResult = document.getElementById('detail-result');
+            detailResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>상세 정보 조회 중...</div>';
+            
+            try {
+                const contentId = document.getElementById('contentId').value;
+                const contentTypeId = document.getElementById('contentTypeId').value;
+                
+                if (!contentId) {
+                    detailResult.innerHTML = '<div class="status error">콘텐츠 ID를 입력해주세요</div>';
+                    return;
+                }
+                
+                // 공통 정보 조회
+                const commonData = await call({
+                    operation: 'detailCommon',
+                    contentId,
+                    contentTypeId,
+                    defaultYN: 'Y',
+                    firstImageYN: 'Y',
+                    areacodeYN: 'Y',
+                    catcodeYN: 'Y',
+                    addrinfoYN: 'Y',
+                    mapinfoYN: 'Y',
+                    overviewYN: 'Y'
+                });
+                
+                // 소개 정보 조회
+                const introData = await call({
+                    operation: 'detailIntro',
+                    contentId,
+                    contentTypeId
+                });
+                
+                const item = extractDetailItem(commonData);
+                const introItem = extractDetailItem(introData);
+                
+                // 두 정보 병합
+                const combinedItem = {...item, ...introItem};
+                
+                let html = '<div class="item-detail">';
+                
+                // 이미지와 제목
+                html += `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="${combinedItem.firstimage || 'https://via.placeholder.com/400x300?text=이미지+없음'}" 
+                            style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                        <h2 style="margin-top: 10px;">${combinedItem.title || '제목 없음'}</h2>
                     </div>
-                </div>
-            `).join('');
-
-            categoryDiv.innerHTML = `
-                <div class="category-header bg-gray-800 text-white p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold">${cat.icon} ${cat.name}</h2>
-                    <span class="text-sm bg-gray-600 px-2 py-1 rounded-full">${items.length} / ${totalCount}</span>
-                </div>
-                <div class="items p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    ${itemsHtml || '<p class="col-span-full text-center text-gray-500 py-8">데이터가 없습니다.</p>'}
-                </div>
-            `;
-            resultsContainer.appendChild(categoryDiv);
+                `;
+                
+                // 기본 정보 표시
+                html += '<div style="margin-bottom: 20px;">';
+                html += `<p><strong>주소:</strong> ${combinedItem.addr1 || ''} ${combinedItem.addr2 || ''}</p>`;
+                
+                if (combinedItem.tel) {
+                    html += `<p><strong>전화번호:</strong> ${combinedItem.tel}</p>`;
+                }
+                
+                if (combinedItem.homepage) {
+                    html += `<p><strong>홈페이지:</strong> <a href="${combinedItem.homepage}" target="_blank">${combinedItem.homepage}</a></p>`;
+                }
+                
+                // 카테고리 정보
+                if (combinedItem.contentTypeName) {
+                    html += `<p><strong>카테고리:</strong> ${combinedItem.contentTypeName.ko} (${combinedItem.contentTypeName.en})</p>`;
+                }
+                
+                // 지역 정보
+                if (combinedItem.areaName) {
+                    html += `<p><strong>지역:</strong> ${combinedItem.areaName.ko} (${combinedItem.areaName.en})</p>`;
+                }
+                
+                html += '</div>';
+                
+                // 소개 정보
+                if (combinedItem.overview) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<h3>소개</h3>';
+                    html += `<div>${combinedItem.overview}</div>`;
+                    html += '</div>';
+                }
+                
+                // 콘텐츠 타입별 추가 정보
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h3>추가 정보</h3>';
+                
+                // 콘텐츠 타입별 특수 필드 표시
+                const specialFields = getSpecialFields(contentTypeId);
+                for (const field of specialFields) {
+                    if (combinedItem[field.key]) {
+                        html += `<p><strong>${field.name}:</strong> ${combinedItem[field.key]}</p>`;
+                    }
+                }
+                
+                html += '</div>';
+                
+                // 원본 JSON 데이터 표시
+                html += '<details style="margin-top: 20px;">';
+                html += '<summary style="cursor: pointer; padding: 10px; background: #f0f0f0;">원본 JSON 데이터</summary>';
+                html += `<pre class="json-response">${JSON.stringify(combinedItem, null, 2)}</pre>`;
+                html += '</details>';
+                
+                html += '</div>';
+                
+                detailResult.innerHTML = html;
+                
+            } catch (e) {
+                detailResult.innerHTML = `<div class="status error">❌ 정보 조회 실패: ${e.message}</div>`;
+            }
+        }
+        
+        // 메트릭스 조회 함수
+        async function getMetrics() {
+            const metricsResult = document.getElementById('metrics-result');
+            metricsResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>메트릭스 조회 중...</div>';
+            
+            try {
+                const data = await call({
+                    operation: 'metrics'
+                });
+                
+                const metrics = data.data;
+                
+                let html = '<div class="status success">✅ 메트릭스 조회 성공</div>';
+                
+                // 서비스 정보
+                html += '<h3>서비스 정보</h3>';
+                html += '<table class="metrics-table">';
+                html += '<tr><th>항목</th><th>값</th></tr>';
+                html += `<tr><td>서비스명</td><td>${metrics.service.name}</td></tr>`;
+                html += `<tr><td>버전</td><td>${metrics.service.version}</td></tr>`;
+                html += `<tr><td>업타임</td><td>${Math.floor(metrics.service.uptime / 1000 / 60)} 분 ${Math.floor(metrics.service.uptime / 1000) % 60} 초</td></tr>`;
+                html += `<tr><td>환경</td><td>${metrics.service.environment}</td></tr>`;
+                html += '</table>';
+                
+                // 캐시 정보
+                html += '<h3>캐시 정보</h3>';
+                html += '<table class="metrics-table">';
+                html += '<tr><th>항목</th><th>값</th></tr>';
+                html += `<tr><td>적중 수</td><td>${metrics.cache.hits}</td></tr>`;
+                html += `<tr><td>미스 수</td><td>${metrics.cache.misses}</td></tr>`;
+                html += `<tr><td>캐시 크기</td><td>${metrics.cache.size} 항목</td></tr>`;
+                html += `<tr><td>적중률</td><td>${metrics.cache.hitRate.toFixed(2)}%</td></tr>`;
+                html += `<tr><td>활성화 상태</td><td>${metrics.cache.enabled ? '활성' : '비활성'}</td></tr>`;
+                html += '</table>';
+                
+                // 속도 제한 정보
+                html += '<h3>속도 제한 정보</h3>';
+                html += '<table class="metrics-table">';
+                html += '<tr><th>항목</th><th>값</th></tr>';
+                html += `<tr><td>총 요청 수</td><td>${metrics.rateLimiter.totalRequests}</td></tr>`;
+                html += `<tr><td>제한된 요청 수</td><td>${metrics.rateLimiter.limitedRequests}</td></tr>`;
+                html += `<tr><td>활성 클라이언트 수</td><td>${metrics.rateLimiter.activeClients}</td></tr>`;
+                html += `<tr><td>활성화 상태</td><td>${metrics.rateLimiter.enabled ? '활성' : '비활성'}</td></tr>`;
+                html += '</table>';
+                
+                // 메모리 정보 (제공된 경우)
+                if (metrics.memory) {
+                    html += '<h3>메모리 사용량</h3>';
+                    html += '<table class="metrics-table">';
+                    html += '<tr><th>항목</th><th>값</th></tr>';
+                    html += `<tr><td>사용 힙 메모리</td><td>${(metrics.memory.heapUsed / 1024 / 1024).toFixed(2)} MB</td></tr>`;
+                    html += `<tr><td>총 힙 메모리</td><td>${(metrics.memory.heapTotal / 1024 / 1024).toFixed(2)} MB</td></tr>`;
+                    if (metrics.memory.external) {
+                        html += `<tr><td>외부 메모리</td><td>${(metrics.memory.external / 1024 / 1024).toFixed(2)} MB</td></tr>`;
+                    }
+                    html += '</table>';
+                }
+                
+                // 원본 JSON 데이터 표시
+                html += '<details style="margin-top: 20px;">';
+                html += '<summary style="cursor: pointer; padding: 10px; background: #f0f0f0;">원본 JSON 데이터</summary>';
+                html += `<pre class="json-response">${JSON.stringify(metrics, null, 2)}</pre>`;
+                html += '</details>';
+                
+                metricsResult.innerHTML = html;
+                
+            } catch (e) {
+                metricsResult.innerHTML = `<div class="status error">❌ 메트릭스 조회 실패: ${e.message}</div>`;
+            }
+        }
+        
+        // 카테고리별 특수 필드 가져오기
+        function getSpecialFields(contentTypeId) {
+            const fields = {
+                '12': [ // 관광지
+                    {key: 'infocenter', name: '문의 및 안내'},
+                    {key: 'restdate', name: '쉬는날'},
+                    {key: 'usetime', name: '이용시간'}
+                ],
+                '14': [ // 문화시설
+                    {key: 'infocenterculture', name: '문의 및 안내'},
+                    {key: 'restdateculture', name: '쉬는날'},
+                    {key: 'usetimeculture', name: '이용시간'},
+                    {key: 'parkingculture', name: '주차시설'}
+                ],
+                '15': [ // 축제/공연/행사
+                    {key: 'eventstartdate', name: '행사 시작일'},
+                    {key: 'eventenddate', name: '행사 종료일'},
+                    {key: 'eventplace', name: '행사 장소'},
+                    {key: 'placeinfo', name: '행사장 위치안내'}
+                ],
+                '25': [ // 여행코스
+                    {key: 'distance', name: '코스 총 거리'},
+                    {key: 'taketime', name: '소요시간'},
+                    {key: 'theme', name: '코스 테마'}
+                ],
+                '28': [ // 레포츠
+                    {key: 'infocenterleports', name: '문의 및 안내'},
+                    {key: 'restdateleports', name: '쉬는날'},
+                    {key: 'usetimeleports', name: '이용시간'}
+                ],
+                '32': [ // 숙박
+                    {key: 'infocenterlodging', name: '문의 및 안내'},
+                    {key: 'checkintime', name: '체크인 시간'},
+                    {key: 'checkouttime', name: '체크아웃 시간'},
+                    {key: 'roomtype', name: '객실유형'},
+                    {key: 'reservationurl', name: '예약안내 홈페이지'}
+                ],
+                '38': [ // 쇼핑
+                    {key: 'infocentershopping', name: '문의 및 안내'},
+                    {key: 'restdateshopping', name: '쉬는날'},
+                    {key: 'opentime', name: '영업시간'},
+                    {key: 'fairday', name: '장서는 날'}
+                ],
+                '39': [ // 음식점
+                    {key: 'infocenterfood', name: '문의 및 안내'},
+                    {key: 'restdatefood', name: '쉬는날'},
+                    {key: 'opentimefood', name: '영업시간'},
+                    {key: 'parkingfood', name: '주차시설'},
+                    {key: 'firstmenu', name: '대표 메뉴'}
+                ]
+            };
+            
+            return fields[contentTypeId] || [];
         }
 
-        /**
-         * 오류 발생 시 오류 메시지를 화면에 표시합니다.
-         * @param {object} cat - 카테고리 정보
-         * @param {string} errorMsg - 에러 메시지
-         */
-        function showError(cat, errorMsg) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'category bg-red-50 rounded-xl shadow-md overflow-hidden';
-            errorDiv.innerHTML = `
-                <div class="category-header bg-red-700 text-white p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold">${cat.icon} ${cat.name}</h2>
-                    <span class="text-sm bg-red-500 px-2 py-1 rounded-full">오류 발생</span>
+        // 카테고리 표시 함수 
+        function showCategory(cat, items, totalCount) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span>${items.length}개 / 전체 ${totalCount}개</span>
                 </div>
-                <div class="p-4 text-red-800 font-semibold">
-                    ❌ ${errorMsg}
+                <div class="items">
+                    ${items.map(item => `
+                        <div class="item">
+                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
+                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
+                            <div class="item-content">
+                                <div class="item-title">${item.title || '제목없음'}</div>
+                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
+                                ${item.distance ? `<div class="item-distance">🧭 ${(item.distance/1000).toFixed(2)}km</div>` : ''}
+                                <div class="item-id">ID: ${item.contentid}</div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
-            resultsContainer.appendChild(errorDiv);
+            document.getElementById('results').appendChild(div);
         }
 
-        /**
-         * 결과 영역과 상태 메시지를 초기화합니다.
-         */
+        // 에러 표시 함수
+        function showError(cat, error) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span style="color: #ffcdd2;">오류 발생</span>
+                </div>
+                <div style="padding:20px; color:#721c24; background:#f8d7da;">❌ ${error}</div>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+
+        // 결과 지우기 함수
         function clearResults() {
-            resultsContainer.innerHTML = '';
-            statusContainer.style.display = 'none';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('status').style.display = 'none';
+        }
+        
+        // 탭 전환 함수
+        function showTab(tabId) {
+            // 모든 탭 컨텐츠 숨기기
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            // 모든 탭 버튼 비활성화
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // 선택한 탭 컨텐츠와 버튼 활성화
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab:nth-child(${Array.from(tabs).findIndex(tab => tab.getAttribute('onclick').includes(tabId)) + 1})`).classList.add('active');
+        }
+        
+        // API 응답에서 항목 추출 (G3.txt 형식에 맞춤)
+        function extractItems(data) {
+            // data -> data -> response -> body -> items -> item
+            return (data?.data?.response?.body?.items?.item) || [];
+        }
+        
+        // API 응답에서 전체 개수 추출
+        function extractTotalCount(data) {
+            // data -> data -> response -> body -> totalCount
+            return data?.data?.response?.body?.totalCount || 0;
+        }
+        
+        // 상세 정보에서 항목 추출
+        function extractDetailItem(data) {
+            const items = extractItems(data);
+            // 단일 항목 반환
+            return items.length > 0 ? items[0] : {};
         }
 
-        // 페이지 로드 시 자동으로 헬스체크 실행
-        window.onload = () => testHealth();
-
+        // 페이지 로드시 자동 헬스체크
+        window.onload = () => testHealthCheck();
     </script>
 </body>
 </html>
