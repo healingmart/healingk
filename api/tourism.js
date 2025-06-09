@@ -230,6 +230,7 @@ class SecurityModule {
 }
 
 // ===== 유틸리티 모듈: 안전한 파싱 및 검증 =====
+
 /**
  * 안전한 유틸리티 함수들을 제공하는 클래스
  * 모든 파일의 유틸리티 기능을 통합하고 개선
@@ -250,7 +251,7 @@ class SafeUtils {
         });
         return `${prefix}_${timestamp}_${random}_${uuid}`;
     }
-    
+
     /**
      * 안전하게 정수를 파싱합니다 (강화된 버전)
      * @param {*} value - 파싱할 값
@@ -260,10 +261,9 @@ class SafeUtils {
      */
     static safeParseInt(value, defaultValue = NaN, options = {}) {
         if (value === null || value === undefined || value === '') return defaultValue;
-        
+
         const { min, max, strict = false } = options;
-        
-        // 보안 검증
+
         if (typeof value === 'string') {
             const threats = SecurityModule.detectThreats(value);
             if (!threats.safe) {
@@ -271,27 +271,22 @@ class SafeUtils {
                 return defaultValue;
             }
         }
-        
+
         let num;
         if (strict) {
-            // 엄격 모드: 숫자만 허용
-            if (!/^-?\d+$/.test(String(value).trim())) {
-                return defaultValue;
-            }
+            if (!/^-?\d+$/.test(String(value).trim())) return defaultValue;
             num = parseInt(value, 10);
         } else {
             num = parseInt(value, 10);
         }
-        
+
         if (isNaN(num)) return defaultValue;
-        
-        // 범위 검증
         if (typeof min === 'number' && num < min) return defaultValue;
         if (typeof max === 'number' && num > max) return defaultValue;
-        
+
         return num;
     }
-    
+
     /**
      * 안전하게 부동 소수점을 파싱합니다 (강화된 버전)
      * @param {*} value - 파싱할 값
@@ -301,10 +296,7 @@ class SafeUtils {
      */
     static safeParseFloat(value, defaultValue = NaN, options = {}) {
         if (value === null || value === undefined || value === '') return defaultValue;
-        
         const { min, max, precision, strict = false } = options;
-        
-        // 보안 검증
         if (typeof value === 'string') {
             const threats = SecurityModule.detectThreats(value);
             if (!threats.safe) {
@@ -312,32 +304,22 @@ class SafeUtils {
                 return defaultValue;
             }
         }
-        
         let num;
         if (strict) {
-            // 엄격 모드: 숫자와 소수점만 허용
-            if (!/^-?\d*\.?\d+$/.test(String(value).trim())) {
-                return defaultValue;
-            }
+            if (!/^-?\d*\.?\d+$/.test(String(value).trim())) return defaultValue;
             num = parseFloat(value);
         } else {
             num = parseFloat(value);
         }
-        
         if (isNaN(num) || !isFinite(num)) return defaultValue;
-        
-        // 범위 검증
         if (typeof min === 'number' && num < min) return defaultValue;
         if (typeof max === 'number' && num > max) return defaultValue;
-        
-        // 정밀도 조정
         if (typeof precision === 'number' && precision >= 0) {
             num = parseFloat(num.toFixed(precision));
         }
-        
         return num;
     }
-    
+
     /**
      * 민감한 데이터를 마스킹합니다 (강화된 버전)
      * @param {object} data - 마스킹할 데이터 객체
@@ -347,16 +329,13 @@ class SafeUtils {
      */
     static maskSensitiveData(data, fieldsToMask = ['apiKey', 'password', 'token', 'ServiceKey'], options = {}) {
         if (typeof data !== 'object' || data === null) return data;
-        
         const { maskChar = '*', showLength = 3, deepCopy = true } = options;
         const maskedData = deepCopy ? JSON.parse(JSON.stringify(data)) : { ...data };
-        
         const maskValue = (value) => {
             if (typeof value !== 'string') return '***MASKED***';
             if (value.length <= showLength) return maskChar.repeat(value.length);
             return value.substring(0, showLength) + maskChar.repeat(Math.max(3, value.length - showLength));
         };
-        
         const maskRecursive = (obj) => {
             for (const [key, value] of Object.entries(obj)) {
                 if (fieldsToMask.includes(key)) {
@@ -366,49 +345,45 @@ class SafeUtils {
                 }
             }
         };
-        
         maskRecursive(maskedData);
         return maskedData;
     }
-    
+
     /**
-     * URL이 유효한 형식인지 확인합니다 (강화된 버전)
+     * URL이 유효한 형식인지 확인합니다 (API URL 예외 처리 추가 버전)
      * @param {string} urlString - 확인할 URL 문자열
      * @param {object} options - 검증 옵션
      * @returns {boolean} 유효성 여부
      */
     static isValidUrl(urlString, options = {}) {
         if (typeof urlString !== 'string') return false;
-        
         const { allowedProtocols = ['http:', 'https:'], allowLocalhost = false, maxLength = 2048 } = options;
-        
-        // 길이 검증
         if (urlString.length > maxLength) return false;
+
+        // 이 URL이 외부 관광 API를 호출하는 것인지 확인합니다.
+        const isTourApiUrl = urlString.includes('apis.data.go.kr');
         
-        // 보안 위협 검증
-        const threats = SecurityModule.detectThreats(urlString);
-        if (!threats.safe) return false;
-        
+        // 외부 관광 API URL이 아닌 경우에만, 더 엄격한 보안 검사를 수행합니다.
+        if (!isTourApiUrl) {
+            const threats = SecurityModule.detectThreats(urlString);
+            if (!threats.safe) {
+                console.warn('Security threat detected in non-API URL:', threats);
+                return false;
+            }
+        }
         try {
             const url = new URL(urlString);
-            
-            // 프로토콜 검증
             if (!allowedProtocols.includes(url.protocol)) return false;
-            
-            // localhost 검증
             if (!allowLocalhost && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
                 return false;
             }
-            
-            // 추가 보안 검증
-            if (url.username || url.password) return false; // 인증 정보 포함 URL 거부
-            
+            if (!isTourApiUrl && (url.username || url.password)) return false;
             return true;
         } catch (error) {
             return false;
         }
     }
-    
+
     /**
      * 지정된 시간(ms) 동안 대기합니다
      * @param {number} ms - 대기할 시간 (밀리초)
@@ -420,7 +395,7 @@ class SafeUtils {
         const waitTime = Math.min(Math.max(0, ms), maxWait);
         return new Promise(resolve => setTimeout(resolve, waitTime));
     }
-    
+
     /**
      * 데이터 검증 및 변환
      * @param {*} data - 검증할 데이터
@@ -430,17 +405,12 @@ class SafeUtils {
     static validateAndTransform(data, schema) {
         const errors = [];
         const transformed = {};
-        
         for (const [key, rules] of Object.entries(schema)) {
             const value = data[key];
-            
-            // 필수 필드 검증
             if (rules.required && (value === undefined || value === null || value === '')) {
                 errors.push(`Field '${key}' is required`);
                 continue;
             }
-            
-            // 타입 검증 및 변환
             if (value !== undefined && value !== null) {
                 try {
                     switch (rules.type) {
@@ -477,7 +447,6 @@ class SafeUtils {
                 }
             }
         }
-        
         return {
             valid: errors.length === 0,
             errors,
