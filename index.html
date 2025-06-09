@@ -3,310 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>제주 7대 관광지 - 한국관광공사 API</title>
+    <title>관광 정보 API 테스터</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #eef2f6; color: #333; line-height: 1.6; }
-        .container { max-width: 1000px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; font-size: 2.2em; border-bottom: 2px solid #4a90e2; padding-bottom: 15px; }
-        .button-group { text-align: center; margin-bottom: 40px; }
-        button {
-            padding: 14px 30px;
-            margin: 10px;
-            background: linear-gradient(135deg, #4a90e2 0%, #007bff 100%);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
-        }
-        button:hover {
-            background: linear-gradient(135deg, #007bff 0%, #4a90e2 100%);
-            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
-            transform: translateY(-2px);
-        }
-        button:disabled {
-            background: #a9c2e0;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
-        .status-message {
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
-            display: none; /* 기본적으로 숨김 */
-            animation: fadeIn 0.5s forwards;
-        }
-        .status-loading { background: #e0f7fa; color: #007bb6; border: 1px solid #00acc1; }
-        .status-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #4caf50; }
-        .status-error { background: #ffebee; color: #d32f2f; border: 1px solid #f44336; }
-        .loading-spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid #fff;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 10px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; display: block; } }
-
-        .tourism-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            padding: 20px 0;
-        }
-        .tourism-item {
-            background: #fdfdfd;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
-        }
-        .tourism-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        .item-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-bottom: 1px solid #eee;
-        }
-        .item-content {
-            padding: 20px;
-            flex-grow: 1; /* 내용이 길어져도 카드 높이 일정하게 유지 */
-        }
-        .item-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-        .item-address {
-            font-size: 0.95em;
-            color: #666;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-        }
-        .item-address span { margin-left: 5px; }
-        .item-description {
-            font-size: 0.9em;
-            color: #555;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 3; /* 3줄 이상 시 생략 */
-            -webkit-box-orient: vertical;
-            margin-bottom: 15px;
-        }
-        .item-more-info {
-            font-size: 0.85em;
-            color: #007bff;
-            text-decoration: none;
-            font-weight: bold;
-            display: block;
-            margin-top: auto; /* 하단에 붙도록 */
-        }
-        .item-more-info:hover { text-decoration: underline; }
-        .no-data { text-align: center; color: #777; padding: 50px; font-size: 1.2em; background: #f0f4f8; border-radius: 8px; margin-top: 30px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .container { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; max-height: 500px; overflow-y: auto; }
+        #status { font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
+    <h1>관광 정보 API 테스터</h1>
+    <p>백엔드 API 주소: <a id="apiUrlLink" href="#" target="_blank"></a></p>
+
     <div class="container">
-        <h1>✨ 제주 7대 관광지</h1>
-        
-        <div class="button-group">
-            <button id="fetchButton" onclick="getJejuTourism()">✈️ 제주 관광지 데이터 가져오기</button>
-            <button id="clearButton" onclick="clearResults()">🗑️ 결과 지우기</button>
-        </div>
-        
-        <div id="statusMessage" class="status-message"></div>
-        <div id="tourismResults" class="tourism-grid">
-            </div>
+        <h2>키워드 검색 (searchKeyword)</h2>
+        <input type="text" id="keyword" placeholder="예: 경복궁, 서울타워" value="대구">
+        <button onclick="searchByKeyword()">검색 실행</button>
     </div>
 
+    <div class="container">
+        <h2>지역 기반 조회 (areaBasedList)</h2>
+        <input type="number" id="areaCode" placeholder="지역 코드 (예: 1=서울, 4=대구)">
+        <button onclick="searchByArea()">조회 실행</button>
+    </div>
+    
+    <div class="container">
+        <h2>위치 기반 조회 (locationBasedList)</h2>
+        <p>현재 위치(대구 시청)를 기준으로 2km 이내의 관광지를 조회합니다.</p>
+        <button onclick="searchByLocation()">조회 실행</button>
+    </div>
+
+    <h2>API 응답 결과</h2>
+    <div id="status">API를 테스트해보세요.</div>
+    <pre id="result">여기에 결과가 표시됩니다.</pre>
+
     <script>
-        // 한국관광공사 API 서버리스 함수 엔드포인트
-        const API_ENDPOINT = 'https://healingk.vercel.app/api/tourism'; 
+        // 사용자가 제공한 Vercel 배포 URL
+        const BASE_URL = 'https://healingk.vercel.app/api';
+        document.getElementById('apiUrlLink').href = BASE_URL;
+        document.getElementById('apiUrlLink').textContent = BASE_URL;
+        
+        const resultElement = document.getElementById('result');
+        const statusElement = document.getElementById('status');
 
-        // UI 요소 참조
-        const fetchButton = document.getElementById('fetchButton');
-        const clearButton = document.getElementById('clearButton');
-        const statusMessageDiv = document.getElementById('statusMessage');
-        const tourismResultsDiv = document.getElementById('tourismResults');
+        // 범용 API 호출 함수
+        async function fetchApi(operation, params = {}) {
+            const query = new URLSearchParams({ operation, ...params }).toString();
+            const fullUrl = `${BASE_URL}?${query}`;
 
-        /**
-         * 상태 메시지를 업데이트하고 표시합니다.
-         * @param {string} message 표시할 메시지
-         * @param {'loading'|'success'|'error'} type 메시지 타입
-         */
-        function updateStatus(message, type) {
-            statusMessageDiv.textContent = message;
-            statusMessageDiv.className = `status-message status-${type}`;
-            statusMessageDiv.style.display = 'block';
-        }
-
-        /**
-         * 버튼 활성화/비활성화를 제어합니다.
-         * @param {boolean} disabled true면 비활성화, false면 활성화
-         */
-        function setButtonsDisabled(disabled) {
-            fetchButton.disabled = disabled;
-            clearButton.disabled = disabled;
-        }
-
-        /**
-         * API 요청을 수행하는 제네릭 함수.
-         * @param {object} params 요청 파라미터 (operation 포함)
-         * @returns {Promise<object>} API 응답 데이터
-         * @throws {Error} 네트워크 오류 또는 API 응답 오류 시
-         */
-        async function callApi(params) {
-            const url = new URL(API_ENDPOINT);
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && String(value).trim() !== '') {
-                    url.searchParams.set(key, String(value));
-                }
-            });
-
-            console.log(`[API Call] Request URL: ${url.toString()}`);
-            console.log(`[API Call] Request Params:`, params);
-
-            let response;
-            let rawText = '';
-            let parsedData;
+            statusElement.textContent = `요청 중... ${fullUrl}`;
+            resultElement.textContent = '';
 
             try {
-                response = await fetch(url.toString());
-                console.log(`[API Call] Response Status: ${response.status} ${response.statusText}`);
-                rawText = await response.text(); // 응답 본문을 먼저 텍스트로 읽기
-                
-                try {
-                    parsedData = JSON.parse(rawText); // 텍스트를 JSON으로 파싱
-                    console.log(`[API Call] Parsed JSON Data:`, parsedData);
-                } catch (jsonParseError) {
-                    console.error(`[API Call Error] JSON 파싱 실패: ${jsonParseError.message}. 원시 응답: ${rawText.substring(0, 500)}...`, jsonParseError);
-                    throw new Error(`데이터 파싱 오류: ${jsonParseError.message}. 원시 응답의 일부: ${rawText.substring(0, 200)}...`);
-                }
+                const response = await fetch(fullUrl);
+                const data = await response.json();
 
-            } catch (networkOrFetchError) {
-                console.error(`[API Call Error] 네트워크 요청 실패 또는 CORS 오류: ${networkOrFetchError.message}`, networkOrFetchError.stack);
-                throw new Error(`네트워크 오류 (서버리스 함수에 접근 불가): ${networkOrFetchError.message}`);
-            }
+                resultElement.textContent = JSON.stringify(data, null, 2);
 
-            // G3.txt 백엔드의 응답 구조에 맞춰 에러 처리
-            if (parsedData.success === false && parsedData.error) {
-                const errorMessage = parsedData.error.message || `알 수 없는 백엔드 오류 (코드: ${parsedData.error.code || 'UNKNOWN'})`;
-                console.error(`[API Call Error] 백엔드 에러 응답:`, parsedData.error);
-                throw new Error(errorMessage);
-            } else if (!response.ok) { // HTTP 상태 코드가 200이 아닌 경우
-                const errorMessage = `HTTP 상태 오류: ${response.status} ${response.statusText}. 서버 메시지: ${parsedData.error?.message || '없음'}`;
-                console.error(`[API Call Error] HTTP 상태 오류 응답:`, parsedData);
-                throw new Error(errorMessage);
-            }
-
-            console.log(`[API Call] 요청 성공.`);
-            return parsedData;
-        }
-
-        /**
-         * 제주 관광지 데이터를 가져와 표시합니다.
-         */
-        async function getJejuTourism() {
-            setButtonsDisabled(true);
-            updateStatus('<span class="loading-spinner"></span>제주 관광지 데이터 로딩 중...', 'loading');
-            tourismResultsDiv.innerHTML = ''; // 이전 결과 지우기
-
-            try {
-                // 제주도(areaCode=39)의 관광지(contentTypeId=12) 30개 요청
-                const responseData = await callApi({
-                    operation: 'areaBasedList',
-                    areaCode: '39', // 제주도 코드
-                    contentTypeId: '12', // 관광지 코드
-                    numOfRows: '30', // 최대 30개
-                    pageNo: '1',
-                    MobileOS: 'ETC', // 필수 파라미터 (백엔드 기본값에도 있지만 명시적으로)
-                    MobileApp: 'JejuTourismApp', // 필수 파라미터
-                    _type: 'json' // 필수 파라미터
-                });
-
-                // G3.txt 백엔드 응답 구조에 맞춰 데이터 추출
-                const items = responseData.data?.response?.body?.items?.item || [];
-                const totalCount = responseData.data?.response?.body?.totalCount || 0;
-
-                if (items.length > 0) {
-                    updateStatus(`✅ 제주 관광지 ${items.length}개 로드됨 (총 ${totalCount}개 중)`, 'success');
-                    displayTourismItems(items);
+                if (response.ok) {
+                    statusElement.textContent = `성공! (상태 코드: ${response.status})`;
                 } else {
-                    updateStatus('⚠️ 제주 관광지 데이터를 찾을 수 없습니다.', 'loading'); // 데이터 없음도 loading으로 표시
-                    tourismResultsDiv.innerHTML = '<div class="no-data">제주 관광지 데이터를 찾을 수 없습니다. API 키 설정 또는 API 상태를 확인해주세요.</div>';
+                    statusElement.textContent = `오류 발생! (상태 코드: ${response.status})`;
                 }
-
             } catch (error) {
-                updateStatus(`❌ 데이터 로드 실패: ${error.message}`, 'error');
-                console.error(`[Get Jeju Tourism] 최종 에러: ${error.message}`, error.stack);
-                tourismResultsDiv.innerHTML = `<div class="no-data">오류 발생: ${error.message}<br>자세한 내용은 개발자 도구(F12) 콘솔을 확인해주세요.</div>`;
-            } finally {
-                setButtonsDisabled(false);
+                statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`;
+                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요.';
             }
         }
 
-        /**
-         * 관광지 아이템 목록을 페이지에 표시합니다.
-         * @param {Array<object>} items 표시할 관광지 아이템 배열
-         */
-        function displayTourismItems(items) {
-            tourismResultsDiv.innerHTML = ''; // 기존 내용 지우기
-            items.forEach(item => {
-                const itemElement = document.createElement('div');
-                itemElement.className = 'tourism-item';
-                itemElement.innerHTML = `
-                    <img src="${item.firstimage || 'https://via.placeholder.com/400x200?text=이미지+없음'}" 
-                         alt="${item.title || '이미지 없음'}" class="item-image"
-                         onerror="this.src='https://via.placeholder.com/400x200?text=이미지+없음'; this.onerror=null;">
-                    <div class="item-content">
-                        <div class="item-title">${item.title || '제목 없음'}</div>
-                        <div class="item-address">📍<span>${item.addr1 || '주소 없음'}</span></div>
-                        <p class="item-description">${item.overview ? (item.overview.substring(0, 150) + '...') : '상세 정보 없음.'}</p>
-                        ${item.homepage ? `<a href="${item.homepage}" target="_blank" class="item-more-info">홈페이지 방문 →</a>` : ''}
-                    </div>
-                `;
-                itemElement.onclick = () => {
-                    alert(`ID: ${item.contentid}\n제목: ${item.title}\n주소: ${item.addr1}\n유형: ${item.contentTypeName || '알 수 없음'}`);
-                };
-                tourismResultsDiv.appendChild(itemElement);
-            });
+        // 키워드 검색 함수
+        function searchByKeyword() {
+            const keyword = document.getElementById('keyword').value;
+            if (!keyword) {
+                alert('키워드를 입력해주세요.');
+                return;
+            }
+            fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 });
         }
 
-        /**
-         * 모든 결과를 지웁니다.
-         */
-        function clearResults() {
-            tourismResultsDiv.innerHTML = '';
-            statusMessageDiv.style.display = 'none';
+        // 지역 코드 조회 함수
+        function searchByArea() {
+            const areaCode = document.getElementById('areaCode').value;
+            if (!areaCode) {
+                alert('지역 코드를 입력해주세요.');
+                return;
+            }
+            fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 });
         }
-
-        // 페이지 로드 시 초기 헬스체크 (백엔드 상태 확인)
-        window.onload = () => {
-            updateStatus('페이지 로드 완료. API 상태 확인 중...', 'loading');
-            getJejuTourism(); // 바로 제주 관광지 데이터 로드를 시도합니다.
-        };
+        
+        // 위치 기반 조회 함수 (대구 시청 좌표 기준)
+        function searchByLocation() {
+            const daeguCityHall = {
+                mapX: 128.601445, // 경도
+                mapY: 35.871435,  // 위도
+                radius: 2000      // 2km
+            };
+            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5 });
+        }
     </script>
 </body>
 </html>
