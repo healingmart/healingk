@@ -7,32 +7,36 @@
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; }
-        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        h1 { color: #333; text-align: center; }
+        button { padding: 12px 24px; margin: 8px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
         button:hover { background: #0056b3; }
-        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
-        .loading { background: #fff3cd; }
-        .success { background: #d4edda; }
-        .error { background: #f8d7da; }
-        .debug { background: #e2e3e5; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
-        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 5px; }
-        .category-header { background: #007bff; color: white; padding: 15px; font-weight: bold; }
-        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; padding: 15px; }
-        .item { border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
-        .item img { width: 100%; height: 150px; object-fit: cover; }
-        .item-content { padding: 10px; }
-        .item-title { font-weight: bold; margin-bottom: 5px; }
-        .item-addr { color: #666; font-size: 0.9em; }
+        .status { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .category-header { background: #007bff; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; padding: 20px; }
+        .item { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; }
+        .item:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .item img { width: 100%; height: 180px; object-fit: cover; }
+        .item-content { padding: 15px; }
+        .item-title { font-weight: bold; margin-bottom: 8px; color: #333; }
+        .item-addr { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .item-id { color: #999; font-size: 0.8em; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏛️ Tourism API Test</h1>
-        <button onclick="loadAll()">모든 카테고리 로드 (각 30개)</button>
-        <button onclick="testConnection()">연결 테스트</button>
-        <button onclick="clear()">지우기</button>
+        <h1>🏛️ 한국관광공사 API 테스트</h1>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testHealth()">❤️ 헬스체크</button>
+            <button onclick="loadAll()">🏛️ 전체 카테고리 로드 (각 30개)</button>
+            <button onclick="clear()">🗑️ 지우기</button>
+        </div>
         
         <div id="status" style="display:none;"></div>
-        <div id="debug" style="display:none;"></div>
         <div id="results"></div>
     </div>
 
@@ -56,43 +60,22 @@
             div.style.display = 'block';
         }
 
-        function debug(msg) {
-            const div = document.getElementById('debug');
-            div.innerHTML = msg;
-            div.className = 'status debug';
-            div.style.display = 'block';
-        }
-
         async function call(params) {
             const url = new URL(API, location.origin);
             Object.entries(params).forEach(([k,v]) => v && url.searchParams.set(k,v));
             
-            try {
-                const res = await fetch(url);
-                const contentType = res.headers.get('content-type') || '';
-                
-                // Content-Type 검증
-                if (!contentType.includes('application/json')) {
-                    const text = await res.text();
-                    debug(`❌ JSON이 아닌 응답 받음<br>Content-Type: ${contentType}<br>응답 내용: ${text.substring(0, 500)}...`);
-                    throw new Error(`서버에서 JSON이 아닌 응답: ${text.substring(0, 100)}...`);
-                }
-                
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-                return data;
-            } catch (e) {
-                debug(`❌ API 호출 오류<br>URL: ${url}<br>오류: ${e.message}`);
-                throw e;
-            }
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            return data;
         }
 
-        async function testConnection() {
-            status('연결 테스트 중...');
+        async function testHealth() {
+            status('헬스체크 중...');
             try {
                 const data = await call({ operation: 'health' });
-                status('✅ 연결 성공!', 'success');
-                debug(`✅ 연결 테스트 성공<br>${JSON.stringify(data, null, 2)}`);
+                status(`✅ 연결 성공! API키: ${data.details.apiKeyConfigured ? '설정됨' : '누락'}`, 'success');
             } catch (e) {
                 status(`❌ 연결 실패: ${e.message}`, 'error');
             }
@@ -100,9 +83,11 @@
 
         async function loadAll() {
             document.getElementById('results').innerHTML = '';
-            status('로딩 중...');
+            status('모든 카테고리 로딩 중...');
             
             let total = 0;
+            let success = 0;
+            
             for(let i = 0; i < categories.length; i++) {
                 const cat = categories[i];
                 status(`${i+1}/${categories.length} ${cat.name} 로딩 중...`);
@@ -115,30 +100,37 @@
                     });
                     
                     const items = data.data?.items || [];
-                    showCategory(cat, items);
+                    showCategory(cat, items, data.data?.totalCount || 0);
                     total += items.length;
+                    success++;
                     
-                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 300));
+                    // 요청 간격 조절
+                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 400));
                 } catch(e) {
                     showError(cat, e.message);
                 }
             }
-            status(`✅ 완료! 총 ${total}개 로드됨`, 'success');
+            
+            status(`✅ 완료! ${success}/${categories.length} 카테고리에서 총 ${total}개 데이터 로드`, 'success');
         }
 
-        function showCategory(cat, items) {
+        function showCategory(cat, items, totalCount) {
             const div = document.createElement('div');
             div.className = 'category';
             div.innerHTML = `
-                <div class="category-header">${cat.icon} ${cat.name} (${items.length}개)</div>
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span>${items.length}개 / 전체 ${totalCount}개</span>
+                </div>
                 <div class="items">
                     ${items.map(item => `
                         <div class="item">
-                            <img src="${item.firstimage || 'https://via.placeholder.com/250x150?text=No+Image'}" 
-                                 onerror="this.src='https://via.placeholder.com/250x150?text=No+Image'">
+                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
+                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
                             <div class="item-content">
                                 <div class="item-title">${item.title || '제목없음'}</div>
-                                <div class="item-addr">${item.addr1 || '주소없음'}</div>
+                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
+                                <div class="item-id">ID: ${item.contentid}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -151,8 +143,11 @@
             const div = document.createElement('div');
             div.className = 'category';
             div.innerHTML = `
-                <div class="category-header">${cat.icon} ${cat.name} - 오류</div>
-                <div style="padding:15px; color:red;">❌ ${error}</div>
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span style="color: #ffcdd2;">오류 발생</span>
+                </div>
+                <div style="padding:20px; color:#721c24; background:#f8d7da;">❌ ${error}</div>
             `;
             document.getElementById('results').appendChild(div);
         }
@@ -160,11 +155,10 @@
         function clear() {
             document.getElementById('results').innerHTML = '';
             document.getElementById('status').style.display = 'none';
-            document.getElementById('debug').style.display = 'none';
         }
 
-        // 페이지 로드 시 자동 연결 테스트
-        window.onload = () => testConnection();
+        // 페이지 로드시 자동 헬스체크
+        window.onload = () => testHealth();
     </script>
 </body>
 </html>
