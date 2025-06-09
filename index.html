@@ -3,231 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 7대 관광지</title>
+    <title>대한민국 7대 관광지 소개</title>
     <style>
-        /* 기본 스타일 */
-        :root {
-            --primary-color: #007BFF;
-            --card-bg: #ffffff;
-            --text-color: #333;
-            --shadow-color: rgba(0,0,0,0.1);
-        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f4f7f6;
-            color: var(--text-color);
+            color: #333;
+            line-height: 1.6;
         }
-        
-        /* 헤더 */
         header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 2rem;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px 0;
             text-align: center;
-            box-shadow: 0 2px 4px var(--shadow-color);
+            border-bottom: 5px solid #3498db;
         }
         header h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 2.5em;
         }
-
-        /* 메인 콘텐츠 컨테이너 */
-        main {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
+        nav {
+            text-align: center;
+            margin: 20px 0;
         }
-
-        /* 관광지 카드 컨테이너 (그리드 레이아웃) */
-        #attractions-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
+        nav button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
         }
-
-        /* 개별 관광지 카드 */
-        .card {
-            background: var(--card-bg);
-            border-radius: 10px;
-            box-shadow: 0 4px 8px var(--shadow-color);
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-            display: flex;
-            flex-direction: column;
+        nav button:hover {
+            background-color: #2980b9;
         }
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 12px 24px var(--shadow-color);
+        .language-switcher {
+            text-align: right;
+            padding: 10px 20px;
         }
-        .card img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            display: block;
-        }
-        .card-content {
-            padding: 1.5rem;
-            flex-grow: 1;
-        }
-        .card-content h2 {
-            margin-top: 0;
-            color: var(--primary-color);
-        }
-        .card-content p {
-            line-height: 1.6;
-        }
-        .card-content .address {
-            font-style: italic;
-            color: #666;
-            margin-top: 1rem;
+        .language-switcher button {
+            background-color: #95a5a6;
+            padding: 8px 15px;
             font-size: 0.9em;
         }
-        
-        /* 로딩 및 에러 메시지 */
-        .message {
-            grid-column: 1 / -1; /* 전체 너비 차지 */
+        .language-switcher button:hover {
+            background-color: #7f8c8d;
+        }
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .spot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .spot-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .spot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .spot-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+        .spot-card-content {
+            padding: 15px;
+        }
+        .spot-card h3 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 1.5em;
+        }
+        .spot-card p {
+            font-size: 0.95em;
+            color: #555;
+        }
+        .spot-card .address {
+            font-size: 0.85em;
+            color: #777;
+            margin-bottom: 10px;
+        }
+        .spot-card .tel {
+            font-size: 0.85em;
+            color: #777;
+            margin-bottom: 10px;
+        }
+        .spot-card .homepage a {
+            color: #e67e22;
+            text-decoration: none;
+        }
+        .spot-card .homepage a:hover {
+            text-decoration: underline;
+        }
+        .loader {
             text-align: center;
-            font-size: 1.5rem;
-            padding: 3rem;
-            background: var(--card-bg);
-            border-radius: 10px;
+            padding: 50px;
+            font-size: 1.5em;
+            color: #7f8c8d;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            background-color: #34495e;
+            color: #ecf0f1;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>대한민국 7대 관광지 🇰🇷</h1>
+        <h1 id="pageTitle">대한민국 7대 관광지</h1>
     </header>
 
-    <main id="attractions-container">
-        <div class="message" id="loader">✨ 멋진 관광지 정보를 불러오는 중입니다...</div>
-    </main>
+    <div class="language-switcher">
+        <button onclick="loadTouristSpots('ko')" id="langKoBtn">🇰🇷 한국어</button>
+        <button onclick="loadTouristSpots('en')" id="langEnBtn">🇬🇧 English</button>
+    </div>
+
+    <div class="container">
+        <p id="pageDescription" style="text-align: center; font-size: 1.1em; margin-bottom: 30px;">
+            한국의 아름다운 7대 관광 명소를 소개합니다. 각 장소의 상세 정보를 확인해보세요.
+        </p>
+        <div id="spotGrid" class="spot-grid">
+            <!-- 관광지 정보가 여기에 동적으로 추가됩니다 -->
+        </div>
+        <div id="loader" class="loader" style="display: none;">
+            정보를 불러오는 중입니다...
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 HealingK Tour Information. All rights reserved.</p>
+    </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const API_ENDPOINT = 'https://healingk.vercel.app/';
-            
-            // 소개할 7대 관광지 키워드 목록
-            const attractions = [
-                '경복궁',
-                'N서울타워',
-                '해운대해수욕장',
-                '설악산국립공원',
-                '전주한옥마을',
-                '성산일출봉',
-                '불국사'
-            ];
+        const API_ENDPOINT = 'https://healingk.vercel.app/api/tourism'; // Vercel 배포 URL
+        const spotGrid = document.getElementById('spotGrid');
+        const loader = document.getElementById('loader');
+        const pageTitle = document.getElementById('pageTitle');
+        const pageDescription = document.getElementById('pageDescription');
 
-            const container = document.getElementById('attractions-container');
-            const loader = document.getElementById('loader');
+        // 임의로 선정한 7대 관광지 contentId (실제 서비스에서는 검색 등으로 동적 로드 권장)
+        // 순서: 경복궁, 석굴암/불국사, 해인사 장경판전, 창덕궁, 수원화성, 제주 화산섬과 용암동굴, 남한산성 (유네스코 등재 기준 참고)
+        const sevenWondersContentIds = [
+            { id: '126508', nameKo: "경복궁", nameEn: "Gyeongbokgung Palace" }, // 경복궁
+            { id: '126510', nameKo: "불국사", nameEn: "Bulguksa Temple" }, // 불국사
+            { id: '126515', nameKo: "해인사", nameEn: "Haeinsa Temple" }, // 해인사 (장경판전)
+            { id: '126509', nameKo: "창덕궁과 후원", nameEn: "Changdeokgung Palace and Huwon" }, // 창덕궁
+            { id: '126512', nameKo: "수원화성", nameEn: "Suwon Hwaseong Fortress" }, // 수원화성
+            { id: '788049', nameKo: "제주 화산섬과 용암동굴", nameEn: "Jeju Volcanic Island and Lava Tubes" }, // 제주 (성산일출봉 예시)
+            { id: '128119', nameKo: "남한산성도립공원", nameEn: "Namhansanseong Provincial Park" }  // 남한산성
+        ];
 
-            /**
-             * API를 호출하여 데이터를 가져오는 함수
-             * @param {string} operation - API 작업 (searchKeyword, detailCommon 등)
-             * @param {object} params - 요청 파라미터
-             * @returns {Promise<object>} API 응답 데이터
-             */
-            async function fetchData(operation, params) {
-                const query = new URLSearchParams({ operation, ...params }).toString();
-                const response = await fetch(`${API_ENDPOINT}?${query}`);
+        let currentLang = 'ko'; // 기본 언어
+
+        // API 호출 함수
+        async function fetchSpotDetail(contentId, lang = 'ko') {
+            const params = new URLSearchParams({
+                operation: 'detailCommon', // 상세 정보 조회 오퍼레이션
+                contentId: contentId,
+                defaultYN: 'Y',
+                firstImageYN: 'Y',
+                areacodeYN: 'Y',
+                addrinfoYN: 'Y',
+                mapinfoYN: 'Y',
+                overviewYN: 'Y',
+                lang: lang // 언어 파라미터 추가
+            });
+
+            try {
+                const response = await fetch(`${API_ENDPOINT}?${params.toString()}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept-Language': lang // 헤더에도 언어 설정
+                    }
+                });
                 if (!response.ok) {
-                    throw new Error(`API 요청 실패: ${response.status}`);
+                    const errorData = await response.json();
+                    console.error(`Error fetching ${contentId} (${lang}):`, errorData);
+                    throw new Error(`HTTP error ${response.status}: ${errorData.error?.message || 'Failed to fetch data'}`);
                 }
-                return response.json();
+                const data = await response.json();
+                if (data.success && data.data && data.data.items && data.data.items.item) {
+                    // API 응답 구조가 item이 배열이 아닌 단일 객체로 올 수 있음을 고려
+                    return Array.isArray(data.data.items.item) ? data.data.items.item[0] : data.data.items.item;
+                } else {
+                    console.warn(`No item found or API error for ${contentId} (${lang}):`, data.error?.message || 'Unknown API structure');
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Failed to fetch details for contentId ${contentId} (${lang}):`, error);
+                return null; // 오류 발생 시 null 반환
+            }
+        }
+
+        // 관광지 카드 HTML 생성
+        function createSpotCard(spotData, lang = 'ko') {
+            if (!spotData) {
+                const card = document.createElement('div');
+                card.className = 'spot-card';
+                card.innerHTML = `<div class="spot-card-content"><p>${lang === 'ko' ? '정보를 불러오는데 실패했습니다.' : 'Failed to load information.'}</p></div>`;
+                return card;
             }
 
-            /**
-             * 관광지 정보를 받아 HTML 카드를 생성하는 함수
-             * @param {object} data - 상세 정보 데이터
-             * @returns {string} 생성된 HTML 카드 문자열
-             */
-            function createAttractionCard(data) {
-                const { title, firstimage, overview, addr1 } = data;
-                
-                // 이미지가 없을 경우 기본 이미지 사용
-                const imageUrl = firstimage || 'https://via.placeholder.com/400x220.png?text=No+Image';
-                
-                // overview가 길 경우 150자로 자르기
-                const shortOverview = overview.length > 150 
-                    ? overview.substring(0, 150) + '...'
-                    : overview;
+            const card = document.createElement('div');
+            card.className = 'spot-card';
 
-                return `
-                    <div class="card">
-                        <img src="${imageUrl}" alt="${title}">
-                        <div class="card-content">
-                            <h2>${title}</h2>
-                            <p>${shortOverview}</p>
-                            <p class="address">📍 주소: ${addr1}</p>
-                        </div>
-                    </div>
-                `;
-            }
+            const title = spotData.title || (lang === 'ko' ? '제목 없음' : 'Untitled');
+            const overview = spotData.overview || (lang === 'ko' ? '설명 없음.' : 'No description available.');
+            const image = spotData.firstimage || 'https://via.placeholder.com/400x200.png?text=No+Image';
+            const address = spotData.addr1 || (lang === 'ko' ? '주소 정보 없음' : 'Address not available');
+            const tel = spotData.tel || '';
+            let homepage = spotData.homepage || '';
 
-            /**
-             * 메인 로직 실행 함수
-             */
-            async function loadAttractions() {
-                try {
-                    const cardPromises = attractions.map(async (keyword) => {
-                        try {
-                            // 1. 키워드 검색으로 contentId와 contentTypeId 가져오기
-                            const searchResult = await fetchData('searchKeyword', { keyword });
-                            
-                            // 검색 결과가 없거나 body 또는 items가 없는 경우 건너뛰기
-                            if (!searchResult.data?.body?.items?.item?.length) {
-                                console.warn(`'${keyword}'에 대한 검색 결과가 없습니다.`);
-                                return null;
-                            }
-                            
-                            const firstItem = searchResult.data.body.items.item[0];
-                            const { contentid, contenttypeid } = firstItem;
-
-                            // 2. contentId로 상세 정보 조회하기
-                            const detailResult = await fetchData('detailCommon', { 
-                                contentId: contentid,
-                                contentTypeId: contenttypeid,
-                                defaultYN: 'Y',
-                                firstImageYN: 'Y',
-                                addrinfoYN: 'Y',
-                                overviewYN: 'Y'
-                            });
-                            
-                            if (!detailResult.data?.body?.items?.item?.length) {
-                                console.warn(`'${keyword}'(contentId: ${contentid})에 대한 상세 정보가 없습니다.`);
-                                return null;
-                            }
-                            
-                            return createAttractionCard(detailResult.data.body.items.item[0]);
-
-                        } catch (error) {
-                            console.error(`'${keyword}' 정보를 가져오는 중 오류 발생:`, error);
-                            return null; // 오류 발생 시 해당 카드는 생성하지 않음
-                        }
-                    });
-
-                    // 모든 API 요청이 완료될 때까지 기다림
-                    const cardsHtml = await Promise.all(cardPromises);
-                    
-                    // 로딩 메시지 제거
-                    loader.style.display = 'none';
-                    
-                    // 성공적으로 생성된 카드만 화면에 추가
-                    container.innerHTML += cardsHtml.filter(card => card !== null).join('');
-
-                } catch (error) {
-                    loader.textContent = '데이터를 불러오는 데 실패했습니다. 😥';
-                    console.error('전체 로드 프로세스 오류:', error);
+            // 홈페이지 HTML 태그 제거 및 유효성 검사 (클라이언트 측에서도 간단히 처리)
+            if (homepage) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = homepage;
+                homepage = tempDiv.textContent || tempDiv.innerText || "";
+                if (homepage && !homepage.startsWith('http')) {
+                    homepage = 'http://' + homepage;
                 }
             }
-            
-            // 프로그램 실행
-            loadAttractions();
-        });
+
+
+            card.innerHTML = `
+                <img src="${image}" alt="${title}" onerror="this.onerror=null;this.src='https.via.placeholder.com/400x200.png?text=Image+Error';">
+                <div class="spot-card-content">
+                    <h3>${title}</h3>
+                    ${address ? `<p class="address">📍 ${address}</p>` : ''}
+                    ${tel ? `<p class="tel">📞 ${tel}</p>` : ''}
+                    ${homepage ? `<p class="homepage">🌐 <a href="${homepage}" target="_blank" rel="noopener noreferrer">${lang === 'ko' ? '홈페이지 방문' : 'Visit Homepage'}</a></p>` : ''}
+                    <p>${overview.substring(0, 150)}${overview.length > 150 ? '...' : ''}</p>
+                </div>
+            `;
+            return card;
+        }
+
+        // 관광지 정보 로드 및 표시
+        async function loadTouristSpots(lang = 'ko') {
+            currentLang = lang;
+            spotGrid.innerHTML = ''; // 기존 내용 초기화
+            loader.style.display = 'block';
+
+            // 페이지 제목 및 설명 언어 변경
+            if (lang === 'ko') {
+                pageTitle.textContent = '대한민국 7대 관광지';
+                pageDescription.textContent = '한국의 아름다운 7대 관광 명소를 소개합니다. 각 장소의 상세 정보를 확인해보세요.';
+                document.documentElement.lang = 'ko';
+            } else {
+                pageTitle.textContent = 'Top 7 Tourist Destinations in Korea';
+                pageDescription.textContent = 'Discover the 7 most beautiful tourist attractions in Korea. Check out the detailed information for each location.';
+                document.documentElement.lang = 'en';
+            }
+
+
+            const spotPromises = sevenWondersContentIds.map(spot => fetchSpotDetail(spot.id, lang));
+
+            try {
+                const spotDetails = await Promise.all(spotPromises);
+                spotDetails.forEach((detail, index) => {
+                    // API 호출 실패 시 기본 이름 사용
+                    const spotName = detail?.title || (lang === 'ko' ? sevenWondersContentIds[index].nameKo : sevenWondersContentIds[index].nameEn);
+                    if (detail) {
+                        detail.title = spotName; // API 응답에 title이 없을 경우 대비
+                    } else {
+                         // API 호출 실패 시, 기본 정보로 카드 생성
+                        const placeholderDetail = {
+                            title: spotName,
+                            overview: lang === 'ko' ? `${spotName}의 상세 정보를 불러오지 못했습니다.` : `Failed to load details for ${spotName}.`,
+                            firstimage: 'https.via.placeholder.com/400x200.png?text=Error'
+                        };
+                         spotGrid.appendChild(createSpotCard(placeholderDetail, lang));
+                         return; // 다음 카드로 넘어감
+                    }
+                    spotGrid.appendChild(createSpotCard(detail, lang));
+                });
+            } catch (error) {
+                console.error("Error loading tourist spots:", error);
+                spotGrid.innerHTML = `<p style="color: red; text-align: center;">${lang === 'ko' ? '관광지 정보를 불러오는 중 오류가 발생했습니다.' : 'An error occurred while loading tourist information.'}</p>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // 페이지 로드 시 기본 언어로 관광지 정보 로드
+        window.onload = () => {
+            loadTouristSpots(currentLang);
+        };
     </script>
-
 </body>
 </html>
