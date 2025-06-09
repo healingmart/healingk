@@ -2763,7 +2763,7 @@ if (BROWSER_ENV) {
         RateLimiter,
         ServiceContainer,
         InternationalizationManager,
-        ResponseFormatter,
+        ResponseFormatter, 
         HttpClient
     };
 }
