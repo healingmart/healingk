@@ -13,6 +13,7 @@
         .loading { background: #fff3cd; }
         .success { background: #d4edda; }
         .error { background: #f8d7da; }
+        .debug { background: #e2e3e5; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
         .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 5px; }
         .category-header { background: #007bff; color: white; padding: 15px; font-weight: bold; }
         .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; padding: 15px; }
@@ -27,9 +28,11 @@
     <div class="container">
         <h1>🏛️ Tourism API Test</h1>
         <button onclick="loadAll()">모든 카테고리 로드 (각 30개)</button>
+        <button onclick="testConnection()">연결 테스트</button>
         <button onclick="clear()">지우기</button>
         
         <div id="status" style="display:none;"></div>
+        <div id="debug" style="display:none;"></div>
         <div id="results"></div>
     </div>
 
@@ -53,11 +56,46 @@
             div.style.display = 'block';
         }
 
+        function debug(msg) {
+            const div = document.getElementById('debug');
+            div.innerHTML = msg;
+            div.className = 'status debug';
+            div.style.display = 'block';
+        }
+
         async function call(params) {
             const url = new URL(API, location.origin);
             Object.entries(params).forEach(([k,v]) => v && url.searchParams.set(k,v));
-            const res = await fetch(url);
-            return await res.json();
+            
+            try {
+                const res = await fetch(url);
+                const contentType = res.headers.get('content-type') || '';
+                
+                // Content-Type 검증
+                if (!contentType.includes('application/json')) {
+                    const text = await res.text();
+                    debug(`❌ JSON이 아닌 응답 받음<br>Content-Type: ${contentType}<br>응답 내용: ${text.substring(0, 500)}...`);
+                    throw new Error(`서버에서 JSON이 아닌 응답: ${text.substring(0, 100)}...`);
+                }
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+                return data;
+            } catch (e) {
+                debug(`❌ API 호출 오류<br>URL: ${url}<br>오류: ${e.message}`);
+                throw e;
+            }
+        }
+
+        async function testConnection() {
+            status('연결 테스트 중...');
+            try {
+                const data = await call({ operation: 'health' });
+                status('✅ 연결 성공!', 'success');
+                debug(`✅ 연결 테스트 성공<br>${JSON.stringify(data, null, 2)}`);
+            } catch (e) {
+                status(`❌ 연결 실패: ${e.message}`, 'error');
+            }
         }
 
         async function loadAll() {
@@ -80,12 +118,12 @@
                     showCategory(cat, items);
                     total += items.length;
                     
-                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 200));
+                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 300));
                 } catch(e) {
                     showError(cat, e.message);
                 }
             }
-            status(`완료! 총 ${total}개 로드됨`, 'success');
+            status(`✅ 완료! 총 ${total}개 로드됨`, 'success');
         }
 
         function showCategory(cat, items) {
@@ -122,7 +160,11 @@
         function clear() {
             document.getElementById('results').innerHTML = '';
             document.getElementById('status').style.display = 'none';
+            document.getElementById('debug').style.display = 'none';
         }
+
+        // 페이지 로드 시 자동 연결 테스트
+        window.onload = () => testConnection();
     </script>
 </body>
 </html>
