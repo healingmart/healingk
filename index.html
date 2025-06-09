@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism API 테스트 - healingk.vercel.app</title>
+    <title>Tourism API 진단 및 테스트 - healingk.vercel.app</title>
     <style>
-        /* CSS 스타일은 가독성을 위해 이전과 동일하게 유지합니다. */
         * {
             margin: 0;
             padding: 0;
@@ -85,6 +84,14 @@
             box-shadow: none;
         }
 
+        .debug-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .tourism-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
         .status {
             padding: 20px;
             margin: 20px 0;
@@ -128,6 +135,49 @@
             padding: 30px;
         }
 
+        .debug-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .debug-section.error {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+
+        .debug-section.success {
+            background: #e8f5e8;
+            border-color: #4caf50;
+        }
+
+        .debug-header {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .debug-section.error .debug-header {
+            color: #c62828;
+        }
+
+        .debug-section.success .debug-header {
+            color: #2e7d32;
+        }
+
+        .debug-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
         .category-section {
             margin-bottom: 30px;
             border: 1px solid #e0e0e0;
@@ -141,6 +191,9 @@
             padding: 15px 20px;
             font-weight: 600;
             font-size: 1.2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .category-content {
@@ -160,6 +213,7 @@
             border-radius: 10px;
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
 
         .item-card:hover {
@@ -212,68 +266,26 @@
             color: #6c757d;
         }
 
-        .form-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .test-urls {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 15px;
-        }
-
-        label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #495057;
-        }
-
-        input, select {
+        .test-url {
+            background: #e3f2fd;
             padding: 10px;
-            border: 2px solid #e9ecef;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: #4facfe;
-        }
-
-        .api-test-section {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .api-test-header {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .api-test-content {
-            padding: 20px;
-        }
-
-        .json-result {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 15px;
-            border-radius: 6px;
+            border-radius: 5px;
             font-family: 'Courier New', monospace;
             font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 15px;
+            word-break: break-all;
+        }
+
+        .test-url button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 11px;
+            min-width: auto;
         }
 
         @media (max-width: 768px) {
@@ -290,359 +302,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏛️ Tourism API 테스트</h1>
-            <p>한국관광공사 API 서버리스 함수 테스트 (healingk.vercel.app/api/tourism)</p>
+            <h1>🔧 Tourism API 진단 및 테스트</h1>
+            <p>API 연결 상태 확인, 오류 진단 및 관광 데이터 테스트</p>
         </div>
 
         <div class="controls">
             <div class="btn-group">
-                <button onclick="loadAllCategories()">🏛️ 모든 카테고리 로드 (각 30개)</button>
-                <button onclick="testHealthCheck()">❤️ 헬스체크</button>
-                <button onclick="testSystemStatus()">📊 시스템 상태</button>
-                <button onclick="clearResults()">🗑️ 결과 지우기</button>
-            </div>
-
-            <div id="status" class="status" style="display: none;">
-                <div id="statusMessage"></div>
-            </div>
-        </div>
-
-        <div class="results">
-            <div id="categoryResults"></div>
-            
-            <!-- API 개별 테스트 섹션 -->
-            <div class="api-test-section">
-                <div class="api-test-header">🔍 개별 API 테스트</div>
-                <div class="api-test-content">
-                    <div class="form-section">
-                        <div class="form-group">
-                            <label for="operation">API 작업</label>
-                            <select id="operation">
-                                <option value="areaBasedList">지역기반 관광정보</option>
-                                <option value="searchKeyword">키워드 검색</option>
-                                <option value="locationBasedList">위치기반 검색</option>
-                                <option value="searchFestival">축제 검색</option>
-                                <option value="detailCommon">상세정보 조회</option>
-                                <option value="areaCode">지역코드 조회</option>
-                                <option value="categoryCode">카테고리코드 조회</option>
-                                <!-- detailIntro, detailInfo, detailImage는 contentId가 필수이므로,
-                                     개별 테스트에서는 주로 detailCommon을 사용하고 필요시 직접 파라미터 추가 -->
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="contentTypeId">콘텐츠 타입</label>
-                            <select id="contentTypeId">
-                                <option value="">전체</option>
-                                <option value="12">관광지</option>
-                                <option value="14">문화시설</option>
-                                <option value="15">축제/공연/행사</option>
-                                <option value="25">여행코스</option>
-                                <option value="28">레포츠</option>
-                                <option value="32">숙박</option>
-                                <option value="38">쇼핑</option>
-                                <option value="39">음식점</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="keyword">검색 키워드 (키워드 검색 시)</label>
-                            <input type="text" id="keyword" placeholder="검색할 키워드를 입력하세요">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="contentId">콘텐츠 ID (상세정보 조회 시)</label>
-                            <input type="text" id="contentId" placeholder="예: 125633" value="125633">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="mapX">경도 (위치 기반 검색 시)</label>
-                            <input type="text" id="mapX" placeholder="예: 126.9780">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="mapY">위도 (위치 기반 검색 시)</label>
-                            <input type="text" id="mapY" placeholder="예: 37.5665">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="radius">반경 (위치 기반 검색 시, 미터)</label>
-                            <input type="text" id="radius" placeholder="예: 1000 (1km)">
-                        </div>
-
-                        <button onclick="testSingleAPI()">API 테스트 실행</button>
-                    </div>
-
-                    <div id="singleApiResult" class="json-result" style="display: none;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // 이 HTML 파일은 별도의 .js 파일을 불러오지 않고, 모든 클라이언트 사이드 JavaScript를 내장합니다.
-        // 모든 API 호출은 Vercel에 배포된 'tourism.js' 서버리스 함수 엔드포인트를 통합니다.
-        const API_BASE_URL = 'https://healingk.vercel.app/api/tourism';
-        
-        // 카테고리 정의
-        const categories = [
-            { id: '12', name: '관광지', icon: '🏛️' },
-            { id: '14', name: '문화시설', icon: '🎭' },
-            { id: '15', name: '축제/공연/행사', icon: '🎪' },
-            { id: '25', name: '여행코스', icon: '🗺️' },
-            { id: '28', name: '레포츠', icon: '⛷️' },
-            { id: '32', name: '숙박', icon: '🏨' },
-            { id: '38', name: '쇼핑', icon: '🛍️' },
-            { id: '39', name: '음식점', icon: '🍽️' }
-        ];
-
-        // 상태 표시 함수
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('status');
-            const messageDiv = document.getElementById('statusMessage');
-            
-            statusDiv.className = `status ${type}`;
-            messageDiv.innerHTML = message;
-            statusDiv.style.display = 'block';
-        }
-
-        function hideStatus() {
-            document.getElementById('status').style.display = 'none';
-        }
-
-        // API 호출 함수 (모든 요청은 서버리스 함수 엔드포인트를 통합니다)
-        async function callAPI(params) {
-            const url = new URL(API_BASE_URL);
-            Object.keys(params).forEach(key => {
-                // 값이 유효한 경우에만 URL 파라미터로 추가
-                if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
-                    url.searchParams.append(key, params[key]);
-                }
-            });
-
-            console.log('API 요청:', url.toString());
-
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (!response.ok) {
-                // 서버리스 함수에서 반환된 에러 메시지를 활용
-                throw new Error(`HTTP ${response.status}: ${data.error?.message || '알 수 없는 오류'}`);
-            }
-
-            return data;
-        }
-
-        // 모든 카테고리 로드
-        async function loadAllCategories() {
-            const resultsDiv = document.getElementById('categoryResults');
-            resultsDiv.innerHTML = ''; // 기존 결과 지우기
-            
-            showStatus('<div class="loading-spinner"></div>모든 카테고리 데이터를 로딩 중입니다...', 'loading');
-
-            let totalItems = 0;
-            let successCount = 0;
-
-            // 각 카테고리에 대해 순차적으로 API 호출
-            for (const [index, category] of categories.entries()) {
-                try {
-                    showStatus(
-                        `<div class="loading-spinner"></div>카테고리 로딩 중... (${index + 1}/${categories.length}) - ${category.name}`, 
-                        'loading'
-                    );
-
-                    const params = {
-                        operation: 'areaBasedList', // areaBasedList 오퍼레이션 사용
-                        contentTypeId: category.id,
-                        numOfRows: '30', // 각 카테고리별 30개 요청
-                        pageNo: '1'
-                    };
-
-                    const result = await callAPI(params);
-                    const items = result.data?.items || [];
-                    
-                    displayCategoryResult(category, items, result.data?.totalCount || 0);
-                    totalItems += items.length;
-                    successCount++;
-                    
-                    // API 호출 간격 조절 (Vercel 서버리스 함수 및 외부 API의 Rate Limiting 방지)
-                    // 너무 빠르게 호출하면 요청 제한에 걸릴 수 있습니다.
-                    if (index < categories.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
-                    }
-                    
-                } catch (error) {
-                    console.error(`카테고리 ${category.name} 로딩 실패:`, error);
-                    displayCategoryError(category, error.message);
-                }
-            }
-
-            showStatus(
-                `✅ 로딩 완료! ${successCount}/${categories.length} 카테고리에서 총 ${totalItems}개의 관광정보를 가져왔습니다.`, 
-                'success'
-            );
-        }
-
-        // 카테고리별 결과 표시
-        function displayCategoryResult(category, items, totalCount) {
-            const resultsDiv = document.getElementById('categoryResults');
-            
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'category-section';
-            
-            categoryDiv.innerHTML = `
-                <div class="category-header">
-                    ${category.icon} ${category.name} (${items.length}개 / 전체 ${totalCount}개)
-                </div>
-                <div class="category-content">
-                    ${items.length === 0 ? 
-                        '<p>데이터가 없습니다.</p>' : 
-                        `<div class="items-grid">${items.map(item => createItemCard(item)).join('')}</div>`
-                    }
-                </div>
-            `;
-            
-            resultsDiv.appendChild(categoryDiv);
-        }
-
-        // 카테고리 에러 표시
-        function displayCategoryError(category, errorMessage) {
-            const resultsDiv = document.getElementById('categoryResults');
-            
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'category-section';
-            
-            categoryDiv.innerHTML = `
-                <div class="category-header">
-                    ${category.icon} ${category.name} - 오류 발생
-                </div>
-                <div class="category-content">
-                    <p style="color: #e74c3c;">❌ ${errorMessage}</p>
-                </div>
-            `;
-            
-            resultsDiv.appendChild(categoryDiv);
-        }
-
-        // 아이템 카드 생성
-        function createItemCard(item) {
-            const imageUrl = item.firstimage || item.firstimage2 || 'https://via.placeholder.com/300x200?text=이미지+없음';
-            const title = item.title || '제목 없음';
-            const address = [item.addr1, item.addr2].filter(Boolean).join(' ') || '주소 정보 없음';
-            // overview에서 HTML 태그 제거 및 텍스트 길이 제한
-            const overview = item.overview ? item.overview.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : '설명 없음';
-            const distance = item.distance ? `${(item.distance / 1000).toFixed(1)}km` : '';
-
-            return `
-                <div class="item-card">
-                    <img src="${imageUrl}" alt="${title}" class="item-image" 
-                         onerror="this.src='https://via.placeholder.com/300x200?text=이미지+없음'">
-                    <div class="item-content">
-                        <div class="item-title">${title}</div>
-                        <div class="item-address">📍 ${address}</div>
-                        <div class="item-overview">${overview}</div>
-                        <div class="item-meta">
-                            <span>ID: ${item.contentid}</span>
-                            ${distance ? `<span>📏 ${distance}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // 개별 API 테스트
-        async function testSingleAPI() {
-            const operation = document.getElementById('operation').value;
-            const contentTypeId = document.getElementById('contentTypeId').value;
-            const keyword = document.getElementById('keyword').value;
-            const contentId = document.getElementById('contentId').value;
-            const mapX = document.getElementById('mapX').value;
-            const mapY = document.getElementById('mapY').value;
-            const radius = document.getElementById('radius').value;
-
-            const params = {
-                operation: operation,
-                numOfRows: '30' // 기본적으로 30개 요청
-            };
-
-            // 조건부 파라미터 추가
-            if (contentTypeId) params.contentTypeId = contentTypeId;
-            if (keyword) params.keyword = keyword; // searchKeyword에만 적용
-            if (contentId) params.contentId = contentId; // detail 계열에 적용
-            if (mapX) params.mapX = mapX; // locationBasedList에 적용
-            if (mapY) params.mapY = mapY; // locationBasedList에 적용
-            if (radius) params.radius = radius; // locationBasedList에 적용
-
-            try {
-                showStatus('<div class="loading-spinner"></div>API 호출 중...', 'loading');
-                
-                const result = await callAPI(params);
-                
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre>${JSON.stringify(result, null, 2)}</pre>`; // JSON 예쁘게 출력
-                
-                showStatus(`✅ ${operation} API 호출 성공!`, 'success');
-                
-            } catch (error) {
-                showStatus(`❌ API 호출 실패: ${error.message}`, 'error');
-                
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre style="color: #f56565;">Error: ${error.message}</pre>`;
-            }
-        }
-
-        // 헬스체크 (서버리스 함수 내부의 healthCheck 오퍼레이션 호출)
-        async function testHealthCheck() {
-            try {
-                showStatus('<div class="loading-spinner"></div>헬스체크 중...', 'loading');
-                const result = await callAPI({ operation: 'health' });
-                
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
-                
-                showStatus('✅ 헬스체크 성공!', 'success');
-            } catch (error) {
-                showStatus(`❌ 헬스체크 실패: ${error.message}`, 'error');
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre style="color: #f56565;">Error: ${error.message}</pre>`;
-            }
-        }
-
-        // 시스템 상태 (서버리스 함수 내부의 systemStatus 오퍼레이션 호출)
-        async function testSystemStatus() {
-            try {
-                showStatus('<div class="loading-spinner"></div>시스템 상태 확인 중...', 'loading');
-                const result = await callAPI({ operation: 'systemStatus' });
-                
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
-                
-                showStatus('✅ 시스템 상태 확인 완료!', 'success');
-            } catch (error) {
-                showStatus(`❌ 시스템 상태 확인 실패: ${error.message}`, 'error');
-                document.getElementById('singleApiResult').style.display = 'block';
-                document.getElementById('singleApiResult').innerHTML = 
-                    `<pre style="color: #f56565;">Error: ${error.message}</pre>`;
-            }
-        }
-
-        // 결과 지우기
-        function clearResults() {
-            document.getElementById('categoryResults').innerHTML = '';
-            document.getElementById('singleApiResult').style.display = 'none';
-            hideStatus();
-        }
-
-        // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Tourism API 테스트 페이지가 로드되었습니다.');
-            console.log('API 엔드포인트:', API_BASE_URL);
-        });
-    </script>
-</body>
-</html>
+                <button class="debug-btn" onclick="runFullDiagnostic()">🔍 전체 진단 실행</button>
+                <button class="debug-btn" onclick="testBasicConnection()">🔗 기본 연결 테스트</button>
+                <button class="debug-btn" onclick="testHealthCheck()">❤️ 헬스체크</button>
+                <button class="tourism-btn" onclick="loadAllCategories()">🏛️ 관광 데이터 로드 (각 30개)</button>
+                <button onclick="showAllTest<span class="cursor">█</span>
