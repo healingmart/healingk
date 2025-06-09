@@ -3,236 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 추천 관광지 TOP 10</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <title>Tourism API Test (Enhanced Logging) - healingk.vercel.app</title>
     <style>
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-        }
-        .hero-bg {
-            background-image: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1570168007204-dfb528c6958f?q=80&w=2070&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-        }
-        .card-img-container {
-            height: 200px;
-        }
-        .modal-bg {
-            background-color: rgba(0, 0, 0, 0.5);
-            transition: opacity 0.3s ease;
-        }
-        .modal-content {
-            transition: transform 0.3s ease;
-        }
-        .fade-in {
-            opacity: 1 !important;
-            pointer-events: auto !important;
-        }
-        .scale-up {
-            transform: scale(1) !important;
-        }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        button { padding: 12px 24px; margin: 8px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .status { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .category-header { background: #007bff; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; padding: 20px; }
+        .item { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; transition: transform 0.2s; }
+        .item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .item img { width: 100%; height: 180px; object-fit: cover; }
+        .item-content { padding: 15px; }
+        .item-title { font-weight: bold; margin-bottom: 8px; color: #333; }
+        .item-addr { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .item-id { color: #999; font-size: 0.8em; }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
-
-    <!-- Header -->
-    <header class="hero-bg text-white shadow-lg">
-        <div class="container mx-auto px-6 py-16 text-center">
-            <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-4">대한민국 추천 관광지</h1>
-            <p class="text-lg md:text-xl text-gray-200">데이터가 증명하는 지금 가장 인기 있는 여행지 TOP 10</p>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="container mx-auto p-6 -mt-10">
-        <div id="loading-container" class="text-center py-20">
-             <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-             <p class="mt-4 text-lg font-semibold text-gray-600">최고의 여행지를 불러오고 있습니다...</p>
+<body>
+    <div class="container">
+        <h1>🏛️ 한국관광공사 API 테스트 (로깅 강화 버전)</h1>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testHealth()">❤️ 헬스체크</button>
+            <button onclick="loadAll()">🏛️ 전체 카테고리 로드 (각 30개)</button>
+            <button onclick="testSingle()">🧪 단일 테스트</button>
+            <button onclick="clear()">🗑️ 지우기</button>
         </div>
         
-        <div id="error-container" class="hidden text-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
-            <strong class="font-bold">오류 발생!</strong>
-            <span class="block sm:inline" id="error-message"></span>
-        </div>
-
-        <div id="destinations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- 관광지 카드가 여기에 동적으로 추가됩니다. -->
-        </div>
-    </main>
-    
-    <!-- Footer -->
-    <footer class="text-center py-8 text-gray-500 text-sm">
-        <p>Powered by 한국관광공사 TourAPI 3.0 & G3 Production Code</p>
-    </footer>
-
-    <!-- Modal -->
-    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none modal-bg">
-        <div id="modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform scale-95 modal-content">
-            <div id="modal-body" class="p-0 overflow-y-auto">
-                <!-- 상세 정보가 여기에 동적으로 추가됩니다. -->
-            </div>
-        </div>
+        <div id="status" style="display:none;"></div>
+        <div id="results"></div>
     </div>
-    
-    <script>
-        const API_ENDPOINT = '/api/tourism';
-        
-        const loadingContainer = document.getElementById('loading-container');
-        const errorContainer = document.getElementById('error-container');
-        const errorMessage = document.getElementById('error-message');
-        const destinationsGrid = document.getElementById('destinations-grid');
-        const modal = document.getElementById('modal');
-        const modalContent = document.getElementById('modal-content');
-        const modalBody = document.getElementById('modal-body');
 
-        /**
-         * API를 호출하는 범용 함수
-         * @param {object} params - 요청 파라미터
-         * @returns {Promise<any>} API 응답 데이터
-         */
-        async function callApi(params) {
-            const url = new URL(API_ENDPOINT, location.origin);
-            Object.entries(params).forEach(([key, value]) => {
-                if (value !== undefined && value !== null) {
-                    url.searchParams.set(key, value);
+    <script>
+        // API 엔드포인트: healingk.vercel.app에 배포된 서버리스 함수 경로
+        const API_BASE_URL = 'https://healingk.vercel.app/api/tourism'; 
+
+        const categories = [
+            {id:'12', name:'관광지', icon:'🏛️'},
+            {id:'14', name:'문화시설', icon:'🎭'},
+            {id:'15', name:'축제/공연/행사', icon:'🎪'},
+            {id:'25', name:'여행코스', icon:'🗺️'},
+            {id:'28', name:'레포츠', icon:'⛷️'},
+            {id:'32', name:'숙박', icon:'🏨'},
+            {id:'38', name:'쇼핑', icon:'🛍️'},
+            {id:'39', name:'음식점', icon:'🍽️'}
+        ];
+
+        function status(msg, type='loading') {
+            const div = document.getElementById('status');
+            div.innerHTML = msg;
+            div.className = `status ${type}`;
+            div.style.display = 'block';
+        }
+
+        async function call(params) {
+            const url = new URL(API_BASE_URL); 
+            Object.entries(params).forEach(([k,v]) => {
+                if (v !== undefined && v !== null && String(v).trim() !== '') {
+                    url.searchParams.set(k, v);
                 }
             });
             
-            const response = await fetch(url);
-            
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-                throw new Error(`서버가 JSON 형식이 아닌 응답을 반환했습니다 (상태: ${response.status}). API 서버가 배포되었는지 확인해주세요.`);
-            }
+            console.log(`[API Call] Request URL: ${url.toString()}`);
+            console.log(`[API Call] Request Params: `, params);
 
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.error?.message || `HTTP 오류 ${response.status}`);
+            let res;
+            try {
+                res = await fetch(url.toString());
+                console.log(`[API Call] Response Status: ${res.status} ${res.statusText}`);
+            } catch (networkError) {
+                console.error(`[API Call Error] Network Error: ${networkError.message}`, networkError.stack);
+                throw new Error(`네트워크 요청 실패: ${networkError.message}`);
             }
+            
+            let data;
+            let rawText = '';
+            try {
+                rawText = await res.text(); // 일단 텍스트로 받아두고
+                data = JSON.parse(rawText); // JSON 파싱 시도
+                console.log(`[API Call] Parsed JSON Data: `, data);
+            } catch (jsonParseError) {
+                console.error(`[API Call Error] JSON 파싱 실패: ${jsonParseError.message}. 원시 응답: ${rawText.substring(0, 500)}...`, jsonParseError.stack);
+                throw new Error(`JSON 파싱 오류: ${jsonParseError.message}. 응답 내용: ${rawText.substring(0, 200)}...`);
+            }
+            
+            // 백엔드 응답 구조에 맞춰 에러 처리: success 필드가 false이고 error 객체가 있는 경우
+            if (data.success === false && data.error) {
+                const errorMessage = data.error.message || `알 수 없는 백엔드 오류 (코드: ${data.error.code})`;
+                console.error(`[API Call Error] Backend Error: ${errorMessage}`, data.error);
+                throw new Error(errorMessage);
+            } else if (!res.ok) { // HTTP 상태 코드가 200이 아닌 경우 (success: true인데 res.ok가 false인 특이 케이스 대비)
+                const errorMessage = `HTTP 상태 오류: ${res.status} ${res.statusText}. 백엔드 메시지: ${data.error?.message || '없음'}`;
+                console.error(`[API Call Error] HTTP Status Error: ${errorMessage}`, data);
+                throw new Error(errorMessage);
+            }
+            
+            console.log(`[API Call] Request Successful.`);
             return data;
         }
 
-        /**
-         * 관광지 목록을 화면에 렌더링
-         * @param {Array} destinations - 관광지 정보 배열
-         */
-        function renderDestinations(destinations) {
-            destinationsGrid.innerHTML = ''; // 기존 내용 초기화
-            destinations.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 cursor-pointer';
-                card.innerHTML = `
-                    <div class="card-img-container relative">
-                        <img src="${item.firstimage || 'https://placehold.co/600x400/E2E8F0/A0AEC0?text=No+Image'}" 
-                             onerror="this.onerror=null;this.src='https://placehold.co/600x400/E2E8F0/A0AEC0?text=Error';" 
-                             alt="${item.title || '관광지'}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 class="absolute bottom-4 left-4 text-white text-xl font-bold">${item.title}</h3>
-                    </div>
-                    <div class="p-5">
-                        <p class="text-gray-600 text-sm">📍 ${item.addr1 || '주소 정보 없음'}</p>
-                    </div>
-                `;
-                card.addEventListener('click', () => showDetails(item.contentid, item.contenttypeid));
-                destinationsGrid.appendChild(card);
-            });
+        async function testHealth() {
+            status('<span class="loading-spinner"></span>헬스체크 중...');
+            try {
+                // G3.txt의 헬스체크 엔드포인트는 operation 파라미터를 'healthCheck'로 받습니다.
+                const data = await call({ operation: 'healthCheck' }); // 
+                // G3.txt의 healthCheck 응답 구조는 data.data?.checks?.apiKeyConfigured 입니다.
+                // healthCheck 응답은 { status: 'healthy', checks: { apiKeyConfigured: true }, version: '...' } 형태.
+                // data.data 대신 직접 data.checks를 확인.
+                const apiKeyConfigured = data.checks?.apiKeyConfigured; [cite: 2711]
+                status(`✅ 연결 성공! API 키: ${apiKeyConfigured ? '설정됨' : '누락'}. 상태: ${data.status}. 버전: ${data.version}.`, 'success'); [cite: 2710, 2720]
+            } catch (e) {
+                status(`❌ 헬스체크 실패: ${e.message}`, 'error');
+                console.error(`[Test Health] Caught error: ${e.message}`, e.stack);
+            }
         }
-        
-        /**
-         * 관광지 상세 정보를 모달로 표시
-         * @param {string} contentId - 콘텐츠 ID
-         * @param {string} contentTypeId - 콘텐츠 타입 ID
-         */
-        async function showDetails(contentId, contentTypeId) {
-            modalBody.innerHTML = `
-                <div class="text-center p-20">
-                    <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-                    <p class="mt-4 text-lg text-gray-600">상세 정보를 불러오는 중...</p>
-                </div>`;
-            modal.classList.add('fade-in');
-            modalContent.classList.add('scale-up');
+
+        async function testSingle() {
+            status('<span class="loading-spinner"></span>단일 테스트 중...');
+            try {
+                // contentTypeId '12' (관광지)에 대해 5개 항목 요청
+                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' }); [cite: 2595]
+                // G3.txt의 areaBasedList 성공 응답 구조는 data.data.response.body.items.item 입니다. 
+                const items = data.data?.response?.body?.items?.item || []; [cite: 2631, 2528]
+                const totalCount = data.data?.response?.body?.totalCount || 0; [cite: 2631, 2528]
+                
+                status(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드됨.`, 'success');
+                showCategory({id:'12', name:'관광지 (단일 테스트)', icon:'🧪'}, items, totalCount);
+            } catch (e) {
+                status(`❌ 단일 테스트 실패: ${e.message}`, 'error');
+                console.error(`[Test Single] Caught error: ${e.message}`, e.stack);
+            }
+        }
+
+        async function loadAll() {
+            document.getElementById('results').innerHTML = '';
+            status('<span class="loading-spinner"></span>모든 카테고리 로딩 중...');
             
-            try {
-                const data = await callApi({
-                    operation: 'detailCommon',
-                    contentId: contentId,
-                    contentTypeId: contentTypeId,
-                    defaultYN: 'Y',
-                    firstImageYN: 'Y',
-                    addrinfoYN: 'Y',
-                    mapinfoYN: 'Y',
-                    overviewYN: 'Y'
-                });
+            let totalItemsLoaded = 0;
+            let successfulCategories = 0;
+            
+            for(let i = 0; i < categories.length; i++) {
+                const cat = categories[i];
+                status(`<span class="loading-spinner"></span>${i+1}/${categories.length} ${cat.name} 로딩 중...`);
                 
-                const item = data.data.response.body.items.item[0];
-                
-                modalBody.innerHTML = `
-                    <div class="relative">
-                        <img src="${item.firstimage || 'https://placehold.co/800x500/E2E8F0/A0AEC0?text=No+Image'}" 
-                             alt="${item.title}" class="w-full h-64 md:h-80 object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                        <h2 class="absolute bottom-6 left-6 text-white text-3xl font-bold">${item.title}</h2>
-                        <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/70 hover:bg-white rounded-full p-2 focus:outline-none transition">
-                            <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="p-6 md:p-8 space-y-4">
-                        <p class="text-lg">${item.overview || '상세 정보가 없습니다.'}</p>
-                        <hr class="my-4">
-                        <p><strong>주소:</strong> ${item.addr1 || '정보 없음'}</p>
-                        <p><strong>연락처:</strong> ${item.tel || '정보 없음'}</p>
-                        <p><strong>홈페이지:</strong> ${item.homepage ? `<a href="${item.homepage}" target="_blank" class="text-blue-600 hover:underline">${item.homepage}</a>` : '정보 없음'}</p>
-                    </div>
-                `;
-            } catch (e) {
-                modalBody.innerHTML = `
-                    <div class="p-8 text-center text-red-600">
-                        <h3 class="text-2xl font-bold mb-4">오류 발생</h3>
-                        <p>${e.message}</p>
-                        <button onclick="closeModal()" class="mt-6 bg-red-600 text-white font-bold py-2 px-4 rounded">닫기</button>
-                    </div>
-                `;
+                try {
+                    const data = await call({
+                        operation: 'areaBasedList', 
+                        contentTypeId: cat.id, 
+                        numOfRows: '30' 
+                    });
+                    
+                    // G3.txt의 응답 구조에 맞춰 아이템 및 총 개수 추출 
+                    const items = data.data?.response?.body?.items?.item || []; [cite: 2631, 2528]
+                    const totalCount = data.data?.response?.body?.totalCount || 0; [cite: 2631, 2528]
+                    
+                    showCategory(cat, items, totalCount);
+                    totalItemsLoaded += items.length;
+                    successfulCategories++;
+                    
+                    // 요청 간격 조절 (API 과부하 방지)
+                    if(i < categories.length - 1) await new Promise(r => setTimeout(r, 400)); 
+                } catch(e) {
+                    showError(cat, e.message);
+                    console.error(`[Load All] Error for category ${cat.name}: ${e.message}`, e.stack);
+                }
             }
-        }
-        
-        /**
-         * 모달 닫기
-         */
-        function closeModal() {
-            modal.classList.remove('fade-in');
-            modalContent.classList.remove('scale-up');
+            
+            status(`✅ 완료! ${successfulCategories}/${categories.length} 카테고리에서 총 ${totalItemsLoaded}개 데이터 로드`, 'success');
         }
 
-        // 모달 배경 클릭 시 닫기
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
+        function showCategory(cat, items, totalCount) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span>${items.length}개 / 전체 ${totalCount}개</span>
+                </div>
+                <div class="items">
+                    ${items.map(item => `
+                        <div class="item">
+                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
+                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
+                            <div class="item-content">
+                                <div class="item-title">${item.title || '제목없음'}</div>
+                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
+                                <div class="item-id">ID: ${item.contentid}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
 
-        // 페이지 로드 시 실행
-        window.onload = async () => {
-            try {
-                // 가장 인기 있는 관광지(12) 10곳을 조회
-                const data = await callApi({
-                    operation: 'areaBasedList',
-                    contentTypeId: '12',
-                    numOfRows: 10,
-                    pageNo: 1,
-                    arrange: 'P' // P: 조회수 순
-                });
-                const destinations = data.data.response.body.items.item;
-                renderDestinations(destinations);
-            } catch (e) {
-                errorContainer.classList.remove('hidden');
-                errorMessage.textContent = e.message;
-            } finally {
-                loadingContainer.classList.add('hidden');
-            }
-        };
+        function showError(cat, error) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span style="color: #ffcdd2;">오류 발생</span>
+                </div>
+                <div style="padding:20px; color:#721c24; background:#f8d7da;">❌ ${error}</div>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
 
+        function clear() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('status').style.display = 'none';
+        }
+
+        // 페이지 로드시 자동 헬스체크
+        window.onload = () => testHealth();
     </script>
-
 </body>
 </html>
