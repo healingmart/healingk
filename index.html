@@ -5,16 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>관광 정보 API 테스터</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 20px auto; padding: 0 20px; }
-        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .container { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
-        button:hover { background-color: #0056b3; }
-        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; max-height: 500px; overflow-y: auto; }
-        #status { font-weight: bold; margin-bottom: 10px; }
-        #apiUrlLink { color: #007bff; text-decoration: none; font-weight: bold; }
-        #apiUrlLink:hover { text-decoration: underline; }
+        body { 
+            font-family: -apple-system, BlinkMacMacFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* cite: 504 */
+            line-height: 1.6; /* cite: 505 */
+            color: #333; /* cite: 505 */
+            max-width: 800px; /* cite: 505 */
+            margin: 20px auto; /* cite: 505 */
+            padding: 0 20px; /* cite: 505 */
+        }
+        h1, h2 { 
+            border-bottom: 2px solid #eee; /* cite: 506 */
+            padding-bottom: 10px; /* cite: 506 */
+        }
+        .container { 
+            background: #f9f9f9; /* cite: 507 */
+            padding: 20px; /* cite: 507 */
+            border-radius: 8px; /* cite: 507 */
+            margin-bottom: 20px; /* cite: 507 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* cite: 508 */
+        }
+        input[type="text"], input[type="number"] { 
+            width: calc(100% - 22px); /* cite: 508 */
+            padding: 10px; /* cite: 509 */
+            margin-bottom: 10px; /* cite: 509 */
+            border: 1px solid #ddd; /* cite: 509 */
+            border-radius: 4px; /* cite: 510 */
+        }
+        button { 
+            background-color: #007bff; /* cite: 510 */
+            color: white; /* cite: 510 */
+            padding: 10px 15px; /* cite: 511 */
+            border: none; /* cite: 511 */
+            border-radius: 4px; /* cite: 511 */
+            cursor: pointer; /* cite: 511 */
+            font-size: 16px; /* cite: 511 */
+            transition: background-color 0.2s; /* cite: 511 */
+        }
+        button:hover { 
+            background-color: #0056b3; /* cite: 512 */
+        }
+        pre { 
+            background: #2d2d2d; /* cite: 512 */
+            color: #f8f8f2; /* cite: 512 */
+            padding: 15px; /* cite: 512 */
+            border-radius: 4px; /* cite: 512 */
+            white-space: pre-wrap; /* cite: 513 */
+            word-wrap: break-word; /* cite: 513 */
+            font-size: 14px; /* cite: 513 */
+            max-height: 500px; /* cite: 513 */
+            overflow-y: auto; /* cite: 513 */
+        }
+        #status { 
+            font-weight: bold; /* cite: 514 */
+            margin-bottom: 10px; /* cite: 514 */
+        }
+        #apiUrlLink { 
+            color: #007bff; /* cite: 514 */
+            text-decoration: none; /* cite: 515 */
+            font-weight: bold; /* cite: 515 */
+        }
+        #apiUrlLink:hover { 
+            text-decoration: underline; /* cite: 516 */
+        }
     </style>
 </head>
 <body>
@@ -45,65 +97,68 @@
     <pre id="result">여기에 결과가 표시됩니다.</pre>
 
     <script>
-        // [수정!] API 경로에 파일 이름인 /tourism을 추가합니다.
-        const BASE_URL = 'https://healingk.vercel.app/api/tourism';
+        // Vercel에 배포된 서버리스 함수의 엔드포인트 URL입니다.
+        // 예를 들어, Vercel 프로젝트 이름이 'my-tourism-api'이고, 
+        // 서버리스 함수 파일이 'api/tourism.js'라면, URL은 다음과 같습니다.
+        // https://[YOUR_VERCEL_PROJECT_NAME].vercel.app/api/tourism
+        // 또는 커스텀 도메인을 사용한다면 해당 도메인/api/tourism 이 됩니다.
+        // TODO: Vercel 배포 후 실제 API URL로 교체해주세요!
+        const BASE_URL = 'https://healingk.vercel.app/api/tourism'; // 
 
         // --- 아래는 수정할 필요 없습니다 ---
-        document.getElementById('apiUrlLink').href = BASE_URL;
-        document.getElementById('apiUrlLink').textContent = BASE_URL;
+        document.getElementById('apiUrlLink').href = BASE_URL; // 
+        document.getElementById('apiUrlLink').textContent = BASE_URL; // 
         
-        const resultElement = document.getElementById('result');
-        const statusElement = document.getElementById('status');
+        const resultElement = document.getElementById('result'); // 
+        const statusElement = document.getElementById('status'); // 
 
         async function fetchApi(operation, params = {}) {
-            const query = new URLSearchParams({ operation, ...params }).toString();
-            const fullUrl = `${BASE_URL}?${query}`;
+            const query = new URLSearchParams({ operation, ...params }).toString(); // 
+            const fullUrl = `${BASE_URL}?${query}`; // 
 
-            statusElement.textContent = `요청 중...`;
-            resultElement.textContent = '로딩 중...';
-
+            statusElement.textContent = `요청 중...`; // 
+            resultElement.textContent = '로딩 중...'; // 
             try {
-                const response = await fetch(fullUrl);
-                const data = await response.json();
+                const response = await fetch(fullUrl); // 
+                const data = await response.json(); // 
 
-                resultElement.textContent = JSON.stringify(data, null, 2);
-
-                if (response.ok && data.success) {
-                    statusElement.textContent = `성공! (상태 코드: ${response.status})`;
+                resultElement.textContent = JSON.stringify(data, null, 2); // 
+                if (response.ok && data.success) { // 
+                    statusElement.textContent = `성공! (상태 코드: ${response.status})`; // 
                 } else {
-                    statusElement.textContent = `API 오류! (상태 코드: ${response.status})`;
+                    statusElement.textContent = `API 오류! (상태 코드: ${response.status})`; // 
                 }
             } catch (error) {
-                statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`;
-                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요.';
+                statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`; // 
+                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요.'; // 
             }
         }
 
         function searchByKeyword() {
-            const keyword = document.getElementById('keyword').value;
-            if (!keyword) {
-                alert('키워드를 입력해주세요.');
-                return;
+            const keyword = document.getElementById('keyword').value; // 
+            if (!keyword) { // 
+                alert('키워드를 입력해주세요.'); // 
+                return; // 
             }
-            fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 });
+            fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 }); // 
         }
 
         function searchByArea() {
-            const areaCode = document.getElementById('areaCode').value;
-            if (!areaCode) {
-                alert('지역 코드를 입력해주세요.');
-                return;
+            const areaCode = document.getElementById('areaCode').value; // 
+            if (!areaCode) { // 
+                alert('지역 코드를 입력해주세요.'); // 
+                return; // 
             }
-            fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 });
+            fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 }); // 
         }
 
         function searchByLocation() {
-            const daeguCityHall = {
-                mapX: 128.601445,
-                mapY: 35.871435,
-                radius: 2000
+            const daeguCityHall = { // 
+                mapX: 128.601445, // 
+                mapY: 35.871435, // 
+                radius: 2000 // 
             };
-            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5 });
+            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5 }); // 
         }
     </script>
 </body>
