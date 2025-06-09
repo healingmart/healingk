@@ -45,7 +45,9 @@
     </div>
 
     <script>
-        const API = '/api/tourism';
+        // API 엔드포인트: healingk.vercel.app에 배포된 서버리스 함수 경로
+        const API = 'https://healingk.vercel.app/api/tourism'; // Vercel 배포 URL에 맞게 수정 
+
         const categories = [
             {id:'12', name:'관광지', icon:'🏛️'},
             {id:'14', name:'문화시설', icon:'🎭'},
@@ -65,21 +67,37 @@
         }
 
         async function call(params) {
-            const url = new URL(API, location.origin);
+            const url = new URL(API); // 이미 전체 URL이므로 location.origin 불필요
             Object.entries(params).forEach(([k,v]) => v && url.searchParams.set(k,v));
             
-            const res = await fetch(url);
-            const data = await res.json();
+            const res = await fetch(url.toString()); // URL 객체를 문자열로 변환하여 fetch에 전달
             
-            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            // 응답이 JSON이 아닐 경우 또는 파싱 오류 발생 시를 대비
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                // JSON 파싱 실패 시, 원시 응답 텍스트를 오류 메시지에 포함
+                const text = await res.text();
+                throw new Error(`JSON 파싱 오류: ${e.message}. 응답 내용: ${text.substring(0, 200)}...`);
+            }
+            
+            // 서버리스 함수 응답 형식에 맞춰 에러 처리
+            if (!res.ok || (data.success === false && data.error)) {
+                // HTTP 상태 코드가 200이 아니거나, success: false이고 error 객체가 있는 경우
+                const errorMessage = data.error?.message || `알 수 없는 오류 (HTTP 상태: ${res.status})`;
+                throw new Error(errorMessage);
+            }
             return data;
         }
 
         async function testHealth() {
             status('<span class="loading-spinner"></span>헬스체크 중...');
             try {
-                const data = await call({ operation: 'health' });
-                status(`✅ 연결 성공! API키: ${data.details.apiKeyConfigured ? '설정됨' : '누락'}`, 'success');
+                const data = await call({ operation: 'healthCheck' }); // G3.txt의 헬스체크 엔드포인트는 healthCheck임 
+                // G3.txt healthCheck 응답 구조: data.checks.apiKey 
+                const apiKeyConfigured = data.checks.apiKey; 
+                status(`✅ 연결 성공! API 키: ${apiKeyConfigured ? '설정됨' : '누락'}. 상태: ${data.status}. 버전: ${data.version}.`, 'success'); [cite: 1658, 1659]
             } catch (e) {
                 status(`❌ 연결 실패: ${e.message}`, 'error');
             }
@@ -88,9 +106,13 @@
         async function testSingle() {
             status('<span class="loading-spinner"></span>단일 테스트 중...');
             try {
-                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
-                status(`✅ 단일 테스트 성공! ${data.data.items.length}개 아이템`, 'success');
-                showCategory({id:'12', name:'관광지 테스트', icon:'🏛️'}, data.data.items, data.data.totalCount);
+                // contentTypeId '12' (관광지)에 대해 5개 항목 요청
+                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' }); [cite: 1997]
+                const items = data.data?.response?.body?.items?.item || []; // G3.txt 응답 구조에 맞춤 
+                const totalCount = data.data?.response?.body?.totalCount || 0; // G3.txt 응답 구조에 맞춤
+                
+                status(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드됨.`, 'success');
+                showCategory({id:'12', name:'관광지 (단일 테스트)', icon:'🧪'}, items, totalCount);
             } catch (e) {
                 status(`❌ 단일 테스트 실패: ${e.message}`, 'error');
             }
@@ -100,8 +122,8 @@
             document.getElementById('results').innerHTML = '';
             status('<span class="loading-spinner"></span>모든 카테고리 로딩 중...');
             
-            let total = 0;
-            let success = 0;
+            let totalItemsLoaded = 0;
+            let successfulCategories = 0;
             
             for(let i = 0; i < categories.length; i++) {
                 const cat = categories[i];
@@ -112,21 +134,23 @@
                         operation: 'areaBasedList',
                         contentTypeId: cat.id,
                         numOfRows: '30'
-                    });
+                    }); [cite: 1997]
                     
-                    const items = data.data?.items || [];
-                    showCategory(cat, items, data.data?.totalCount || 0);
-                    total += items.length;
-                    success++;
+                    const items = data.data?.response?.body?.items?.item || []; // G3.txt 응답 구조에 맞춤 
+                    const totalCount = data.data?.response?.body?.totalCount || 0; // G3.txt 응답 구조에 맞춤
                     
-                    // 요청 간격 조절
-                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 400));
+                    showCategory(cat, items, totalCount);
+                    totalItemsLoaded += items.length;
+                    successfulCategories++;
+                    
+                    // 요청 간격 조절 (API 과부하 방지)
+                    if(i < categories.length - 1) await new Promise(r => setTimeout(r, 400)); 
                 } catch(e) {
                     showError(cat, e.message);
                 }
             }
             
-            status(`✅ 완료! ${success}/${categories.length} 카테고리에서 총 ${total}개 데이터 로드`, 'success');
+            status(`✅ 완료! ${successfulCategories}/${categories.length} 카테고리에서 총 ${totalItemsLoaded}개 데이터 로드`, 'success');
         }
 
         function showCategory(cat, items, totalCount) {
