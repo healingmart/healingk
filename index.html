@@ -3,689 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 7대 관광지 - Healing Korea</title>
+    <title>관광 정보 API 테스터</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        header h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-
-        .api-status {
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            text-align: center;
-            color: white;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-loading { background: #ffc107; }
-        .status-success { background: #28a745; }
-        .status-error { background: #dc3545; }
-
-        .search-section {
-            background: rgba(255,255,255,0.95);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-
-        .search-controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .search-input {
-            flex: 1;
-            min-width: 250px;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a6fd8;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .tourist-spots {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-        }
-
-        .spot-card {
-            background: rgba(255,255,255,0.95);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-
-        .spot-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 45px rgba(0,0,0,0.2);
-        }
-
-        .spot-image {
-            width: 100%;
-            height: 200px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 3rem;
-            position: relative;
-        }
-
-        .spot-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .spot-content {
-            padding: 25px;
-        }
-
-        .spot-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .spot-location {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .spot-description {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-
-        .spot-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 0.9rem;
-            color: #777;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: white;
-        }
-
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .error-message {
-            background: rgba(220, 53, 69, 0.1);
-            border: 1px solid rgba(220, 53, 69, 0.3);
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-
-        .success-message {
-            background: rgba(40, 167, 69, 0.1);
-            border: 1px solid rgba(40, 167, 69, 0.3);
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-
-        @media (max-width: 768px) {
-            header h1 { font-size: 2rem; }
-            header p { font-size: 1rem; }
-            .search-controls { flex-direction: column; }
-            .search-input { min-width: 100%; }
-            .tourist-spots { grid-template-columns: 1fr; }
-        }
-
-        .api-test-section {
-            background: rgba(255,255,255,0.95);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-
-        .test-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-
-        .api-response {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            font-family: monospace;
-            font-size: 0.9rem;
-            max-height: 300px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .container { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; max-height: 500px; overflow-y: auto; }
+        #status { font-weight: bold; margin-bottom: 10px; }
+        #apiUrlLink { color: #007bff; text-decoration: none; font-weight: bold; }
+        #apiUrlLink:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
+
+    <h1>관광 정보 API 테스터</h1>
+    <p>백엔드 API 주소: <a id="apiUrlLink" href="#" target="_blank"></a></p>
+
     <div class="container">
-        <header>
-            <h1>🇰🇷 대한민국 7대 관광지</h1>
-            <p>아름다운 우리나라의 명소를 소개합니다</p>
-        </header>
-
-        <div class="api-status">
-            <span class="status-indicator status-loading" id="apiStatusIndicator"></span>
-            <span id="apiStatusText">API 연결 상태 확인 중...</span>
-        </div>
-
-        <div class="search-section">
-            <h2>🔍 관광지 검색</h2>
-            <div class="search-controls">
-                <input type="text" class="search-input" id="searchInput" placeholder="관광지 이름을 입력하세요 (예: 경복궁, 제주도, 부산)">
-                <button class="btn btn-primary" onclick="searchTouristSpot()">검색</button>
-                <button class="btn btn-secondary" onclick="loadDefault7Spots()">7대 관광지 보기</button>
-            </div>
-            <div id="searchResults"></div>
-        </div>
-
-        <div class="api-test-section">
-            <h2>🛠️ API 테스트</h2>
-            <div class="test-buttons">
-                <button class="btn btn-primary" onclick="testAreaBasedList()">지역별 관광정보</button>
-                <button class="btn btn-primary" onclick="testKeywordSearch()">키워드 검색</button>
-                <button class="btn btn-primary" onclick="testLocationBased()">위치기반 검색</button>
-                <button class="btn btn-secondary" onclick="clearApiResponse()">결과 지우기</button>
-            </div>
-            <div id="apiResponse" class="api-response" style="display: none;"></div>
-        </div>
-
-        <div class="tourist-spots" id="touristSpots">
-            <div class="loading">관광지 정보를 불러오는 중입니다...</div>
-        </div>
+        <h2>키워드 검색 (searchKeyword)</h2>
+        <input type="text" id="keyword" placeholder="예: 경복궁, 서울타워" value="대구">
+        <button onclick="searchByKeyword()">검색 실행</button>
     </div>
 
-    <script src="tourism.js"></script>
+    <div class="container">
+        <h2>지역 기반 조회 (areaBasedList)</h2>
+        <input type="number" id="areaCode" placeholder="지역 코드 (예: 1=서울, 4=대구)" value="4">
+        <button onclick="searchByArea()">조회 실행</button>
+    </div>
+
+    <div class="container">
+        <h2>위치 기반 조회 (locationBasedList)</h2>
+        <p>현재 위치(대구 시청)를 기준으로 2km 이내의 관광지를 조회합니다.</p>
+        <button onclick="searchByLocation()">조회 실행</button>
+    </div>
+
+    <h2>API 응답 결과</h2>
+    <div id="status">API를 테스트해보세요.</div>
+    <pre id="result">여기에 결과가 표시됩니다.</pre>
+
     <script>
-        // 전역 변수
-        let apiClient = null;
-        let isApiReady = false;
+        // [수정!] API 경로에 파일 이름인 /tourism을 추가합니다.
+        const BASE_URL = 'https://healingk.vercel.app/api/tourism';
 
-        // 대한민국 7대 관광지 기본 정보
-        const default7Spots = [
-            { name: '경복궁', keyword: '경복궁', emoji: '🏯', description: '조선 왕조의 정궁으로 한국의 대표적인 궁궐' },
-            { name: '불국사', keyword: '불국사', emoji: '🛕', description: '신라 시대의 대표적인 불교 사원' },
-            { name: '제주도', keyword: '제주도', emoji: '🌋', description: '아름다운 자연과 독특한 문화의 섬' },
-            { name: '해운대', keyword: '해운대', emoji: '🏖️', description: '부산의 대표적인 해수욕장' },
-            { name: '설악산', keyword: '설악산', emoji: '🏔️', description: '강원도의 명산으로 사계절 아름다운 자연' },
-            { name: '담양 죽녹원', keyword: '담양', emoji: '🎋', description: '푸른 대나무 숲의 장관' },
-            { name: '안동 하회마을', keyword: '하회마을', emoji: '🏘️', description: '전통 한옥과 문화가 잘 보존된 마을' }
-        ];
+        // --- 아래는 수정할 필요 없습니다 ---
+        document.getElementById('apiUrlLink').href = BASE_URL;
+        document.getElementById('apiUrlLink').textContent = BASE_URL;
+        
+        const resultElement = document.getElementById('result');
+        const statusElement = document.getElementById('status');
 
-        // API 초기화
-        async function initializeAPI() {
+        async function fetchApi(operation, params = {}) {
+            const query = new URLSearchParams({ operation, ...params }).toString();
+            const fullUrl = `${BASE_URL}?${query}`;
+
+            statusElement.textContent = `요청 중...`;
+            resultElement.textContent = '로딩 중...';
+
             try {
-                updateApiStatus('loading', 'API 초기화 중...');
-                
-                // Tourism API 클라이언트 초기화 (환경변수 없이 테스트)
-                const TourismAPI = window.TourismAPI || window;
-                
-                if (typeof TourismAPI.TourismApiClient !== 'undefined') {
-                    apiClient = new TourismAPI.TourismApiClient({
-                        apiKey: 'test-key', // 실제 사용시에는 환경변수에서 가져와야 함
-                        timeout: 10000,
-                        retryAttempts: 2
-                    });
-                    
-                    isApiReady = true;
-                    updateApiStatus('success', 'API 클라이언트 초기화 완료 (테스트 모드)');
-                    
-                    // 기본 7대 관광지 로드
-                    await loadDefault7Spots();
+                const response = await fetch(fullUrl);
+                const data = await response.json();
+
+                resultElement.textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.success) {
+                    statusElement.textContent = `성공! (상태 코드: ${response.status})`;
                 } else {
-                    throw new Error('TourismApiClient를 찾을 수 없습니다.');
+                    statusElement.textContent = `API 오류! (상태 코드: ${response.status})`;
                 }
             } catch (error) {
-                console.error('API 초기화 실패:', error);
-                updateApiStatus('error', `API 초기화 실패: ${error.message}`);
-                
-                // 실패시 더미 데이터로 표시
-                displayDummyData();
+                statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`;
+                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요.';
             }
         }
 
-        // API 상태 업데이트
-        function updateApiStatus(status, message) {
-            const indicator = document.getElementById('apiStatusIndicator');
-            const text = document.getElementById('apiStatusText');
-            
-            indicator.className = `status-indicator status-${status}`;
-            text.textContent = message;
-        }
-
-        // 더미 데이터 표시 (API 연결 실패시)
-        function displayDummyData() {
-            const container = document.getElementById('touristSpots');
-            container.innerHTML = '';
-
-            default7Spots.forEach((spot, index) => {
-                const card = createSpotCard({
-                    title: spot.name,
-                    addr1: '대한민국',
-                    overview: spot.description,
-                    firstimage: null,
-                    contentid: index + 1,
-                    contenttypeid: 12
-                }, spot.emoji);
-                container.appendChild(card);
-            });
-
-            showMessage('success', '더미 데이터로 7대 관광지를 표시하고 있습니다.');
-        }
-
-        // 기본 7대 관광지 로드
-        async function loadDefault7Spots() {
-            const container = document.getElementById('touristSpots');
-            container.innerHTML = '<div class="loading">7대 관광지 정보를 불러오는 중...</div>';
-
-            try {
-                const spotPromises = default7Spots.map(async (spot) => {
-                    try {
-                        if (!isApiReady) {
-                            throw new Error('API not ready');
-                        }
-
-                        const response = await apiClient.searchKeyword({
-                            keyword: spot.keyword,
-                            numOfRows: 1,
-                            pageNo: 1,
-                            contentTypeId: 12 // 관광지
-                        });
-
-                        if (response && response.data && response.data.items && response.data.items.length > 0) {
-                            return { ...response.data.items[0], emoji: spot.emoji };
-                        } else {
-                            // API 응답이 없으면 더미 데이터 사용
-                            return {
-                                title: spot.name,
-                                addr1: '대한민국',
-                                overview: spot.description,
-                                firstimage: null,
-                                contentid: Math.random().toString(36).substr(2, 9),
-                                contenttypeid: 12,
-                                emoji: spot.emoji
-                            };
-                        }
-                    } catch (error) {
-                        console.warn(`${spot.name} 데이터 로드 실패:`, error);
-                        // 에러시 더미 데이터 반환
-                        return {
-                            title: spot.name,
-                            addr1: '대한민국',
-                            overview: spot.description,
-                            firstimage: null,
-                            contentid: Math.random().toString(36).substr(2, 9),
-                            contenttypeid: 12,
-                            emoji: spot.emoji
-                        };
-                    }
-                });
-
-                const spots = await Promise.all(spotPromises);
-                displayTouristSpots(spots);
-                showMessage('success', '7대 관광지 정보를 성공적으로 불러왔습니다!');
-
-            } catch (error) {
-                console.error('7대 관광지 로드 실패:', error);
-                displayDummyData();
-            }
-        }
-
-        // 관광지 검색
-        async function searchTouristSpot() {
-            const keyword = document.getElementById('searchInput').value.trim();
-            const resultsContainer = document.getElementById('searchResults');
-            
+        function searchByKeyword() {
+            const keyword = document.getElementById('keyword').value;
             if (!keyword) {
-                showMessage('error', '검색어를 입력해주세요.');
+                alert('키워드를 입력해주세요.');
                 return;
             }
+            fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 });
+        }
 
-            if (!isApiReady) {
-                showMessage('error', 'API가 초기화되지 않았습니다.');
+        function searchByArea() {
+            const areaCode = document.getElementById('areaCode').value;
+            if (!areaCode) {
+                alert('지역 코드를 입력해주세요.');
                 return;
             }
-
-            resultsContainer.innerHTML = '<div class="loading">검색 중...</div>';
-
-            try {
-                const response = await apiClient.searchKeyword({
-                    keyword: keyword,
-                    numOfRows: 10,
-                    pageNo: 1,
-                    contentTypeId: 12
-                });
-
-                if (response && response.data && response.data.items) {
-                    displaySearchResults(response.data.items);
-                    showMessage('success', `"${keyword}" 검색 결과 ${response.data.items.length}개를 찾았습니다.`);
-                } else {
-                    resultsContainer.innerHTML = '<p>검색 결과가 없습니다.</p>';
-                    showMessage('error', '검색 결과가 없습니다.');
-                }
-            } catch (error) {
-                console.error('검색 실패:', error);
-                resultsContainer.innerHTML = '<p>검색 중 오류가 발생했습니다.</p>';
-                showMessage('error', `검색 실패: ${error.message}`);
-            }
+            fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 });
         }
 
-        // 검색 결과 표시
-        function displaySearchResults(items) {
-            const container = document.getElementById('searchResults');
-            container.innerHTML = '';
-
-            if (items.length === 0) {
-                container.innerHTML = '<p>검색 결과가 없습니다.</p>';
-                return;
-            }
-
-            const grid = document.createElement('div');
-            grid.className = 'tourist-spots';
-            
-            items.forEach(item => {
-                const card = createSpotCard(item);
-                grid.appendChild(card);
-            });
-
-            container.appendChild(grid);
+        function searchByLocation() {
+            const daeguCityHall = {
+                mapX: 128.601445,
+                mapY: 35.871435,
+                radius: 2000
+            };
+            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5 });
         }
-
-        // 관광지 표시
-        function displayTouristSpots(spots) {
-            const container = document.getElementById('touristSpots');
-            container.innerHTML = '';
-
-            spots.forEach(spot => {
-                const card = createSpotCard(spot, spot.emoji);
-                container.appendChild(card);
-            });
-        }
-
-        // 관광지 카드 생성
-        function createSpotCard(item, emoji = '🗺️') {
-            const card = document.createElement('div');
-            card.className = 'spot-card';
-            
-            const title = item.title || '제목 없음';
-            const addr = item.addr1 || '주소 정보 없음';
-            const overview = item.overview || '상세 정보가 제공되지 않습니다.';
-            const image = item.firstimage || null;
-
-            card.innerHTML = `
-                <div class="spot-image">
-                    ${image ? `<img src="${image}" alt="${title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
-                    <div style="display: ${image ? 'none' : 'flex'}; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 3rem;">
-                        ${emoji}
-                    </div>
-                </div>
-                <div class="spot-content">
-                    <h3 class="spot-title">${title}</h3>
-                    <div class="spot-location">📍 ${addr}</div>
-                    <p class="spot-description">${overview.length > 150 ? overview.substring(0, 150) + '...' : overview}</p>
-                    <div class="spot-info">
-                        <span>관광지</span>
-                        <span>ID: ${item.contentid || 'N/A'}</span>
-                    </div>
-                </div>
-            `;
-
-            card.addEventListener('click', () => {
-                showDetailModal(item);
-            });
-
-            return card;
-        }
-
-        // 상세 정보 모달 (간단한 alert로 대체)
-        function showDetailModal(item) {
-            const info = `
-🏛️ ${item.title || '제목 없음'}
-
-📍 위치: ${item.addr1 || '주소 정보 없음'}
-
-📝 설명: ${item.overview || '상세 정보가 제공되지 않습니다.'}
-
-🆔 콘텐츠 ID: ${item.contentid || 'N/A'}
-📞 연락처: ${item.tel || '정보 없음'}
-🌐 홈페이지: ${item.homepage || '정보 없음'}
-            `;
-            alert(info);
-        }
-
-        // 메시지 표시
-        function showMessage(type, message) {
-            const existing = document.querySelector('.success-message, .error-message');
-            if (existing) existing.remove();
-
-            const div = document.createElement('div');
-            div.className = type === 'success' ? 'success-message' : 'error-message';
-            div.textContent = message;
-            
-            const container = document.querySelector('.search-section');
-            container.appendChild(div);
-
-            setTimeout(() => div.remove(), 5000);
-        }
-
-        // API 테스트 함수들
-        async function testAreaBasedList() {
-            if (!isApiReady) {
-                showApiResponse('error', 'API가 초기화되지 않았습니다.');
-                return;
-            }
-
-            showApiResponse('loading', '지역별 관광정보 조회 중...');
-
-            try {
-                const response = await apiClient.areaBasedList({
-                    areaCode: 1, // 서울
-                    numOfRows: 5,
-                    pageNo: 1,
-                    contentTypeId: 12
-                });
-
-                showApiResponse('success', JSON.stringify(response, null, 2));
-            } catch (error) {
-                showApiResponse('error', `오류: ${error.message}`);
-            }
-        }
-
-        async function testKeywordSearch() {
-            if (!isApiReady) {
-                showApiResponse('error', 'API가 초기화되지 않았습니다.');
-                return;
-            }
-
-            showApiResponse('loading', '키워드 검색 중...');
-
-            try {
-                const response = await apiClient.searchKeyword({
-                    keyword: '경복궁',
-                    numOfRows: 3,
-                    pageNo: 1
-                });
-
-                showApiResponse('success', JSON.stringify(response, null, 2));
-            } catch (error) {
-                showApiResponse('error', `오류: ${error.message}`);
-            }
-        }
-
-        async function testLocationBased() {
-            if (!isApiReady) {
-                showApiResponse('error', 'API가 초기화되지 않았습니다.');
-                return;
-            }
-
-            showApiResponse('loading', '위치기반 검색 중...');
-
-            try {
-                const response = await apiClient.locationBasedList({
-                    mapX: 126.981611, // 서울 경복궁 근처
-                    mapY: 37.568477,
-                    radius: 1000,
-                    numOfRows: 5
-                });
-
-                showApiResponse('success', JSON.stringify(response, null, 2));
-            } catch (error) {
-                showApiResponse('error', `오류: ${error.message}`);
-            }
-        }
-
-        function showApiResponse(type, content) {
-            const responseDiv = document.getElementById('apiResponse');
-            responseDiv.style.display = 'block';
-            
-            if (type === 'loading') {
-                responseDiv.style.backgroundColor = '#fff3cd';
-                responseDiv.style.borderColor = '#ffeaa7';
-                responseDiv.textContent = content;
-            } else if (type === 'success') {
-                responseDiv.style.backgroundColor = '#d4edda';
-                responseDiv.style.borderColor = '#c3e6cb';
-                responseDiv.textContent = content;
-            } else {
-                responseDiv.style.backgroundColor = '#f8d7da';
-                responseDiv.style.borderColor = '#f5c6cb';
-                responseDiv.textContent = content;
-            }
-        }
-
-        function clearApiResponse() {
-            document.getElementById('apiResponse').style.display = 'none';
-        }
-
-        // Enter 키 이벤트
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchTouristSpot();
-            }
-        });
-
-        // 페이지 로드시 초기화
-        window.addEventListener('DOMContentLoaded', initializeAPI);
     </script>
 </body>
 </html>
