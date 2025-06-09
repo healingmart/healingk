@@ -5,584 +5,230 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>관광 정보 API 테스트</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             box-sizing: border-box;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f5f5f5;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        button {
+            background-color: #007bff;
             color: white;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-
-        .test-panel {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .panel-title {
-            font-size: 1.5em;
-            margin-bottom: 20px;
-            color: #4a5568;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #2d3748;
-        }
-
-        select, input, textarea {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e2e8f0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        select:focus, input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 25px;
+            padding: 10px 15px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.2s ease;
             margin-right: 10px;
-            margin-bottom: 10px;
         }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
-        }
-
-        .response-container {
-            background: #1a202c;
-            color: #e2e8f0;
-            padding: 20px;
-            border-radius: 5px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            max-height: 600px;
-            overflow-y: auto;
+        button:hover { background-color: #0056b3; }
+        pre {
+            background-color: #e9e9e9;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
+            font-family: monospace;
         }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .status-indicator {
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background-color: #c6f6d5;
-            color: #2f855a;
-            border: 1px solid #9ae6b4;
-        }
-
-        .status-error {
-            background-color: #fed7d7;
-            color: #c53030;
-            border: 1px solid #feb2b2;
-        }
-
-        .quick-test-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .param-hint {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 5px;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .quick-test-buttons {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .endpoint-info {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .endpoint-info h4 {
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-
-        .endpoint-info ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-
-        .endpoint-info li {
-            padding: 5px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .endpoint-info li:last-child {
-            border-bottom: none;
-        }
+        .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .section:last-child { border-bottom: none; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🏛️ 관광 정보 API 테스트</h1>
-            <p>한국관광공사 API를 활용한 서버리스 관광 정보 API 테스트 도구</p>
+        <h1>관광 정보 API 테스트 클라이언트</h1>
+
+        <div class="section">
+            <h2>API 엔드포인트 설정</h2>
+            <label for="apiEndpoint">API URL:</label>
+            <input type="text" id="apiEndpoint" value="YOUR_SERVERLESS_FUNCTION_URL_HERE" placeholder="예: https://your-vercel-project.vercel.app/api/tourism">
+            <p style="font-size: 0.9em; color: #777;">실제 배포된 서버리스 함수의 URL을 입력하세요.</p>
         </div>
 
-        <div class="main-content">
-            <!-- API 테스트 패널 -->
-            <div class="test-panel">
-                <h2 class="panel-title">🚀 API 테스트</h2>
-                
-                <!-- 빠른 테스트 버튼들 -->
-                <div class="quick-test-buttons">
-                    <button class="btn" onclick="quickTest('areaBasedList')">지역별 관광지</button>
-                    <button class="btn" onclick="quickTest('searchKeyword')">키워드 검색</button>
-                    <button class="btn" onclick="quickTest('searchFestival')">축제 검색</button>
-                    <button class="btn" onclick="quickTest('areaCode')">지역 코드</button>
-                </div>
-
-                <form id="apiTestForm">
-                    <div class="form-group">
-                        <label for="apiEndpoint">API 엔드포인트:</label>
-                        <input type="text" id="apiEndpoint" value="/api/tourism" placeholder="예: /api/tourism">
-                        <div class="param-hint">서버리스 함수가 배포된 엔드포인트 경로</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="operation">Operation:</label>
-                        <select id="operation" onchange="updateParameterInfo()">
-                            <option value="">-- 작업 선택 --</option>
-                            <option value="areaBasedList">areaBasedList (지역 기반 관광지 목록)</option>
-                            <option value="detailCommon">detailCommon (공통 상세정보)</option>
-                            <option value="detailIntro">detailIntro (소개 정보)</option>
-                            <option value="detailInfo">detailInfo (반복 정보)</option>
-                            <option value="detailImage">detailImage (이미지 정보)</option>
-                            <option value="searchKeyword">searchKeyword (키워드 검색)</option>
-                            <option value="searchFestival">searchFestival (축제 검색)</option>
-                            <option value="locationBasedList">locationBasedList (위치 기반 목록)</option>
-                            <option value="areaCode">areaCode (지역 코드)</option>
-                            <option value="categoryCode">categoryCode (카테고리 코드)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="httpMethod">HTTP 메서드:</label>
-                        <select id="httpMethod">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="parameters">파라미터 (JSON 형식):</label>
-                        <textarea id="parameters" rows="8" placeholder='{"numOfRows": 10, "pageNo": 1}'></textarea>
-                        <div class="param-hint">JSON 형식으로 파라미터를 입력하세요</div>
-                    </div>
-
-                    <div class="form-group">
-                        <button type="button" class="btn" onclick="sendRequest()">API 요청 전송</button>
-                        <button type="button" class="btn btn-secondary" onclick="clearResponse()">응답 지우기</button>
-                        <button type="button" class="btn btn-secondary" onclick="healthCheck()">헬스체크</button>
-                    </div>
-                </form>
-
-                <!-- 파라미터 정보 -->
-                <div id="parameterInfo" class="endpoint-info" style="display: none;">
-                    <h4>📋 주요 파라미터</h4>
-                    <ul id="parameterList"></ul>
-                </div>
-            </div>
-
-            <!-- 응답 패널 -->
-            <div class="test-panel">
-                <h2 class="panel-title">📊 API 응답</h2>
-                
-                <div id="statusIndicator" style="display: none;"></div>
-                
-                <div id="loading" class="loading">
-                    <div class="spinner"></div>
-                    <p>API 요청 처리 중...</p>
-                </div>
-
-                <div id="responseContainer" class="response-container">
-                    여기에 API 응답이 표시됩니다.
-                    
-👋 시작하려면 왼쪽에서 작업을 선택하고 'API 요청 전송' 버튼을 클릭하세요!
-
-📚 사용 가능한 주요 파라미터:
-• numOfRows: 한 페이지 결과 수 (기본값: 10)
-• pageNo: 페이지 번호 (기본값: 1)
-• arrange: 정렬 구분 (A: 제목순, B: 조회순, C: 수정일순, D: 생성일순, E: 거리순)
-• contentTypeId: 콘텐츠 타입 (12: 관광지, 14: 문화시설, 15: 축제, 32: 숙박, 39: 음식점)
-• areaCode: 지역 코드 (1: 서울, 6: 부산, 39: 제주도 등)
-• keyword: 검색 키워드
-• contentId: 콘텐츠 ID (상세 정보 조회 시 필요)
-                </div>
-            </div>
+        <div class="section">
+            <h2>1. 지역 기반 관광 정보 조회 (GET) - areaBasedList</h2>
+            <label for="areaCode">지역 코드 (areaCode):</label>
+            <input type="text" id="areaCode" value="1" placeholder="예: 1 (서울), 31 (경기도)">
+            <label for="contentTypeIdArea">콘텐츠 타입 ID (contentTypeId):</label>
+            <input type="text" id="contentTypeIdArea" value="12" placeholder="예: 12 (관광지)">
+            <label for="numOfRowsArea">한 페이지 결과 수 (numOfRows):</label>
+            <input type="number" id="numOfRowsArea" value="5">
+            <label for="pageNoArea">페이지 번호 (pageNo):</label>
+            <input type="number" id="pageNoArea" value="1">
+            <button onclick="callAreaBasedList()">areaBasedList 호출 (GET)</button>
         </div>
+
+        <div class="section">
+            <h2>2. 공통 정보 조회 (POST) - detailCommon</h2>
+            <label for="contentIdCommon">콘텐츠 ID (contentId):</label>
+            <input type="text" id="contentIdCommon" value="126508" placeholder="예: 126508 (경복궁)">
+            <label for="contentTypeIdCommon">콘텐츠 타입 ID (contentTypeId):</label>
+            <input type="text" id="contentTypeIdCommon" value="12" placeholder="예: 12 (관광지)">
+            <button onclick="callDetailCommon()">detailCommon 호출 (POST)</button>
+        </div>
+
+        <div class="section">
+            <h2>3. 키워드 검색 (POST) - searchKeyword</h2>
+            <label for="keyword">키워드 (keyword):</label>
+            <input type="text" id="keyword" value="서울 N 타워">
+            <label for="areaCodeKeyword">지역 코드 (areaCode):</label>
+            <input type="text" id="areaCodeKeyword" value="1" placeholder="비워두면 전국 검색">
+            <button onclick="callSearchKeyword()">searchKeyword 호출 (POST)</button>
+        </div>
+        
+        <div class="section">
+            <h2>4. 배치 요청 (POST) - batch</h2>
+            <label for="batchOperations">배치 작업 목록 (JSON 형식):</label>
+            <textarea id="batchOperations" rows="10" placeholder='[{"operation": "areaCode", "params": {"numOfRows": "2"}}, {"operation": "detailCommon", "params": {"contentId": "264305", "contentTypeId": "12"}}]'>[{"operation": "areaCode", "params": {"numOfRows": "2"}}, {"operation": "detailCommon", "params": {"contentId": "264305", "contentTypeId": "12"}}]</textarea>
+            <button onclick="callBatchRequest()">batch 요청 (POST)</button>
+        </div>
+
+        <div class="section">
+            <h2>5. 헬스 체크 (GET) - healthCheck</h2>
+            <button onclick="callHealthCheck()">healthCheck 호출 (GET)</button>
+        </div>
+
+        <div class="section">
+            <h2>6. 메트릭 조회 (GET) - metrics</h2>
+            <button onclick="callMetrics()">metrics 호출 (GET - JSON)</button>
+            <button onclick="callMetrics('text/plain')">metrics 호출 (GET - Prometheus)</button>
+        </div>
+
+
+        <h2>API 응답</h2>
+        <pre id="responseOutput">여기에 API 응답이 표시됩니다.</pre>
     </div>
 
     <script>
-        // 파라미터 정보 데이터
-        const parameterInfo = {
-            areaBasedList: [
-                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
-                "pageNo: 페이지 번호 (기본값: 1)", 
-                "arrange: 정렬 구분 (A~E, O~R)",
-                "contentTypeId: 콘텐츠 타입 ID (12,14,15,25,28,32,38,39)",
-                "areaCode: 지역 코드 (1~39)",
-                "sigunguCode: 시군구 코드",
-                "cat1,cat2,cat3: 카테고리 코드"
-            ],
-            detailCommon: [
-                "contentId: 콘텐츠 ID (필수)",
-                "contentTypeId: 콘텐츠 타입 ID",
-                "defaultYN: 기본정보 조회여부 (Y/N, 기본값: Y)",
-                "firstImageYN: 대표이미지 조회여부 (Y/N, 기본값: Y)",
-                "areacodeYN: 지역코드 조회여부 (Y/N, 기본값: Y)",
-                "catcodeYN: 분류코드 조회여부 (Y/N, 기본값: Y)",
-                "addrinfoYN: 주소정보 조회여부 (Y/N, 기본값: Y)",
-                "mapinfoYN: 좌표정보 조회여부 (Y/N, 기본값: Y)",
-                "overviewYN: 개요정보 조회여부 (Y/N, 기본값: Y)"
-            ],
-            searchKeyword: [
-                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
-                "pageNo: 페이지 번호 (기본값: 1)",
-                "keyword: 검색 키워드 (필수, 1~100자)",
-                "contentTypeId: 콘텐츠 타입 ID",
-                "areaCode: 지역 코드",
-                "arrange: 정렬 구분 (A~D, O~R)"
-            ],
-            searchFestival: [
-                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
-                "pageNo: 페이지 번호 (기본값: 1)",
-                "eventStartDate: 행사 시작일 (YYYYMMDD, 필수)",
-                "eventEndDate: 행사 종료일 (YYYYMMDD)",
-                "areaCode: 지역 코드",
-                "arrange: 정렬 구분 (A~D, O, Q, R)"
-            ],
-            locationBasedList: [
-                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
-                "pageNo: 페이지 번호 (기본값: 1)",
-                "mapX: 경도 (필수, -180~180)",
-                "mapY: 위도 (필수, -90~90)", 
-                "radius: 거리 반경 (필수, 1~20000m, 기본값: 1000)",
-                "contentTypeId: 콘텐츠 타입 ID",
-                "arrange: 정렬 구분 (A~E)"
-            ],
-            areaCode: [
-                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
-                "pageNo: 페이지 번호 (기본값: 1)",
-                "areaCode: 지역 코드 (선택적)"
-            ]
-        };
-
-        // 빠른 테스트 예제
-        const quickTestExamples = {
-            areaBasedList: {
-                operation: 'areaBasedList',
-                parameters: {
-                    numOfRows: 10,
-                    pageNo: 1,
-                    arrange: 'A',
-                    contentTypeId: '12',
-                    areaCode: '1'
-                }
-            },
-            searchKeyword: {
-                operation: 'searchKeyword', 
-                parameters: {
-                    numOfRows: 10,
-                    pageNo: 1,
-                    keyword: '경복궁',
-                    arrange: 'A'
-                }
-            },
-            searchFestival: {
-                operation: 'searchFestival',
-                parameters: {
-                    numOfRows: 10,
-                    pageNo: 1,
-                    eventStartDate: '20240101',
-                    eventEndDate: '20241231',
-                    areaCode: '1'
-                }
-            },
-            areaCode: {
-                operation: 'areaCode',
-                parameters: {
-                    numOfRows: 20,
-                    pageNo: 1
-                }
-            }
-        };
-
-        function updateParameterInfo() {
-            const operation = document.getElementById('operation').value;
-            const infoDiv = document.getElementById('parameterInfo');
-            const paramList = document.getElementById('parameterList');
-            
-            if (operation && parameterInfo[operation]) {
-                paramList.innerHTML = '';
-                parameterInfo[operation].forEach(param => {
-                    const li = document.createElement('li');
-                    li.textContent = param;
-                    paramList.appendChild(li);
-                });
-                infoDiv.style.display = 'block';
-            } else {
-                infoDiv.style.display = 'none';
-            }
-        }
-
-        function quickTest(testType) {
-            const example = quickTestExamples[testType];
-            if (example) {
-                document.getElementById('operation').value = example.operation;
-                document.getElementById('parameters').value = JSON.stringify(example.parameters, null, 2);
-                updateParameterInfo();
-            }
-        }
-
-        async function sendRequest() {
+        const getApiEndpoint = () => {
             const endpoint = document.getElementById('apiEndpoint').value;
-            const operation = document.getElementById('operation').value;
-            const method = document.getElementById('httpMethod').value;
-            const parametersText = document.getElementById('parameters').value;
+            if (!endpoint || endpoint === "YOUR_SERVERLESS_FUNCTION_URL_HERE") {
+                alert("API 엔드포인트 URL을 설정해주세요.");
+                return null;
+            }
+            return endpoint;
+        };
 
-            if (!operation) {
-                alert('Operation을 선택해주세요.');
-                return;
+        const outputElement = document.getElementById('responseOutput');
+
+        async function callApi(method, operation, params = {}, headers = {'Content-Type': 'application/json'}, body = null) {
+            const API_ENDPOINT = getApiEndpoint();
+            if (!API_ENDPOINT) return;
+
+            outputElement.textContent = '요청 중...';
+            outputElement.className = '';
+
+            let url = API_ENDPOINT;
+            let requestOptions = {
+                method: method,
+                headers: headers
+            };
+
+            if (method === 'GET') {
+                const queryParams = new URLSearchParams({...params, operation});
+                url += `?${queryParams.toString()}`;
+            } else if (method === 'POST') {
+                requestOptions.body = JSON.stringify({ operation, ...params, ...body });
             }
 
-            let parameters = {};
-            if (parametersText.trim()) {
-                try {
-                    parameters = JSON.parse(parametersText);
-                } catch (e) {
-                    alert('파라미터 JSON 형식이 올바르지 않습니다.');
-                    return;
-                }
-            }
-
-            showLoading(true);
-            clearStatus();
 
             try {
-                const requestOptions = {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
+                const response = await fetch(url, requestOptions);
+                const contentType = response.headers.get("content-type");
+                let data;
+
+                if (contentType && contentType.includes("application/json")) {
+                    data = await response.json();
+                    outputElement.textContent = JSON.stringify(data, null, 2);
+                    if (data.success === false || !response.ok) {
+                        outputElement.className = 'error';
+                    } else {
+                        outputElement.className = 'success';
                     }
-                };
-
-                if (method === 'GET') {
-                    const urlParams = new URLSearchParams({
-                        operation: operation,
-                        ...parameters
-                    });
-                    const response = await fetch(`${endpoint}?${urlParams}`, requestOptions);
-                    await handleResponse(response);
+                } else if (contentType && contentType.includes("text/plain")) {
+                    data = await response.text();
+                    outputElement.textContent = data;
+                    if (!response.ok) {
+                        outputElement.className = 'error';
+                    } else {
+                        outputElement.className = 'success';
+                    }
                 } else {
-                    requestOptions.body = JSON.stringify({
-                        operation: operation,
-                        ...parameters
-                    });
-                    const response = await fetch(endpoint, requestOptions);
-                    await handleResponse(response);
+                     data = await response.text(); // 예상치 못한 content-type
+                     outputElement.textContent = `예상치 못한 Content-Type: ${contentType}\n\n${data}`;
+                     outputElement.className = 'error';
                 }
-            } catch (error) {
-                showError(`네트워크 오류: ${error.message}`);
-                displayResponse(`❌  요청 실패
-                
-오류: ${error.message}
-시간: ${new Date().toLocaleString()}
 
-네트워크 연결을 확인하고 올바른 엔드포인트를 입력했는지 확인해주세요.`);
-            } finally {
-                showLoading(false);
+
+            } catch (error) {
+                console.error('API 호출 오류:', error);
+                outputElement.textContent = `오류 발생: ${error.message}\n\n${error.stack}`;
+                outputElement.className = 'error';
             }
         }
 
-        async function handleResponse(response) {
-            const responseText = await response.text();
-            let responseData;
-            
+        function callAreaBasedList() {
+            const params = {
+                areaCode: document.getElementById('areaCode').value || undefined,
+                contentTypeId: document.getElementById('contentTypeIdArea').value || undefined,
+                numOfRows: document.getElementById('numOfRowsArea').value || undefined,
+                pageNo: document.getElementById('pageNoArea').value || undefined
+            };
+            // 빈 값은 undefined로 보내서 백엔드 기본값 사용 유도
+            for (const key in params) {
+                if (params[key] === '') params[key] = undefined;
+            }
+            callApi('GET', 'areaBasedList', params);
+        }
+
+        function callDetailCommon() {
+            const params = {
+                contentId: document.getElementById('contentIdCommon').value,
+                contentTypeId: document.getElementById('contentTypeIdCommon').value
+            };
+            callApi('POST', 'detailCommon', {}, {'Content-Type': 'application/json'}, params);
+        }
+
+        function callSearchKeyword() {
+            const params = {
+                keyword: document.getElementById('keyword').value,
+                areaCode: document.getElementById('areaCodeKeyword').value || undefined
+            };
+            if (params.areaCode === '') params.areaCode = undefined;
+            callApi('POST', 'searchKeyword', {}, {'Content-Type': 'application/json'}, params);
+        }
+
+        function callBatchRequest() {
             try {
-                responseData = JSON.parse(responseText);
+                const operationsText = document.getElementById('batchOperations').value;
+                const operations = JSON.parse(operationsText); // 입력된 JSON 문자열을 파싱
+                // POST 요청 시 body는 operation과 params를 포함하는 객체가 아니라,
+                // 백엔드 batchHandler가 예상하는 { operations: [...] } 형태여야 합니다.
+                callApi('POST', 'batch', {}, {'Content-Type': 'application/json'}, { operations });
             } catch (e) {
-                responseData = responseText;
-            }
-
-            if (response.ok) {
-                if (responseData.success !== false) {
-                    showSuccess(`요청 성공 (${response.status})`);
-                } else {
-                    showError(`API 오류: ${responseData.error?.message || '알 수 없는 오류'}`);
-                }
-            } else {
-                showError(`HTTP 오류 ${response.status}: ${response.statusText}`);
-            }
-
-            displayResponse(JSON.stringify(responseData, null, 2));
-        }
-
-        async function healthCheck() {
-            const endpoint = document.getElementById('apiEndpoint').value.replace('/tourism', '/healthCheck');
-            
-            showLoading(true);
-            clearStatus();
-
-            try {
-                const response = await fetch(endpoint);
-                await handleResponse(response);
-            } catch (error) {
-                showError(`헬스체크 실패: ${error.message}`);
-                displayResponse(`❌ 헬스체크 실패
-                
-오류: ${error.message}
-시간: ${new Date().toLocaleString()}`);
-            } finally {
-                showLoading(false);
+                outputElement.textContent = `배치 작업 목록 JSON 파싱 오류: ${e.message}`;
+                outputElement.className = 'error';
             }
         }
 
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        function callHealthCheck() {
+            callApi('GET', 'healthCheck');
         }
 
-        function showSuccess(message) {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status-indicator status-success';
-            indicator.textContent = `✅ ${message}`;
-            indicator.style.display = 'block';
+        function callMetrics(acceptType = 'application/json') {
+            const headers = acceptType === 'text/plain' ? { 'Accept': 'text/plain' } : { 'Accept': 'application/json' };
+            callApi('GET', 'metrics', {}, headers);
         }
 
-        function showError(message) {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status-indicator status-error';
-            indicator.textContent = `❌ ${message}`;
-            indicator.style.display = 'block';
-        }
-
-        function clearStatus() {
-            document.getElementById('statusIndicator').style.display = 'none';
-        }
-
-        function displayResponse(response) {
-            document.getElementById('responseContainer').textContent = response;
-        }
-
-        function clearResponse() {
-            document.getElementById('responseContainer').textContent = '응답이 지워졌습니다.\n\n새로운 API 요청을 시도해보세요! 🚀';
-            clearStatus();
-        }
-
-        // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            // 현재 도메인 기반으로 기본 엔드포인트 설정
-            const currentDomain = window.location.origin;
-            document.getElementById('apiEndpoint').value = `${currentDomain}/api/tourism`;
-        });
     </script>
 </body>
 </html>
