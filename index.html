@@ -3,623 +3,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism API Test - G3 Version</title>
+    <title>관광 정보 API 테스트</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f8f9fa; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: #0056b3; text-align: center; margin-bottom: 30px; }
-        button { padding: 12px 24px; margin: 8px; background: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        button:hover { background: #003d82; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        button:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
-        .status { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
-        .loading { background: #fff3cd; color: #856404; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .category-header { background: #0056b3; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
-        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; padding: 20px; }
-        .item { border: 1px solid #eee; border-radius: 8px; overflow: hidden; background: white; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        .item:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .item img { width: 100%; height: 180px; object-fit: cover; }
-        .item-content { padding: 15px; }
-        .item-title { font-weight: bold; margin-bottom: 8px; color: #333; }
-        .item-addr { color: #666; font-size: 0.9em; margin-bottom: 5px; }
-        .item-distance { color: #0056b3; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
-        .item-id { color: #999; font-size: 0.8em; }
-        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #0056b3; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
-        .test-panel { background: #fff; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .input-group input, .input-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .tabs { display: flex; margin-bottom: 20px; }
-        .tab { padding: 12px 20px; border-bottom: 2px solid transparent; cursor: pointer; font-weight: bold; }
-        .tab.active { border-color: #0056b3; color: #0056b3; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .json-response { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin: 10px 0; overflow: auto; max-height: 300px; font-family: monospace; }
-        .item-detail { padding: 20px; background: white; border-radius: 8px; margin-bottom: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .metrics-table {width: 100%; border-collapse: collapse; margin: 20px 0;}
-        .metrics-table th, .metrics-table td {border: 1px solid #ddd; padding: 8px; text-align: left;}
-        .metrics-table th {background-color: #f2f2f2;}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .test-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #4a5568;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+        }
+
+        .response-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-indicator {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background-color: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status-error {
+            background-color: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+
+        .quick-test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .param-hint {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .quick-test-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .endpoint-info {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .endpoint-info h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .endpoint-info ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .endpoint-info li {
+            padding: 5px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .endpoint-info li:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏛️ 한국관광공사 API 테스트 (G3 버전)</h1>
-        
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('basic-tab')">기본 테스트</div>
-            <div class="tab" onclick="showTab('detail-tab')">상세정보 테스트</div>
-            <div class="tab" onclick="showTab('location-tab')">위치기반 테스트</div>
-            <div class="tab" onclick="showTab('metrics-tab')">메트릭스</div>
+        <div class="header">
+            <h1>🏛️ 관광 정보 API 테스트</h1>
+            <p>한국관광공사 API를 활용한 서버리스 관광 정보 API 테스트 도구</p>
         </div>
 
-        <div id="basic-tab" class="tab-content active">
-            <div style="text-align: center; margin: 20px 0;">
-                <button onclick="testHealthCheck()">❤️ 헬스체크</button>
-                <button onclick="loadAll()">🏛️ 전체 카테고리 로드 (각 10개)</button>
-                <button onclick="testSingle()">🧪 단일 테스트</button>
-                <button onclick="clearResults()">🗑️ 지우기</button>
-            </div>
-            
-            <div id="status" style="display:none;"></div>
-            <div id="results"></div>
-        </div>
-
-        <div id="detail-tab" class="tab-content">
+        <div class="main-content">
+            <!-- API 테스트 패널 -->
             <div class="test-panel">
-                <h3>🔎 콘텐츠 상세 정보 조회</h3>
-                <div class="input-group">
-                    <label for="contentId">콘텐츠 ID:</label>
-                    <input type="text" id="contentId" placeholder="예: 125266">
+                <h2 class="panel-title">🚀 API 테스트</h2>
+                
+                <!-- 빠른 테스트 버튼들 -->
+                <div class="quick-test-buttons">
+                    <button class="btn" onclick="quickTest('areaBasedList')">지역별 관광지</button>
+                    <button class="btn" onclick="quickTest('searchKeyword')">키워드 검색</button>
+                    <button class="btn" onclick="quickTest('searchFestival')">축제 검색</button>
+                    <button class="btn" onclick="quickTest('areaCode')">지역 코드</button>
                 </div>
-                <div class="input-group">
-                    <label for="contentTypeId">콘텐츠 타입:</label>
-                    <select id="contentTypeId">
-                        <option value="12">관광지</option>
-                        <option value="14">문화시설</option>
-                        <option value="15">축제/공연/행사</option>
-                        <option value="25">여행코스</option>
-                        <option value="28">레포츠</option>
-                        <option value="32">숙박</option>
-                        <option value="38">쇼핑</option>
-                        <option value="39">음식점</option>
-                    </select>
-                </div>
-                <button onclick="getDetail()">상세 정보 조회</button>
-                <div id="detail-result"></div>
-            </div>
-        </div>
 
-        <div id="location-tab" class="tab-content">
-            <div class="test-panel">
-                <h3>📍 위치 기반 검색</h3>
-                <div class="input-group">
-                    <label for="mapX">경도(mapX):</label>
-                    <input type="text" id="mapX" placeholder="예: 126.981106" value="126.981106">
-                </div>
-                <div class="input-group">
-                    <label for="mapY">위도(mapY):</label>
-                    <input type="text" id="mapY" placeholder="예: 37.568477" value="37.568477">
-                </div>
-                <div class="input-group">
-                    <label for="radius">반경(미터):</label>
-                    <input type="number" id="radius" placeholder="예: 3000" value="3000">
-                </div>
-                <div class="input-group">
-                    <label for="loc-content-type">콘텐츠 타입:</label>
-                    <select id="loc-content-type">
-                        <option value="">전체</option>
-                        <option value="12">관광지</option>
-                        <option value="14">문화시설</option>
-                        <option value="15">축제/공연/행사</option>
-                        <option value="25">여행코스</option>
-                        <option value="28">레포츠</option>
-                        <option value="32">숙박</option>
-                        <option value="38">쇼핑</option>
-                        <option value="39">음식점</option>
-                    </select>
-                </div>
-                <button onclick="searchByLocation()">위치 기반 검색</button>
-                <div id="location-result"></div>
-            </div>
-        </div>
+                <form id="apiTestForm">
+                    <div class="form-group">
+                        <label for="apiEndpoint">API 엔드포인트:</label>
+                        <input type="text" id="apiEndpoint" value="/api/tourism" placeholder="예: /api/tourism">
+                        <div class="param-hint">서버리스 함수가 배포된 엔드포인트 경로</div>
+                    </div>
 
-        <div id="metrics-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="operation">Operation:</label>
+                        <select id="operation" onchange="updateParameterInfo()">
+                            <option value="">-- 작업 선택 --</option>
+                            <option value="areaBasedList">areaBasedList (지역 기반 관광지 목록)</option>
+                            <option value="detailCommon">detailCommon (공통 상세정보)</option>
+                            <option value="detailIntro">detailIntro (소개 정보)</option>
+                            <option value="detailInfo">detailInfo (반복 정보)</option>
+                            <option value="detailImage">detailImage (이미지 정보)</option>
+                            <option value="searchKeyword">searchKeyword (키워드 검색)</option>
+                            <option value="searchFestival">searchFestival (축제 검색)</option>
+                            <option value="locationBasedList">locationBasedList (위치 기반 목록)</option>
+                            <option value="areaCode">areaCode (지역 코드)</option>
+                            <option value="categoryCode">categoryCode (카테고리 코드)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="httpMethod">HTTP 메서드:</label>
+                        <select id="httpMethod">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="parameters">파라미터 (JSON 형식):</label>
+                        <textarea id="parameters" rows="8" placeholder='{"numOfRows": 10, "pageNo": 1}'></textarea>
+                        <div class="param-hint">JSON 형식으로 파라미터를 입력하세요</div>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="button" class="btn" onclick="sendRequest()">API 요청 전송</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearResponse()">응답 지우기</button>
+                        <button type="button" class="btn btn-secondary" onclick="healthCheck()">헬스체크</button>
+                    </div>
+                </form>
+
+                <!-- 파라미터 정보 -->
+                <div id="parameterInfo" class="endpoint-info" style="display: none;">
+                    <h4>📋 주요 파라미터</h4>
+                    <ul id="parameterList"></ul>
+                </div>
+            </div>
+
+            <!-- 응답 패널 -->
             <div class="test-panel">
-                <h3>📊 API 메트릭스 정보</h3>
-                <button onclick="getMetrics()">메트릭스 조회</button>
-                <div id="metrics-result"></div>
+                <h2 class="panel-title">📊 API 응답</h2>
+                
+                <div id="statusIndicator" style="display: none;"></div>
+                
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>API 요청 처리 중...</p>
+                </div>
+
+                <div id="responseContainer" class="response-container">
+                    여기에 API 응답이 표시됩니다.
+                    
+👋 시작하려면 왼쪽에서 작업을 선택하고 'API 요청 전송' 버튼을 클릭하세요!
+
+📚 사용 가능한 주요 파라미터:
+• numOfRows: 한 페이지 결과 수 (기본값: 10)
+• pageNo: 페이지 번호 (기본값: 1)
+• arrange: 정렬 구분 (A: 제목순, B: 조회순, C: 수정일순, D: 생성일순, E: 거리순)
+• contentTypeId: 콘텐츠 타입 (12: 관광지, 14: 문화시설, 15: 축제, 32: 숙박, 39: 음식점)
+• areaCode: 지역 코드 (1: 서울, 6: 부산, 39: 제주도 등)
+• keyword: 검색 키워드
+• contentId: 콘텐츠 ID (상세 정보 조회 시 필요)
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 기본 API 경로 설정
-        const API = '/api/tourism';
-        
-        // 카테고리 정의
-        const categories = [
-            {id:'12', name:'관광지', icon:'🏛️'},
-            {id:'14', name:'문화시설', icon:'🎭'},
-            {id:'15', name:'축제/공연/행사', icon:'🎪'},
-            {id:'25', name:'여행코스', icon:'🗺️'},
-            {id:'28', name:'레포츠', icon:'⛷️'},
-            {id:'32', name:'숙박', icon:'🏨'},
-            {id:'38', name:'쇼핑', icon:'🛍️'},
-            {id:'39', name:'음식점', icon:'🍽️'}
-        ];
+        // 파라미터 정보 데이터
+        const parameterInfo = {
+            areaBasedList: [
+                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
+                "pageNo: 페이지 번호 (기본값: 1)", 
+                "arrange: 정렬 구분 (A~E, O~R)",
+                "contentTypeId: 콘텐츠 타입 ID (12,14,15,25,28,32,38,39)",
+                "areaCode: 지역 코드 (1~39)",
+                "sigunguCode: 시군구 코드",
+                "cat1,cat2,cat3: 카테고리 코드"
+            ],
+            detailCommon: [
+                "contentId: 콘텐츠 ID (필수)",
+                "contentTypeId: 콘텐츠 타입 ID",
+                "defaultYN: 기본정보 조회여부 (Y/N, 기본값: Y)",
+                "firstImageYN: 대표이미지 조회여부 (Y/N, 기본값: Y)",
+                "areacodeYN: 지역코드 조회여부 (Y/N, 기본값: Y)",
+                "catcodeYN: 분류코드 조회여부 (Y/N, 기본값: Y)",
+                "addrinfoYN: 주소정보 조회여부 (Y/N, 기본값: Y)",
+                "mapinfoYN: 좌표정보 조회여부 (Y/N, 기본값: Y)",
+                "overviewYN: 개요정보 조회여부 (Y/N, 기본값: Y)"
+            ],
+            searchKeyword: [
+                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
+                "pageNo: 페이지 번호 (기본값: 1)",
+                "keyword: 검색 키워드 (필수, 1~100자)",
+                "contentTypeId: 콘텐츠 타입 ID",
+                "areaCode: 지역 코드",
+                "arrange: 정렬 구분 (A~D, O~R)"
+            ],
+            searchFestival: [
+                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
+                "pageNo: 페이지 번호 (기본값: 1)",
+                "eventStartDate: 행사 시작일 (YYYYMMDD, 필수)",
+                "eventEndDate: 행사 종료일 (YYYYMMDD)",
+                "areaCode: 지역 코드",
+                "arrange: 정렬 구분 (A~D, O, Q, R)"
+            ],
+            locationBasedList: [
+                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
+                "pageNo: 페이지 번호 (기본값: 1)",
+                "mapX: 경도 (필수, -180~180)",
+                "mapY: 위도 (필수, -90~90)", 
+                "radius: 거리 반경 (필수, 1~20000m, 기본값: 1000)",
+                "contentTypeId: 콘텐츠 타입 ID",
+                "arrange: 정렬 구분 (A~E)"
+            ],
+            areaCode: [
+                "numOfRows: 한 페이지 결과 수 (1~1000, 기본값: 10)",
+                "pageNo: 페이지 번호 (기본값: 1)",
+                "areaCode: 지역 코드 (선택적)"
+            ]
+        };
 
-        // 상태 메시지 표시 함수
-        function status(msg, type='loading') {
-            const div = document.getElementById('status');
-            div.innerHTML = msg;
-            div.className = `status ${type}`;
-            div.style.display = 'block';
-        }
-
-        // API 호출 함수 (GET 방식)
-        async function call(params) {
-            const url = new URL(API, location.origin);
-            Object.entries(params).forEach(([k,v]) => {
-                if (v !== undefined && v !== null && v !== '') {
-                    url.searchParams.set(k, v);
+        // 빠른 테스트 예제
+        const quickTestExamples = {
+            areaBasedList: {
+                operation: 'areaBasedList',
+                parameters: {
+                    numOfRows: 10,
+                    pageNo: 1,
+                    arrange: 'A',
+                    contentTypeId: '12',
+                    areaCode: '1'
                 }
-            });
-            
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                if (!data.success) {
-                    throw new Error(data.error?.message || `API Error: ${data.error?.code || 'Unknown error'}`);
+            },
+            searchKeyword: {
+                operation: 'searchKeyword', 
+                parameters: {
+                    numOfRows: 10,
+                    pageNo: 1,
+                    keyword: '경복궁',
+                    arrange: 'A'
                 }
-                
-                return data;
-            } catch (error) {
-                console.error('API Error:', error);
-                throw error;
+            },
+            searchFestival: {
+                operation: 'searchFestival',
+                parameters: {
+                    numOfRows: 10,
+                    pageNo: 1,
+                    eventStartDate: '20240101',
+                    eventEndDate: '20241231',
+                    areaCode: '1'
+                }
+            },
+            areaCode: {
+                operation: 'areaCode',
+                parameters: {
+                    numOfRows: 20,
+                    pageNo: 1
+                }
             }
-        }
-        
-        // 헬스체크 함수
-        async function testHealthCheck() {
-            status('<span class="loading-spinner"></span>헬스체크 중...');
-            try {
-                const data = await call({ operation: 'healthCheck' });
-                status(`✅ 연결 성공! 버전: ${data.data.version}, API키: ${data.data.checks.apiKey ? '설정됨' : '누락'}`, 'success');
-            } catch (e) {
-                status(`❌ 연결 실패: ${e.message}`, 'error');
+        };
+
+        function updateParameterInfo() {
+            const operation = document.getElementById('operation').value;
+            const infoDiv = document.getElementById('parameterInfo');
+            const paramList = document.getElementById('parameterList');
+            
+            if (operation && parameterInfo[operation]) {
+                paramList.innerHTML = '';
+                parameterInfo[operation].forEach(param => {
+                    const li = document.createElement('li');
+                    li.textContent = param;
+                    paramList.appendChild(li);
+                });
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
             }
         }
 
-        // 단일 테스트 함수
-        async function testSingle() {
-            status('<span class="loading-spinner"></span>단일 테스트 중...');
-            try {
-                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
-                const items = extractItems(data);
-                const totalCount = extractTotalCount(data);
-                
-                status(`✅ 단일 테스트 성공! ${items.length}개 아이템`, 'success');
-                showCategory({id:'12', name:'관광지 테스트', icon:'🏛️'}, items, totalCount);
-            } catch (e) {
-                status(`❌ 단일 테스트 실패: ${e.message}`, 'error');
+        function quickTest(testType) {
+            const example = quickTestExamples[testType];
+            if (example) {
+                document.getElementById('operation').value = example.operation;
+                document.getElementById('parameters').value = JSON.stringify(example.parameters, null, 2);
+                updateParameterInfo();
             }
         }
-        
-        // 전체 카테고리 로드 함수
-        async function loadAll() {
-            document.getElementById('results').innerHTML = '';
-            status('<span class="loading-spinner"></span>모든 카테고리 로딩 중...');
-            
-            let total = 0;
-            let success = 0;
-            
-            for(let i = 0; i < categories.length; i++) {
-                const cat = categories[i];
-                status(`<span class="loading-spinner"></span>${i+1}/${categories.length} ${cat.name} 로딩 중...`);
-                
+
+        async function sendRequest() {
+            const endpoint = document.getElementById('apiEndpoint').value;
+            const operation = document.getElementById('operation').value;
+            const method = document.getElementById('httpMethod').value;
+            const parametersText = document.getElementById('parameters').value;
+
+            if (!operation) {
+                alert('Operation을 선택해주세요.');
+                return;
+            }
+
+            let parameters = {};
+            if (parametersText.trim()) {
                 try {
-                    const data = await call({
-                        operation: 'areaBasedList',
-                        contentTypeId: cat.id,
-                        numOfRows: '10'
+                    parameters = JSON.parse(parametersText);
+                } catch (e) {
+                    alert('파라미터 JSON 형식이 올바르지 않습니다.');
+                    return;
+                }
+            }
+
+            showLoading(true);
+            clearStatus();
+
+            try {
+                const requestOptions = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (method === 'GET') {
+                    const urlParams = new URLSearchParams({
+                        operation: operation,
+                        ...parameters
                     });
-                    
-                    const items = extractItems(data);
-                    const totalCount = extractTotalCount(data);
-                    showCategory(cat, items, totalCount);
-                    total += items.length;
-                    success++;
-                    
-                    // 요청 간격 조절
-                    if(i < categories.length-1) await new Promise(r => setTimeout(r, 400));
-                } catch(e) {
-                    showError(cat, e.message);
+                    const response = await fetch(`${endpoint}?${urlParams}`, requestOptions);
+                    await handleResponse(response);
+                } else {
+                    requestOptions.body = JSON.stringify({
+                        operation: operation,
+                        ...parameters
+                    });
+                    const response = await fetch(endpoint, requestOptions);
+                    await handleResponse(response);
                 }
+            } catch (error) {
+                showError(`네트워크 오류: ${error.message}`);
+                displayResponse(`❌  요청 실패
+                
+오류: ${error.message}
+시간: ${new Date().toLocaleString()}
+
+네트워크 연결을 확인하고 올바른 엔드포인트를 입력했는지 확인해주세요.`);
+            } finally {
+                showLoading(false);
             }
-            
-            status(`✅ 완료! ${success}/${categories.length} 카테고리에서 총 ${total}개 데이터 로드`, 'success');
         }
-        
-        // 위치 기반 검색 함수
-        async function searchByLocation() {
-            const locationResult = document.getElementById('location-result');
-            locationResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>위치 기반 검색 중...</div>';
+
+        async function handleResponse(response) {
+            const responseText = await response.text();
+            let responseData;
             
             try {
-                const mapX = document.getElementById('mapX').value;
-                const mapY = document.getElementById('mapY').value;
-                const radius = document.getElementById('radius').value;
-                const contentTypeId = document.getElementById('loc-content-type').value;
-                
-                const data = await call({
-                    operation: 'locationBasedList',
-                    mapX,
-                    mapY,
-                    radius,
-                    contentTypeId,
-                    numOfRows: '20',
-                    arrange: 'E' // 거리순 정렬
-                });
-                
-                const items = extractItems(data);
-                
-                if (items.length === 0) {
-                    locationResult.innerHTML = '<div class="status error">조건에 맞는 결과가 없습니다.</div>';
-                    return;
-                }
-                
-                let html = '<div class="status success">✅ 검색 결과: ' + items.length + '개 항목</div>';
-                html += '<div class="items">';
-                
-                items.forEach(item => {
-                    html += `
-                        <div class="item">
-                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
-                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
-                            <div class="item-content">
-                                <div class="item-title">${item.title || '제목없음'}</div>
-                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
-                                ${item.distance ? `<div class="item-distance">🧭 ${(item.distance/1000).toFixed(2)}km</div>` : ''}
-                                <div class="item-id">ID: ${item.contentid}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                html += '</div>';
-                locationResult.innerHTML = html;
-                
+                responseData = JSON.parse(responseText);
             } catch (e) {
-                locationResult.innerHTML = `<div class="status error">❌ 검색 실패: ${e.message}</div>`;
+                responseData = responseText;
             }
+
+            if (response.ok) {
+                if (responseData.success !== false) {
+                    showSuccess(`요청 성공 (${response.status})`);
+                } else {
+                    showError(`API 오류: ${responseData.error?.message || '알 수 없는 오류'}`);
+                }
+            } else {
+                showError(`HTTP 오류 ${response.status}: ${response.statusText}`);
+            }
+
+            displayResponse(JSON.stringify(responseData, null, 2));
         }
-        
-        // 상세 정보 조회 함수
-        async function getDetail() {
-            const detailResult = document.getElementById('detail-result');
-            detailResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>상세 정보 조회 중...</div>';
+
+        async function healthCheck() {
+            const endpoint = document.getElementById('apiEndpoint').value.replace('/tourism', '/healthCheck');
             
+            showLoading(true);
+            clearStatus();
+
             try {
-                const contentId = document.getElementById('contentId').value;
-                const contentTypeId = document.getElementById('contentTypeId').value;
+                const response = await fetch(endpoint);
+                await handleResponse(response);
+            } catch (error) {
+                showError(`헬스체크 실패: ${error.message}`);
+                displayResponse(`❌ 헬스체크 실패
                 
-                if (!contentId) {
-                    detailResult.innerHTML = '<div class="status error">콘텐츠 ID를 입력해주세요</div>';
-                    return;
-                }
-                
-                // 공통 정보 조회
-                const commonData = await call({
-                    operation: 'detailCommon',
-                    contentId,
-                    contentTypeId,
-                    defaultYN: 'Y',
-                    firstImageYN: 'Y',
-                    areacodeYN: 'Y',
-                    catcodeYN: 'Y',
-                    addrinfoYN: 'Y',
-                    mapinfoYN: 'Y',
-                    overviewYN: 'Y'
-                });
-                
-                // 소개 정보 조회
-                const introData = await call({
-                    operation: 'detailIntro',
-                    contentId,
-                    contentTypeId
-                });
-                
-                const item = extractDetailItem(commonData);
-                const introItem = extractDetailItem(introData);
-                
-                // 두 정보 병합
-                const combinedItem = {...item, ...introItem};
-                
-                let html = '<div class="item-detail">';
-                
-                // 이미지와 제목
-                html += `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="${combinedItem.firstimage || 'https://via.placeholder.com/400x300?text=이미지+없음'}" 
-                            style="max-width: 100%; max-height: 400px; object-fit: contain;">
-                        <h2 style="margin-top: 10px;">${combinedItem.title || '제목 없음'}</h2>
-                    </div>
-                `;
-                
-                // 기본 정보 표시
-                html += '<div style="margin-bottom: 20px;">';
-                html += `<p><strong>주소:</strong> ${combinedItem.addr1 || ''} ${combinedItem.addr2 || ''}</p>`;
-                
-                if (combinedItem.tel) {
-                    html += `<p><strong>전화번호:</strong> ${combinedItem.tel}</p>`;
-                }
-                
-                if (combinedItem.homepage) {
-                    html += `<p><strong>홈페이지:</strong> <a href="${combinedItem.homepage}" target="_blank">${combinedItem.homepage}</a></p>`;
-                }
-                
-                // 카테고리 정보
-                if (combinedItem.contentTypeName) {
-                    html += `<p><strong>카테고리:</strong> ${combinedItem.contentTypeName.ko} (${combinedItem.contentTypeName.en})</p>`;
-                }
-                
-                // 지역 정보
-                if (combinedItem.areaName) {
-                    html += `<p><strong>지역:</strong> ${combinedItem.areaName.ko} (${combinedItem.areaName.en})</p>`;
-                }
-                
-                html += '</div>';
-                
-                // 소개 정보
-                if (combinedItem.overview) {
-                    html += '<div style="margin-bottom: 20px;">';
-                    html += '<h3>소개</h3>';
-                    html += `<div>${combinedItem.overview}</div>`;
-                    html += '</div>';
-                }
-                
-                // 콘텐츠 타입별 추가 정보
-                html += '<div style="margin-bottom: 20px;">';
-                html += '<h3>추가 정보</h3>';
-                
-                // 콘텐츠 타입별 특수 필드 표시
-                const specialFields = getSpecialFields(contentTypeId);
-                for (const field of specialFields) {
-                    if (combinedItem[field.key]) {
-                        html += `<p><strong>${field.name}:</strong> ${combinedItem[field.key]}</p>`;
-                    }
-                }
-                
-                html += '</div>';
-                
-                // 원본 JSON 데이터 표시
-                html += '<details style="margin-top: 20px;">';
-                html += '<summary style="cursor: pointer; padding: 10px; background: #f0f0f0;">원본 JSON 데이터</summary>';
-                html += `<pre class="json-response">${JSON.stringify(combinedItem, null, 2)}</pre>`;
-                html += '</details>';
-                
-                html += '</div>';
-                
-                detailResult.innerHTML = html;
-                
-            } catch (e) {
-                detailResult.innerHTML = `<div class="status error">❌ 정보 조회 실패: ${e.message}</div>`;
+오류: ${error.message}
+시간: ${new Date().toLocaleString()}`);
+            } finally {
+                showLoading(false);
             }
         }
-        
-        // 메트릭스 조회 함수
-        async function getMetrics() {
-            const metricsResult = document.getElementById('metrics-result');
-            metricsResult.innerHTML = '<div class="status loading"><span class="loading-spinner"></span>메트릭스 조회 중...</div>';
-            
-            try {
-                const data = await call({
-                    operation: 'metrics'
-                });
-                
-                const metrics = data.data;
-                
-                let html = '<div class="status success">✅ 메트릭스 조회 성공</div>';
-                
-                // 서비스 정보
-                html += '<h3>서비스 정보</h3>';
-                html += '<table class="metrics-table">';
-                html += '<tr><th>항목</th><th>값</th></tr>';
-                html += `<tr><td>서비스명</td><td>${metrics.service.name}</td></tr>`;
-                html += `<tr><td>버전</td><td>${metrics.service.version}</td></tr>`;
-                html += `<tr><td>업타임</td><td>${Math.floor(metrics.service.uptime / 1000 / 60)} 분 ${Math.floor(metrics.service.uptime / 1000) % 60} 초</td></tr>`;
-                html += `<tr><td>환경</td><td>${metrics.service.environment}</td></tr>`;
-                html += '</table>';
-                
-                // 캐시 정보
-                html += '<h3>캐시 정보</h3>';
-                html += '<table class="metrics-table">';
-                html += '<tr><th>항목</th><th>값</th></tr>';
-                html += `<tr><td>적중 수</td><td>${metrics.cache.hits}</td></tr>`;
-                html += `<tr><td>미스 수</td><td>${metrics.cache.misses}</td></tr>`;
-                html += `<tr><td>캐시 크기</td><td>${metrics.cache.size} 항목</td></tr>`;
-                html += `<tr><td>적중률</td><td>${metrics.cache.hitRate.toFixed(2)}%</td></tr>`;
-                html += `<tr><td>활성화 상태</td><td>${metrics.cache.enabled ? '활성' : '비활성'}</td></tr>`;
-                html += '</table>';
-                
-                // 속도 제한 정보
-                html += '<h3>속도 제한 정보</h3>';
-                html += '<table class="metrics-table">';
-                html += '<tr><th>항목</th><th>값</th></tr>';
-                html += `<tr><td>총 요청 수</td><td>${metrics.rateLimiter.totalRequests}</td></tr>`;
-                html += `<tr><td>제한된 요청 수</td><td>${metrics.rateLimiter.limitedRequests}</td></tr>`;
-                html += `<tr><td>활성 클라이언트 수</td><td>${metrics.rateLimiter.activeClients}</td></tr>`;
-                html += `<tr><td>활성화 상태</td><td>${metrics.rateLimiter.enabled ? '활성' : '비활성'}</td></tr>`;
-                html += '</table>';
-                
-                // 메모리 정보 (제공된 경우)
-                if (metrics.memory) {
-                    html += '<h3>메모리 사용량</h3>';
-                    html += '<table class="metrics-table">';
-                    html += '<tr><th>항목</th><th>값</th></tr>';
-                    html += `<tr><td>사용 힙 메모리</td><td>${(metrics.memory.heapUsed / 1024 / 1024).toFixed(2)} MB</td></tr>`;
-                    html += `<tr><td>총 힙 메모리</td><td>${(metrics.memory.heapTotal / 1024 / 1024).toFixed(2)} MB</td></tr>`;
-                    if (metrics.memory.external) {
-                        html += `<tr><td>외부 메모리</td><td>${(metrics.memory.external / 1024 / 1024).toFixed(2)} MB</td></tr>`;
-                    }
-                    html += '</table>';
-                }
-                
-                // 원본 JSON 데이터 표시
-                html += '<details style="margin-top: 20px;">';
-                html += '<summary style="cursor: pointer; padding: 10px; background: #f0f0f0;">원본 JSON 데이터</summary>';
-                html += `<pre class="json-response">${JSON.stringify(metrics, null, 2)}</pre>`;
-                html += '</details>';
-                
-                metricsResult.innerHTML = html;
-                
-            } catch (e) {
-                metricsResult.innerHTML = `<div class="status error">❌ 메트릭스 조회 실패: ${e.message}</div>`;
-            }
-        }
-        
-        // 카테고리별 특수 필드 가져오기
-        function getSpecialFields(contentTypeId) {
-            const fields = {
-                '12': [ // 관광지
-                    {key: 'infocenter', name: '문의 및 안내'},
-                    {key: 'restdate', name: '쉬는날'},
-                    {key: 'usetime', name: '이용시간'}
-                ],
-                '14': [ // 문화시설
-                    {key: 'infocenterculture', name: '문의 및 안내'},
-                    {key: 'restdateculture', name: '쉬는날'},
-                    {key: 'usetimeculture', name: '이용시간'},
-                    {key: 'parkingculture', name: '주차시설'}
-                ],
-                '15': [ // 축제/공연/행사
-                    {key: 'eventstartdate', name: '행사 시작일'},
-                    {key: 'eventenddate', name: '행사 종료일'},
-                    {key: 'eventplace', name: '행사 장소'},
-                    {key: 'placeinfo', name: '행사장 위치안내'}
-                ],
-                '25': [ // 여행코스
-                    {key: 'distance', name: '코스 총 거리'},
-                    {key: 'taketime', name: '소요시간'},
-                    {key: 'theme', name: '코스 테마'}
-                ],
-                '28': [ // 레포츠
-                    {key: 'infocenterleports', name: '문의 및 안내'},
-                    {key: 'restdateleports', name: '쉬는날'},
-                    {key: 'usetimeleports', name: '이용시간'}
-                ],
-                '32': [ // 숙박
-                    {key: 'infocenterlodging', name: '문의 및 안내'},
-                    {key: 'checkintime', name: '체크인 시간'},
-                    {key: 'checkouttime', name: '체크아웃 시간'},
-                    {key: 'roomtype', name: '객실유형'},
-                    {key: 'reservationurl', name: '예약안내 홈페이지'}
-                ],
-                '38': [ // 쇼핑
-                    {key: 'infocentershopping', name: '문의 및 안내'},
-                    {key: 'restdateshopping', name: '쉬는날'},
-                    {key: 'opentime', name: '영업시간'},
-                    {key: 'fairday', name: '장서는 날'}
-                ],
-                '39': [ // 음식점
-                    {key: 'infocenterfood', name: '문의 및 안내'},
-                    {key: 'restdatefood', name: '쉬는날'},
-                    {key: 'opentimefood', name: '영업시간'},
-                    {key: 'parkingfood', name: '주차시설'},
-                    {key: 'firstmenu', name: '대표 메뉴'}
-                ]
-            };
-            
-            return fields[contentTypeId] || [];
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // 카테고리 표시 함수 
-        function showCategory(cat, items, totalCount) {
-            const div = document.createElement('div');
-            div.className = 'category';
-            div.innerHTML = `
-                <div class="category-header">
-                    <span>${cat.icon} ${cat.name}</span>
-                    <span>${items.length}개 / 전체 ${totalCount}개</span>
-                </div>
-                <div class="items">
-                    ${items.map(item => `
-                        <div class="item">
-                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
-                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
-                            <div class="item-content">
-                                <div class="item-title">${item.title || '제목없음'}</div>
-                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
-                                ${item.distance ? `<div class="item-distance">🧭 ${(item.distance/1000).toFixed(2)}km</div>` : ''}
-                                <div class="item-id">ID: ${item.contentid}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            document.getElementById('results').appendChild(div);
+        function showSuccess(message) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = 'status-indicator status-success';
+            indicator.textContent = `✅ ${message}`;
+            indicator.style.display = 'block';
         }
 
-        // 에러 표시 함수
-        function showError(cat, error) {
-            const div = document.createElement('div');
-            div.className = 'category';
-            div.innerHTML = `
-                <div class="category-header">
-                    <span>${cat.icon} ${cat.name}</span>
-                    <span style="color: #ffcdd2;">오류 발생</span>
-                </div>
-                <div style="padding:20px; color:#721c24; background:#f8d7da;">❌ ${error}</div>
-            `;
-            document.getElementById('results').appendChild(div);
+        function showError(message) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = 'status-indicator status-error';
+            indicator.textContent = `❌ ${message}`;
+            indicator.style.display = 'block';
         }
 
-        // 결과 지우기 함수
-        function clearResults() {
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('status').style.display = 'none';
-        }
-        
-        // 탭 전환 함수
-        function showTab(tabId) {
-            // 모든 탭 컨텐츠 숨기기
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(tab => tab.classList.remove('active'));
-            
-            // 모든 탭 버튼 비활성화
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            
-            // 선택한 탭 컨텐츠와 버튼 활성화
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`.tab:nth-child(${Array.from(tabs).findIndex(tab => tab.getAttribute('onclick').includes(tabId)) + 1})`).classList.add('active');
-        }
-        
-        // API 응답에서 항목 추출 (G3.txt 형식에 맞춤)
-        function extractItems(data) {
-            // data -> data -> response -> body -> items -> item
-            return (data?.data?.response?.body?.items?.item) || [];
-        }
-        
-        // API 응답에서 전체 개수 추출
-        function extractTotalCount(data) {
-            // data -> data -> response -> body -> totalCount
-            return data?.data?.response?.body?.totalCount || 0;
-        }
-        
-        // 상세 정보에서 항목 추출
-        function extractDetailItem(data) {
-            const items = extractItems(data);
-            // 단일 항목 반환
-            return items.length > 0 ? items[0] : {};
+        function clearStatus() {
+            document.getElementById('statusIndicator').style.display = 'none';
         }
 
-        // 페이지 로드시 자동 헬스체크
-        window.onload = () => testHealthCheck();
+        function displayResponse(response) {
+            document.getElementById('responseContainer').textContent = response;
+        }
+
+        function clearResponse() {
+            document.getElementById('responseContainer').textContent = '응답이 지워졌습니다.\n\n새로운 API 요청을 시도해보세요! 🚀';
+            clearStatus();
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 현재 도메인 기반으로 기본 엔드포인트 설정
+            const currentDomain = window.location.origin;
+            document.getElementById('apiEndpoint').value = `${currentDomain}/api/tourism`;
+        });
     </script>
 </body>
 </html>
