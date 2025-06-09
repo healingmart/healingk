@@ -12,17 +12,19 @@
             max-width: 800px;
             margin: 20px auto;
             padding: 0 20px;
+            background-color: #f4f7f6;
         }
         h1, h2 {
             border-bottom: 2px solid #eee;
             padding-bottom: 10px;
+            color: #2c3e50;
         }
         .container {
-            background: #f9f9f9;
+            background: #ffffff;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         input[type="text"], input[type="number"] {
             width: calc(100% - 22px);
@@ -30,6 +32,7 @@
             margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 16px;
         }
         button {
             background-color: #007bff;
@@ -39,7 +42,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s ease-in-out;
         }
         button:hover {
             background-color: #0056b3;
@@ -54,10 +57,12 @@
             font-size: 14px;
             max-height: 500px;
             overflow-y: auto;
+            border: 1px solid #3a3a3a;
         }
         #status {
             font-weight: bold;
             margin-bottom: 10px;
+            color: #34495e;
         }
         #apiUrlLink {
             color: #007bff;
@@ -93,13 +98,12 @@
     </div>
 
     <h2>API 응답 결과</h2>
-
     <div id="status">API를 테스트해보세요.</div>
-
     <pre id="result">여기에 결과가 표시됩니다.</pre>
 
     <script>
-        // Vercel 배포 시, tourism.js 파일은 /api/tourism 경로로 접근 가능합니다.
+        // [수정!] API 경로에 파일 이름인 /tourism을 추가합니다.
+        // Vercel에서 api/tourism.js 파일은 /api/tourism 경로로 접근 가능합니다.
         const BASE_URL = 'https://healingk.vercel.app/api/tourism';
 
         // --- 아래는 수정할 필요 없습니다 ---
@@ -109,18 +113,11 @@
         const resultElement = document.getElementById('result');
         const statusElement = document.getElementById('status');
 
-        /**
-         * 지정된 API 작업을 백엔드 서버리스 함수에 요청합니다.
-         * @param {string} operation - 호출할 백엔드 API 작업명 (예: 'searchKeyword', 'areaBasedList')
-         * @param {object} params - API 요청에 필요한 파라미터 객체
-         */
         async function fetchApi(operation, params = {}) {
-            // operation 파라미터는 백엔드에서 어떤 API를 호출할지 결정하는 데 사용됩니다.
-            // 나머지 params는 해당 API에 필요한 실제 데이터입니다.
             const query = new URLSearchParams({ operation, ...params }).toString();
             const fullUrl = `${BASE_URL}?${query}`;
 
-            statusElement.textContent = `요청 중... (URL: ${fullUrl})`; // 요청 URL도 함께 표시
+            statusElement.textContent = `요청 중...`;
             resultElement.textContent = '로딩 중...';
 
             try {
@@ -131,58 +128,39 @@
 
                 if (response.ok && data.success) {
                     statusElement.textContent = `성공! (상태 코드: ${response.status})`;
+                    statusElement.style.color = '#28a745'; // 성공 시 초록색
                 } else {
-                    // 백엔드에서 success: false를 반환하는 경우의 에러 처리
-                    const errorMessage = data.error?.message || '알 수 없는 API 오류';
-                    const errorCode = data.error?.code || 'UNKNOWN';
-                    statusElement.textContent = `API 오류! (상태 코드: ${response.status}, 코드: ${errorCode}, 메시지: ${errorMessage})`;
+                    statusElement.textContent = `API 오류! (상태 코드: ${response.status}) - ${data.error ? data.error.message : '알 수 없는 오류'}`;
+                    statusElement.style.color = '#dc3545'; // 오류 시 빨간색
                 }
             } catch (error) {
                 statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`;
-                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요. ';
-                console.error('Fetch API error:', error);
+                statusElement.style.color = '#dc3545'; // 오류 시 빨간색
+                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요. ' + error.message;
             }
         }
 
-        /**
-         * 키워드 검색 API를 호출합니다.
-         */
         function searchByKeyword() {
             const keyword = document.getElementById('keyword').value;
             if (!keyword) {
-                alert('키워드를 입력해주세요. ');
+                alert('키워드를 입력해주세요.');
                 return;
             }
-            // 백엔드 searchKeyword 함수에 'keyword'와 'numOfRows' 파라미터 전달
             fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 });
         }
 
-        /**
-         * 지역 기반 조회 API를 호출합니다.
-         */
         function searchByArea() {
             const areaCode = document.getElementById('areaCode').value;
             if (!areaCode) {
-                alert('지역 코드를 입력해주세요. ');
+                alert('지역 코드를 입력해주세요.');
                 return;
             }
-            // 백엔드 areaBasedList 함수에 'areaCode'와 'numOfRows' 파라미터 전달
             fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 });
         }
 
-        /**
-         * 위치 기반 조회 API를 호출합니다.
-         * 대구 시청 좌표를 기준으로 2km 이내의 관광지를 조회합니다.
-         * addDistance: 'Y' 파라미터를 추가하여 백엔드에서 거리 정보를 계산하도록 요청합니다.
-         */
         function searchByLocation() {
-            const daeguCityHall = {
-                mapX: 128.601445, // 대구 시청 경도
-                mapY: 35.871435,  // 대구 시청 위도
-                radius: 2000      // 2km (단위: m)
-            };
-            // 백엔드 locationBasedList 함수에 좌표, 반경, numOfRows, 그리고 거리 계산 요청 파라미터 전달
-            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5, addDistance: 'Y' });
+            const daeguCityHall = { mapX: 128.601445, mapY: 35.871435, radius: 2000 };
+            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5, addDistance: 'Y' }); // addDistance 파라미터 추가
         }
     </script>
 </body>
