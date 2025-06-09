@@ -3,278 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourism API Test - 프로덕션 최종</title>
-    <!-- Tailwind CSS 로드 -->
+    <title>대한민국 추천 관광지 TOP 10</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* 커스텀 스피너 애니메이션 */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
         }
-        .loading-spinner {
-            animation: spin 1s linear infinite;
+        .hero-bg {
+            background-image: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1570168007204-dfb528c6958f?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+        .card-img-container {
+            height: 200px;
+        }
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+        .fade-in {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        .scale-up {
+            transform: scale(1) !important;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-800">
+<body class="bg-gray-50 text-gray-800">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">🏛️ 한국관광공사 API 테스트</h1>
-            <p class="text-gray-600 mt-2">G3 프로덕션 코드를 테스트하기 위한 클라이언트 페이지입니다.</p>
-        </header>
+    <!-- Header -->
+    <header class="hero-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-16 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-4">대한민국 추천 관광지</h1>
+            <p class="text-lg md:text-xl text-gray-200">데이터가 증명하는 지금 가장 인기 있는 여행지 TOP 10</p>
+        </div>
+    </header>
 
-        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-            <div class="flex flex-wrap justify-center items-center gap-4">
-                <button onclick="testHealth()" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">❤️ 헬스체크</button>
-                <button onclick="loadAll()" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">🏛️ 전체 카테고리 로드</button>
-                <button onclick="testSingle()" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">🧪 단일 테스트</button>
-                <button onclick="clearResults()" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">🗑️ 지우기</button>
-            </div>
+    <!-- Main Content -->
+    <main class="container mx-auto p-6 -mt-10">
+        <div id="loading-container" class="text-center py-20">
+             <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
+             <p class="mt-4 text-lg font-semibold text-gray-600">최고의 여행지를 불러오고 있습니다...</p>
+        </div>
+        
+        <div id="error-container" class="hidden text-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
+            <strong class="font-bold">오류 발생!</strong>
+            <span class="block sm:inline" id="error-message"></span>
         </div>
 
-        <!-- 상태 메시지 표시 영역 -->
-        <div id="status-container" class="p-4 mb-6 rounded-lg text-center font-semibold" style="display:none;"></div>
+        <div id="destinations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <!-- 관광지 카드가 여기에 동적으로 추가됩니다. -->
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        <p>Powered by 한국관광공사 TourAPI 3.0 & G3 Production Code</p>
+    </footer>
 
-        <!-- 결과 표시 영역 -->
-        <div id="results" class="space-y-8"></div>
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none modal-bg">
+        <div id="modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transform scale-95 modal-content">
+            <div id="modal-body" class="p-0 overflow-y-auto">
+                <!-- 상세 정보가 여기에 동적으로 추가됩니다. -->
+            </div>
+        </div>
     </div>
-
+    
     <script>
-        // --- API 엔드포인트 설정 ---
-        // 서버리스 환경에서는 각 기능(handler)별로 엔드포인트가 분리되는 것이 일반적입니다.
-        // G3 코드의 `handler` 함수는 이 주소로 호출됩니다.
-        const TOURISM_API_ENDPOINT = '/api/tourism'; 
-        // G3 코드의 `healthCheck` 함수는 이 주소로 호출됩니다. (Vercel 라우팅 설정에 따라 달라질 수 있음)
-        const HEALTH_API_ENDPOINT = '/api/healthCheck';
-
-        const categories = [
-            {id:'12', name:'관광지', icon:'🏞️'},
-            {id:'14', name:'문화시설', icon:'🎭'},
-            {id:'15', name:'축제/공연/행사', icon:'🎪'},
-            {id:'25', name:'여행코스', icon:'🗺️'},
-            {id:'28', name:'레포츠', icon:'⛷️'},
-            {id:'32', name:'숙박', icon:'🏨'},
-            {id:'38', name:'쇼핑', icon:'🛍️'},
-            {id:'39', name:'음식점', icon:'🍽️'}
-        ];
+        const API_ENDPOINT = '/api/tourism';
         
-        const statusContainer = document.getElementById('status-container');
-        const resultsContainer = document.getElementById('results');
-        const buttons = document.querySelectorAll('button');
+        const loadingContainer = document.getElementById('loading-container');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
+        const destinationsGrid = document.getElementById('destinations-grid');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalBody = document.getElementById('modal-body');
 
         /**
-         * 버튼 활성/비활성 상태를 제어합니다.
-         * @param {boolean} isLoading - 로딩 중 여부
+         * API를 호출하는 범용 함수
+         * @param {object} params - 요청 파라미터
+         * @returns {Promise<any>} API 응답 데이터
          */
-        function setButtonsLoading(isLoading) {
-            buttons.forEach(button => {
-                button.disabled = isLoading;
-            });
-        }
-
-        /**
-         * 상태 메시지를 표시합니다.
-         * @param {string} msg - 표시할 메시지 (HTML 가능)
-         * @param {'loading'|'success'|'error'} type - 메시지 종류
-         */
-        function showStatus(msg, type = 'loading') {
-            statusContainer.style.display = 'block';
-            let bgColor, textColor;
-            switch (type) {
-                case 'success':
-                    bgColor = 'bg-green-100';
-                    textColor = 'text-green-800';
-                    break;
-                case 'error':
-                    bgColor = 'bg-red-100';
-                    textColor = 'text-red-800';
-                    break;
-                default: // loading
-                    bgColor = 'bg-blue-100';
-                    textColor = 'text-blue-800';
-                    break;
-            }
-            statusContainer.className = `p-4 mb-6 rounded-lg text-center font-semibold ${bgColor} ${textColor}`;
-            statusContainer.innerHTML = `<div class="flex justify-center items-center">${msg}</div>`;
-        }
-
-        /**
-         * [수정됨] 범용 API 호출 함수입니다.
-         * 서버로부터 받은 응답이 JSON이 아닐 경우를 처리하는 로직이 추가되었습니다.
-         * @param {string} endpoint - 호출할 API 엔드포인트
-         * @param {object} params - 쿼리 파라미터로 전송할 객체
-         * @returns {Promise<any>} - API 응답 데이터
-         */
-        async function callApi(endpoint, params = {}) {
-            const url = new URL(endpoint, location.origin);
+        async function callApi(params) {
+            const url = new URL(API_ENDPOINT, location.origin);
             Object.entries(params).forEach(([key, value]) => {
                 if (value !== undefined && value !== null) {
                     url.searchParams.set(key, value);
                 }
             });
-
+            
             const response = await fetch(url);
-
-            // 응답 헤더를 확인하여 반환된 콘텐츠 타입을 체크합니다.
+            
             const contentType = response.headers.get("content-type");
             if (!contentType || !contentType.includes("application/json")) {
-                // 이 블록은 404 Not Found HTML 페이지와 같이 JSON이 아닌 응답을 받았을 때 실행됩니다.
-                throw new Error(`서버가 JSON 형식이 아닌 응답을 반환했습니다 (상태: ${response.status}). API 주소(${endpoint})가 올바르지 않거나 현재 미리보기 환경에서 사용할 수 없습니다.`);
+                throw new Error(`서버가 JSON 형식이 아닌 응답을 반환했습니다 (상태: ${response.status}). API 서버가 배포되었는지 확인해주세요.`);
             }
 
             const data = await response.json();
-
-            // 응답 코드가 2xx가 아니거나, 응답 JSON 내 success가 false일 경우 에러 처리
             if (!response.ok || !data.success) {
                 throw new Error(data.error?.message || `HTTP 오류 ${response.status}`);
             }
             return data;
         }
+
+        /**
+         * 관광지 목록을 화면에 렌더링
+         * @param {Array} destinations - 관광지 정보 배열
+         */
+        function renderDestinations(destinations) {
+            destinationsGrid.innerHTML = ''; // 기존 내용 초기화
+            destinations.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 cursor-pointer';
+                card.innerHTML = `
+                    <div class="card-img-container relative">
+                        <img src="${item.firstimage || 'https://placehold.co/600x400/E2E8F0/A0AEC0?text=No+Image'}" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/600x400/E2E8F0/A0AEC0?text=Error';" 
+                             alt="${item.title || '관광지'}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 class="absolute bottom-4 left-4 text-white text-xl font-bold">${item.title}</h3>
+                    </div>
+                    <div class="p-5">
+                        <p class="text-gray-600 text-sm">📍 ${item.addr1 || '주소 정보 없음'}</p>
+                    </div>
+                `;
+                card.addEventListener('click', () => showDetails(item.contentid, item.contenttypeid));
+                destinationsGrid.appendChild(card);
+            });
+        }
         
         /**
-         * 헬스체크 API를 테스트합니다.
+         * 관광지 상세 정보를 모달로 표시
+         * @param {string} contentId - 콘텐츠 ID
+         * @param {string} contentTypeId - 콘텐츠 타입 ID
          */
-        async function testHealth() {
-            clearResults();
-            setButtonsLoading(true);
-            showStatus('<div class="loading-spinner w-5 h-5 border-blue-500 border-t-transparent border-2 rounded-full mr-3"></div>헬스체크 중...');
+        async function showDetails(contentId, contentTypeId) {
+            modalBody.innerHTML = `
+                <div class="text-center p-20">
+                    <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                    <p class="mt-4 text-lg text-gray-600">상세 정보를 불러오는 중...</p>
+                </div>`;
+            modal.classList.add('fade-in');
+            modalContent.classList.add('scale-up');
+            
             try {
-                // 수정: 'healthCheck' 엔드포인트를 직접 호출합니다.
-                const data = await callApi(HEALTH_API_ENDPOINT);
-                const checks = data.checks;
-                const statusMessage = `✅ 헬스체크 성공! | API 키: ${checks.apiKeyConfigured ? 'OK' : '누락!'} | 컨테이너: ${checks.serviceContainerInitialized ? 'OK' : '실패!'}`;
-                showStatus(statusMessage, 'success');
-            } catch (e) {
-                showStatus(`❌ 연결 실패: ${e.message}`, 'error');
-            } finally {
-                setButtonsLoading(false);
-            }
-        }
-
-        /**
-         * 단일 카테고리를 테스트합니다.
-         */
-        async function testSingle() {
-            clearResults();
-            setButtonsLoading(true);
-            showStatus('<div class="loading-spinner w-5 h-5 border-indigo-500 border-t-transparent border-2 rounded-full mr-3"></div>단일 테스트 중...');
-            try {
-                const data = await callApi(TOURISM_API_ENDPOINT, { operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
-                const items = data.data?.response?.body?.items?.item || [];
-                showStatus(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드`, 'success');
-                showCategory({id:'12', name:'관광지 테스트', icon:'🏞️'}, items, data.data?.response?.body?.totalCount || 0);
-            } catch (e) {
-                showStatus(`❌ 단일 테스트 실패: ${e.message}`, 'error');
-            } finally {
-                setButtonsLoading(false);
-            }
-        }
-
-        /**
-         * 모든 카테고리의 데이터를 로드합니다.
-         */
-        async function loadAll() {
-            clearResults();
-            setButtonsLoading(true);
-            let totalItems = 0;
-            let successCount = 0;
-
-            for (let i = 0; i < categories.length; i++) {
-                const cat = categories[i];
-                showStatus(`<div class="loading-spinner w-5 h-5 border-green-500 border-t-transparent border-2 rounded-full mr-3"></div>(${i+1}/${categories.length}) ${cat.name} 로딩 중...`);
+                const data = await callApi({
+                    operation: 'detailCommon',
+                    contentId: contentId,
+                    contentTypeId: contentTypeId,
+                    defaultYN: 'Y',
+                    firstImageYN: 'Y',
+                    addrinfoYN: 'Y',
+                    mapinfoYN: 'Y',
+                    overviewYN: 'Y'
+                });
                 
-                try {
-                    const data = await callApi(TOURISM_API_ENDPOINT, {
-                        operation: 'areaBasedList',
-                        contentTypeId: cat.id,
-                        numOfRows: '30'
-                    });
-                    
-                    const items = data.data?.response?.body?.items?.item || [];
-                    const totalCount = data.data?.response?.body?.totalCount || 0;
-                    showCategory(cat, items, totalCount);
-                    totalItems += items.length;
-                    successCount++;
-
-                    // API Rate Limit을 피하기 위해 요청 간 딜레이 추가
-                    if (i < categories.length - 1) await new Promise(r => setTimeout(r, 200));
-                } catch(e) {
-                    showError(cat, e.message);
-                }
-            }
-            
-            showStatus(`✅ 로드 완료! ${successCount}/${categories.length}개 카테고리에서 총 ${totalItems}개 데이터 로드`, 'success');
-            setButtonsLoading(false);
-        }
-
-        /**
-         * 카테고리별 결과를 화면에 표시합니다.
-         * @param {object} cat - 카테고리 정보
-         * @param {Array} items - 아이템 목록
-         * @param {number} totalCount - 전체 아이템 수
-         */
-        function showCategory(cat, items, totalCount) {
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'category bg-white rounded-xl shadow-md overflow-hidden';
-            
-            const itemsHtml = Array.isArray(items) ? items.map(item => `
-                <div class="item border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-lg transition-shadow duration-300">
-                    <img src="${item.firstimage || 'https://placehold.co/400x250/E2E8F0/A0AEC0?text=No+Image'}" 
-                         onerror="this.onerror=null;this.src='https://placehold.co/400x250/E2E8F0/A0AEC0?text=Error';" 
-                         class="w-full h-48 object-cover" alt="${item.title || ''}">
-                    <div class="p-4">
-                        <div class="font-bold text-lg mb-2 truncate" title="${item.title || ''}">${item.title || '제목없음'}</div>
-                        <p class="text-gray-600 text-sm mb-2 truncate">📍 ${item.addr1 || '주소없음'}</p>
-                        <p class="text-gray-500 text-xs">ID: ${item.contentid}</p>
+                const item = data.data.response.body.items.item[0];
+                
+                modalBody.innerHTML = `
+                    <div class="relative">
+                        <img src="${item.firstimage || 'https://placehold.co/800x500/E2E8F0/A0AEC0?text=No+Image'}" 
+                             alt="${item.title}" class="w-full h-64 md:h-80 object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                        <h2 class="absolute bottom-6 left-6 text-white text-3xl font-bold">${item.title}</h2>
+                        <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/70 hover:bg-white rounded-full p-2 focus:outline-none transition">
+                            <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
-                </div>
-            `).join('') : '';
-
-            categoryDiv.innerHTML = `
-                <div class="category-header bg-gray-800 text-white p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold">${cat.icon} ${cat.name}</h2>
-                    <span class="text-sm bg-gray-600 px-2 py-1 rounded-full">${Array.isArray(items) ? items.length : 0} / ${totalCount}</span>
-                </div>
-                <div class="items p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    ${itemsHtml || '<p class="col-span-full text-center text-gray-500 py-8">데이터가 없습니다.</p>'}
-                </div>
-            `;
-            resultsContainer.appendChild(categoryDiv);
+                    <div class="p-6 md:p-8 space-y-4">
+                        <p class="text-lg">${item.overview || '상세 정보가 없습니다.'}</p>
+                        <hr class="my-4">
+                        <p><strong>주소:</strong> ${item.addr1 || '정보 없음'}</p>
+                        <p><strong>연락처:</strong> ${item.tel || '정보 없음'}</p>
+                        <p><strong>홈페이지:</strong> ${item.homepage ? `<a href="${item.homepage}" target="_blank" class="text-blue-600 hover:underline">${item.homepage}</a>` : '정보 없음'}</p>
+                    </div>
+                `;
+            } catch (e) {
+                modalBody.innerHTML = `
+                    <div class="p-8 text-center text-red-600">
+                        <h3 class="text-2xl font-bold mb-4">오류 발생</h3>
+                        <p>${e.message}</p>
+                        <button onclick="closeModal()" class="mt-6 bg-red-600 text-white font-bold py-2 px-4 rounded">닫기</button>
+                    </div>
+                `;
+            }
         }
-
+        
         /**
-         * 오류 발생 시 오류 메시지를 화면에 표시합니다.
-         * @param {object} cat - 카테고리 정보
-         * @param {string} errorMsg - 에러 메시지
+         * 모달 닫기
          */
-        function showError(cat, errorMsg) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'category bg-red-50 rounded-xl shadow-md overflow-hidden';
-            errorDiv.innerHTML = `
-                <div class="category-header bg-red-700 text-white p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold">${cat.icon} ${cat.name}</h2>
-                    <span class="text-sm bg-red-500 px-2 py-1 rounded-full">오류 발생</span>
-                </div>
-                <div class="p-4 text-red-800 font-semibold">
-                    ❌ ${errorMsg}
-                </div>
-            `;
-            resultsContainer.appendChild(errorDiv);
+        function closeModal() {
+            modal.classList.remove('fade-in');
+            modalContent.classList.remove('scale-up');
         }
 
-        /**
-         * 결과 영역과 상태 메시지를 초기화합니다.
-         */
-        function clearResults() {
-            resultsContainer.innerHTML = '';
-            statusContainer.style.display = 'none';
-        }
+        // 모달 배경 클릭 시 닫기
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
 
-        // 페이지 로드 시 자동으로 헬스체크 실행
-        window.onload = () => testHealth();
+        // 페이지 로드 시 실행
+        window.onload = async () => {
+            try {
+                // 가장 인기 있는 관광지(12) 10곳을 조회
+                const data = await callApi({
+                    operation: 'areaBasedList',
+                    contentTypeId: '12',
+                    numOfRows: 10,
+                    pageNo: 1,
+                    arrange: 'P' // P: 조회수 순
+                });
+                const destinations = data.data.response.body.items.item;
+                renderDestinations(destinations);
+            } catch (e) {
+                errorContainer.classList.remove('hidden');
+                errorMessage.textContent = e.message;
+            } finally {
+                loadingContainer.classList.add('hidden');
+            }
+        };
 
     </script>
+
 </body>
 </html>
