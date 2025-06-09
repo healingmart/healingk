@@ -377,44 +377,225 @@ class SafeUtils {
      * @param {object} options - 검증 옵션
      * @returns {boolean} 유효성 여부
      */
-    static isValidUrl(urlString, options = {}) {
-        if (typeof urlString !== 'string') return false;
-        
-        const { allowedProtocols = ['http:', 'https:'], allowLocalhost = false, maxLength = 2048 } = options;
-        
-        // 길이 검증
-        if (urlString.length > maxLength) return false;
-        
-        // 보안 위협 검증
-        const threats = SecurityModule.detectThreats(urlString);
-        if (!threats.safe) return false;
-        
-        try {
-            const url = new URL(urlString);
-            
-            // 프로토콜 검증
-            if (!allowedProtocols.includes(url.protocol)) return false;
-            
-            // localhost 검증
-            if (!allowLocalhost && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
-                return false;
-            }
-            
-            // 추가 보안 검증
-            if (url.username || url.password) return false; // 인증 정보 포함 URL 거부
-            
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
+
+
+
     
-    /**
-     * 지정된 시간(ms) 동안 대기합니다
-     * @param {number} ms - 대기할 시간 (밀리초)
-     * @param {object} options - 대기 옵션
-     * @returns {Promise<void>}
-     */
+  class SafeUtils {
+
+/**
+
+* 고유한 요청 ID를 생성합니다 (이 부분은 수정하지 않습니다)
+
+* @param {string} prefix - ID 접두사
+
+* @returns {string} 생성된 요청 ID
+
+*/
+
+static generateRequestId(prefix = 'req') {
+
+const timestamp = Date.now().toString(36);
+
+const random = Math.random().toString(36).substring(2, 15);
+
+const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+
+const r = (Math.random() * 16) | 0;
+
+const v = c === 'x' ? r : (r & 0x3) | 0x8;
+
+return v.toString(16);
+
+});
+
+return `${prefix}_${timestamp}_${random}_${uuid}`;
+
+}
+
+
+/**
+
+* 안전하게 정수를 파싱합니다 (이 부분은 수정하지 않습니다)
+
+* @param {*} value - 파싱할 값
+
+* @param {number} defaultValue - 파싱 실패 시 반환할 기본값
+
+* @param {object} options - 추가 옵션
+
+* @returns {number} 파싱된 정수 또는 기본값
+
+*/
+
+static safeParseInt(value, defaultValue = NaN, options = {}) {
+
+if (value === null || value === undefined || value === '') return defaultValue;
+
+
+const { min, max, strict = false } = options;
+
+
+// 보안 검증
+
+if (typeof value === 'string') {
+
+const threats = SecurityModule.detectThreats(value);
+
+if (!threats.safe) {
+
+console.warn('Security threat detected in parseInt input:', threats);
+
+return defaultValue;
+
+}
+
+}
+
+
+let num;
+
+if (strict) {
+
+// 엄격 모드: 숫자만 허용
+
+if (!/^-?\d+$/.test(String(value).trim())) {
+
+return defaultValue;
+
+}
+
+num = parseInt(value, 10);
+
+} else {
+
+num = parseInt(value, 10);
+
+}
+
+
+if (isNaN(num)) return defaultValue;
+
+
+// 범위 검증
+
+if (typeof min === 'number' && num < min) return defaultValue;
+
+if (typeof max === 'number' && num > max) return defaultValue;
+
+
+return num;
+
+}
+
+
+
+/* ... (safeParseFloat, maskSensitiveData 등 다른 함수는 그대로 둡니다) ... */
+
+
+
+// ▼▼▼▼▼ 바로 이 함수를 아래의 새 코드로 통째로 교체해야 합니다! ▼▼▼▼▼
+
+/**
+
+* URL이 유효한 형식인지 확인합니다 (API URL 예외 처리 추가 버전)
+
+* @param {string} urlString - 확인할 URL 문자열
+
+* @param {object} options - 검증 옵션
+
+* @returns {boolean} 유효성 여부
+
+*/
+
+static isValidUrl(urlString, options = {}) {
+
+if (typeof urlString !== 'string') return false;
+
+
+
+const { allowedProtocols = ['http:', 'https:'], allowLocalhost = false, maxLength = 2048 } = options;
+
+
+
+// 길이 검증
+
+if (urlString.length > maxLength) return false;
+
+
+
+// 이 URL이 외부 관광 API를 호출하는 것인지 확인합니다.
+
+const isTourApiUrl = urlString.includes('apis.data.go.kr');
+
+
+// 외부 관광 API URL이 아닌 경우에만, 더 엄격한 보안 검사를 수행합니다.
+
+if (!isTourApiUrl) {
+
+const threats = SecurityModule.detectThreats(urlString);
+
+if (!threats.safe) {
+
+console.warn('Security threat detected in non-API URL:', threats);
+
+return false;
+
+}
+
+}
+
+
+
+try {
+
+const url = new URL(urlString);
+
+
+
+// 프로토콜 검증
+
+if (!allowedProtocols.includes(url.protocol)) return false;
+
+
+
+// localhost 검증
+
+if (!allowLocalhost && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
+
+return false;
+
+}
+
+
+
+// 인증 정보 포함 URL 거부 (API URL은 serviceKey 같은 파라미터가 많으므로 예외 처리)
+
+if (!isTourApiUrl && (url.username || url.password)) return false;
+
+
+
+return true;
+
+} catch (error) {
+
+return false;
+
+}
+
+}
+
+// ▲▲▲▲▲ isValidUrl 함수를 여기까지 교체 ▲▲▲▲▲
+
+
+
+/* ... (sleep, validateAndTransform 등 나머지 함수들은 그대로 둡니다) ... */
+
+
+
+
+
+    
     static sleep(ms, options = {}) {
         const { maxWait = 30000 } = options;
         const waitTime = Math.min(Math.max(0, ms), maxWait);
