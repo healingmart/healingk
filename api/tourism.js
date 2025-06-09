@@ -1,25 +1,17 @@
-관광 정보 API 서버리스 함수 (오류 수정 및 개선 버전)
+// 관광 정보 API 서버리스 함수 (프로덕션 최적화 버전)
 
-## 주요 변경 사항:
-
-- API 키 처리 개선: API 키 누락 시 명확한 오류 메시지 반환
-- HTTP 클라이언트 안정성 향상: Node.js 환경에서 http/https 모듈 동적 import 개선
-- 에러 핸들링 강화: 전반적인 에러 처리 로직 개선
-- 코드 가독성 향상: 주석 추가 및 코드 구조 정리
-- 한국관광공사 API 엔드포인트 수정 (operation 뒤의 '1' 제거)
-- 응답 데이터 처리 및 유효성 검사 강화
-- `ServiceKey` URL 인코딩 로직 개선
-- `homepage` 필드 처리 로직 개선 (URL 유효성 검사)
-- `SafeUtils.isValidUrl` 정규식 오타 수정
-- HTTP API 기본 URL을 HTTPS로 변경
-- 전역 에러 핸들러 로깅 방식 간소화
-- `req.body` 파싱 로직 간소화 (서버리스 환경 최적화)
-- **개선: 배치 요청 최대 크기 ConfigManager로 이동**
-- **개선: SafeUtils.sanitizeInput에 HTML 보안 라이브러리 사용 권고 주석 강화**
-- **보안: 브라우저 환경에서 전역 변수 노출 제거 (API 키 노출 위험 방지)**
-- **구조: 파일 분리 필요성에 대한 주석 추가**
-
-*/
+/**
+ * 주요 수정 사항:
+ * 1. SafeUtils.sanitizeInput의 정규식 오류 수정 (기존 반영)
+ * 2. ResponseFormatter.formatError의 메시지 처리 개선 (기존 반영)
+ * 3. InternationalizationManager의 메시지 일관성 개선 (기존 반영)
+ * 4. HttpClient의 ServiceKey 처리 로직 개선 (기존 반영)
+ * 5. 국제화 메시지의 문법 및 형식 통일 (기존 반영)
+ * 6. 에러 처리 로직의 안정성 향상 (기존 반영)
+ * 7. AdvancedCache, RateLimiter에서 setInterval 제거 (서버리스 환경 최적화)
+ * 8. ConfigManager 설정 항목 간결화 (핵심 기능 위주)
+ * 9. HTML 새니타이징 라이브러리 사용 강력 권고 및 예시 추가
+ */
 
 // ===== 전역 상수 정의 =====
 const SERVICE_START_TIME = Date.now();
@@ -69,12 +61,13 @@ class SafeUtils {
     /**
      * 입력 문자열을 위생 처리합니다.
      * HTML 태그를 제거하고 기본적인 XSS 방지를 수행합니다.
-     * **주의: 복잡한 HTML 콘텐츠의 XSS 방지를 위해서는 DOMPurify 또는 sanitize-html과 같은
-     * 전문 라이브러리 사용을 강력히 권장합니다. 현재 구현은 기본적인 수준의 방어입니다.**
+     * **주의: 이 함수는 기본적인 위생 처리만 제공합니다. 복잡한 HTML 콘텐츠의 XSS 방지를 위해서는
+     * `isomorphic-dompurify` (브라우저/Node.js) 또는 `sanitize-html` (Node.js)과 같은
+     * 전문 라이브러리 사용을 강력히 권장합니다. 현재 구현은 완전한 XSS 방어를 보장하지 않습니다.**
      * @param {string} input - 위생 처리할 문자열
      * @param {number} maxLength - 최대 길이
      * @param {object} options - 추가 옵션
-     * @param {string[]} [options.allowedTags] - 허용할 HTML 태그 (기본: 태그 제거)
+     * @param {string[]} [options.allowedTags] - 허용할 HTML 태그 (기본: 태그 제거). 이 옵션 사용 시에도 전문 라이브러리 사용을 권장합니다.
      * @returns {string} 위생 처리된 문자열
      */
     static sanitizeInput(input, maxLength = 1000, options = {}) {
@@ -88,17 +81,16 @@ class SafeUtils {
         // HTML 태그 처리
         if (options.allowedTags && Array.isArray(options.allowedTags)) {
             // 허용된 태그를 제외하고 모든 태그를 제거하는 정규식.
-            // 주의: 이 방식은 완벽한 HTML 파싱이 아니므로, 복잡한 HTML에서는 DOMPurify 같은 라이브러리 사용 권장.
-            // 허용된 태그 목록을 동적으로 구성
+            // 주의: 이 방식은 완벽한 HTML 파싱이 아니므로, 복잡한 HTML에서는 전문 라이브러리 사용 권장.
             const allowedTagsPattern = options.allowedTags.map(tag => `(?:${tag})`).join('|');
-            const tagRegex = new RegExp(`<(?!\/?(?:${allowedTagsPattern})\\b)[^>]*?>`, 'gi');
+            const tagRegex = new RegExp(`<(?!\\/?(?:${allowedTagsPattern})\\b)[^>]*?>`, 'gi');
             sanitized = sanitized.replace(tagRegex, '');
         } else {
             // 기본적으로 모든 HTML 태그 제거
             sanitized = sanitized.replace(/<[^>]*>/g, '');
         }
 
-        // 기본적인 XSS 방지 (더 강력한 라이브러리 사용 권장 - 예: DOMPurify, sanitize-html)
+        // 기본적인 XSS 방지 (더 강력한 라이브러리 사용 권장)
         sanitized = sanitized.replace(/[<>"']/g, (match) => {
             switch (match) {
                 case '<': return '&lt;';
@@ -139,7 +131,6 @@ class SafeUtils {
         if (typeof string !== 'string') return false;
         try {
             const url = new URL(string);
-            // http 또는 https 프로토콜로 시작하는지 확인
             return url.protocol === 'http:' || url.protocol === 'https:';
         } catch (_) {
             return false;
@@ -189,10 +180,9 @@ class GeoUtils {
         const Δφ = ((lat2 - lat1) * Math.PI) / 180;
         const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
         return R * c; // 미터 단위 거리
     }
 
@@ -208,6 +198,7 @@ class GeoUtils {
         const lat = SafeUtils.safeParseFloat(userLat);
         const lng = SafeUtils.safeParseFloat(userLng);
         const rad = SafeUtils.safeParseFloat(radius);
+
         if (isNaN(lat) || isNaN(lng)) {
             return items; // 사용자 좌표가 유효하지 않으면 거리 계산 없이 원본 반환
         }
@@ -215,14 +206,14 @@ class GeoUtils {
         return items.map(item => {
             const itemLat = SafeUtils.safeParseFloat(item.mapy); // mapy가 위도
             const itemLng = SafeUtils.safeParseFloat(item.mapx); // mapx가 경도
+
             if (!isNaN(itemLat) && !isNaN(itemLng)) {
                 const distance = this.getDistance(lat, lng, itemLat, itemLng);
                 item.distance = distance; // 미터 단위
             }
             return item;
         }).filter(item => {
-            // radius가 유효하지 않거나 0 이하면 필터링 안 함
-            if (isNaN(rad) || rad <= 0) return true;
+            if (isNaN(rad) || rad <= 0) return true; // radius가 유효하지 않거나 0 이하면 필터링 안 함
             return item.distance !== undefined && item.distance <= rad;
         }).sort((a, b) => {
             // 거리를 기준으로 오름차순 정렬
@@ -247,13 +238,13 @@ class BaseError extends Error {
         this.details = details;
         this.timestamp = new Date().toISOString();
         this.i18n = i18n;
-        // 국제화 메시지 처리
+
         if (this.i18n && this.i18n.getMessage) {
             this.localizedMessage = this.i18n.getMessage(code, details) || message;
         } else {
             this.localizedMessage = message;
         }
-        // 스택 트레이스 캡처
+
         if (typeof Error.captureStackTrace === 'function') {
             Error.captureStackTrace(this, this.constructor);
         } else {
@@ -261,10 +252,6 @@ class BaseError extends Error {
         }
     }
 
-    /**
-     * 에러 객체를 JSON 형식으로 직렬화합니다.
-     * @returns {object} JSON 형식의 에러 객체
-     */
     toJSON() {
         return {
             success: false,
@@ -280,9 +267,6 @@ class BaseError extends Error {
     }
 }
 
-/**
- * 관광 API 관련 특정 에러 클래스입니다.
- */
 class TourismApiError extends BaseError {
     constructor(code = 'API_ERROR', operation = 'unknown', statusCode = 500, details = {}, metadata = {}, i18n = null) {
         const message = i18n ? i18n.getMessage(code, { operation, ...details }) : `Tourism API error during ${operation}`;
@@ -301,9 +285,6 @@ class TourismApiError extends BaseError {
     }
 }
 
-/**
- * 입력값 유효성 검사 에러 클래스입니다.
- */
 class ValidationError extends BaseError {
     constructor(message, field = 'unknown', value = 'unknown', i18n = null) {
         const localizedMessage = i18n ? i18n.getMessage('VALIDATION_ERROR_FIELD', { field, value, message }) : `Validation error for field '${field}': ${message}`;
@@ -320,9 +301,6 @@ class ValidationError extends BaseError {
     }
 }
 
-/**
- * API 요청 시간 초과 에러 클래스입니다.
- */
 class ApiTimeoutError extends BaseError {
     constructor(timeout, operation = 'unknown', i18n = null) {
         const message = i18n ? i18n.getMessage('API_TIMEOUT', { timeout, operation }) : `API request timed out after ${timeout}ms for operation '${operation}'.`;
@@ -332,9 +310,6 @@ class ApiTimeoutError extends BaseError {
     }
 }
 
-/**
- * API 요청 한도 초과 에러 클래스입니다.
- */
 class RateLimitError extends BaseError {
     constructor(limit, remaining, i18n = null) {
         const message = i18n ? i18n.getMessage('RATE_LIMIT_EXCEEDED', { limit, remaining }) : `Rate limit exceeded. Limit: ${limit}, Remaining: ${remaining}.`;
@@ -344,9 +319,6 @@ class RateLimitError extends BaseError {
     }
 }
 
-/**
- * 보안 관련 에러 클래스입니다.
- */
 class SecurityError extends BaseError {
     constructor(message = 'Security threat detected', code = 'SECURITY_ERROR', details = {}, i18n = null) {
         const localizedMessage = i18n ? i18n.getMessage(code, details) : message;
@@ -355,18 +327,7 @@ class SecurityError extends BaseError {
 }
 
 // ===== 응답 포맷터 =====
-/**
- * API 응답을 일관된 형식으로 포맷팅하는 클래스입니다.
- */
 class ResponseFormatter {
-    /**
-     * 성공 응답을 포맷합니다.
-     * @param {string} operation - 수행된 작업명
-     * @param {object} data - 응답 데이터
-     * @param {object} metadata - 추가 메타데이터
-     * @param {object} performance - 성능 정보
-     * @returns {object} 포맷된 성공 응답
-     */
     static formatSuccess(operation, data, metadata = {}, performance = {}) {
         return {
             success: true,
@@ -378,12 +339,6 @@ class ResponseFormatter {
         };
     }
 
-    /**
-     * 에러 응답을 포맷합니다.
-     * @param {Error|BaseError} error - 에러 객체
-     * @param {string} operation - 에러가 발생한 작업명
-     * @returns {object} 포맷된 에러 응답
-     */
     static formatError(error, operation = 'unknown') {
         if (error instanceof BaseError) {
             const errorJson = error.toJSON();
@@ -393,9 +348,9 @@ class ResponseFormatter {
             return errorJson;
         }
 
-        // 알 수 없는 에러에 대한 처리 (i18n 사용)
-        const i18n = error.i18n; // 에러 객체에 i18n이 직접 포함되어 있다면 사용
+        const i18n = error.i18n;
         const message = i18n ? i18n.getMessage('UNKNOWN_ERROR') : 'An unexpected error occurred.';
+
         return {
             success: false,
             error: {
@@ -410,13 +365,6 @@ class ResponseFormatter {
         };
     }
 
-    /**
-     * 응답 데이터에 캐시 정보를 추가합니다.
-     * @param {object} data - 원본 응답 데이터
-     * @param {boolean} isCached - 캐시 사용 여부
-     * @param {object} cacheStats - 캐시 통계 정보
-     * @returns {object} 캐시 정보가 추가된 응답 데이터
-     */
     static addCacheInfo(data, isCached, cacheStats) {
         if (typeof data === 'object' && data !== null) {
             data.metadata = {
@@ -432,9 +380,6 @@ class ResponseFormatter {
 }
 
 // ===== 서비스 컨테이너 =====
-/**
- * 의존성 주입을 관리하는 서비스 컨테이너입니다.
- */
 class ServiceContainer {
     constructor() {
         this.services = new Map();
@@ -442,12 +387,6 @@ class ServiceContainer {
         this.initialized = false;
     }
 
-    /**
-     * 서비스를 컨테이너에 등록합니다.
-     * @param {string} name - 서비스 이름
-     * @param {function(ServiceContainer): object} factory - 서비스 인스턴스를 생성하는 팩토리 함수
-     * @returns {ServiceContainer} 현재 컨테이너 인스턴스 (체이닝용)
-     */
     register(name, factory) {
         if (this.services.has(name)) {
             console.warn(`Service ${name} is already registered. Overwriting.`);
@@ -456,12 +395,6 @@ class ServiceContainer {
         return this;
     }
 
-    /**
-     * 서비스 인스턴스를 가져옵니다. (싱글턴 패턴)
-     * @param {string} name - 가져올 서비스 이름
-     * @returns {object} 서비스 인스턴스
-     * @throws {Error} 서비스가 등록되지 않은 경우
-     */
     get(name) {
         if (!this.instances.has(name)) {
             if (!this.services.has(name)) {
@@ -473,38 +406,23 @@ class ServiceContainer {
         return this.instances.get(name);
     }
 
-    /**
-     * 등록된 모든 서비스를 초기화(인스턴스화)합니다.
-     */
     initialize() {
         if (this.initialized) return;
         for (const name of this.services.keys()) {
-            this.get(name); // 모든 서비스 인스턴스화
+            this.get(name);
         }
         this.initialized = true;
         console.log('Service container initialized with services:', Array.from(this.instances.keys()).join(', '));
     }
 
-    /**
-     * 컨테이너가 초기화되었는지 여부를 반환합니다.
-     * @returns {boolean} 초기화 여부
-     */
     isInitialized() {
         return this.initialized;
     }
 
-    /**
-     * 현재 인스턴스화된 서비스들의 목록을 반환합니다.
-     * @returns {string[]} 인스턴스화된 서비스 이름 목록
-     */
     getInstancedServices() {
         return Array.from(this.instances.keys());
     }
 
-    /**
-     * 컨테이너와 모든 서비스 인스턴스를 파괴합니다.
-     * (주로 테스트 환경이나 애플리케이션 종료 시 사용)
-     */
     destroy() {
         for (const instance of this.instances.values()) {
             if (typeof instance.destroy === 'function') {
@@ -523,9 +441,6 @@ class ServiceContainer {
 }
 
 // ===== 국제화 관리자 =====
-/**
- * 다국어 메시지를 관리하는 클래스입니다.
- */
 class InternationalizationManager {
     constructor(defaultLanguage = 'ko') {
         this.currentLanguage = defaultLanguage;
@@ -533,7 +448,7 @@ class InternationalizationManager {
             ko: {
                 API_ERROR: 'API 오류가 발생했습니다 (작업: ${operation}).',
                 VALIDATION_ERROR: '입력값 검증 오류가 발생했습니다.',
-                VALIDATION_ERROR_FIELD: "필드 '${field}' 검증 오류: ${message}",
+                VALIDATION_ERROR_FIELD: "필드 '${field}' 검증 오류: ${message}.",
                 API_TIMEOUT: 'API 요청 시간 초과 (${timeout}ms, 작업: ${operation}).',
                 RATE_LIMIT_EXCEEDED: '요청 한도 초과. 한도: ${limit}, 남은 요청: ${remaining}.',
                 SECURITY_ERROR: '보안 위협이 감지되었습니다.',
@@ -542,21 +457,21 @@ class InternationalizationManager {
                 INVALID_API_KEY: '제공된 API 키가 유효하지 않습니다.',
                 UNSUPPORTED_OPERATION: "지원하지 않는 작업입니다: '${operation}'.",
                 BATCH_DISABLED: '배치 요청 기능이 비활성화되어 있습니다.',
-                BATCH_SIZE_EXCEEDED: '최대 ${max}개의 작업만 배치로 처리할 수 있습니다. (요청: ${actual})',
-                INVALID_RANGE: "필드 '${field}'의 값이 유효한 범위를 벗어났습니다. (허용 범위: ${min} ~ ${max})",
+                BATCH_SIZE_EXCEEDED: '최대 ${max}개의 작업만 배치로 처리할 수 있습니다. (요청: ${actual}).',
+                INVALID_RANGE: "필드 '${field}'의 값이 유효한 범위를 벗어났습니다. (허용 범위: ${min} ~ ${max}).",
                 NUMERIC_ERROR: "필드 '${field}'는 숫자여야 합니다.",
                 INVALID_FORMAT: "필드 '${field}'의 형식이 올바르지 않습니다.",
                 INVALID_COORDINATES: "좌표값이 유효하지 않습니다 (위도: ${lat}, 경도: ${lng}).",
-                MIN_LENGTH_ERROR: "최소 길이는 ${minLength}자 입니다. (현재: ${actual}자)",
-                MAX_LENGTH_ERROR: "최대 길이는 ${maxLength}자 입니다. (현재: ${actual}자)",
-                ENUM_ERROR: "허용된 값 중 하나여야 합니다: ${values}",
-                API_RESPONSE_ERROR: "API 응답에 오류가 발생했습니다. 상태: ${status} ${statusText}",
-                API_LOGIC_ERROR: "API 내부 처리 오류가 발생했습니다. 코드: ${resultCode}",
+                MIN_LENGTH_ERROR: "최소 길이는 ${minLength}자입니다. (현재: ${actual}자).",
+                MAX_LENGTH_ERROR: "최대 길이는 ${maxLength}자입니다. (현재: ${actual}자).",
+                ENUM_ERROR: "허용된 값 중 하나여야 합니다: ${values}.",
+                API_RESPONSE_ERROR: "API 응답에 오류가 발생했습니다. 상태: ${status} ${statusText}.",
+                API_LOGIC_ERROR: "API 내부 처리 오류가 발생했습니다. 코드: ${resultCode}.",
                 NETWORK_ERROR: "네트워크 오류가 발생하여 API 요청을 처리할 수 없습니다.",
-                APPLICATION_ERROR: "어플리케이션 에러가 발생했습니다.",
-                DB_ERROR: "데이터베이스 에러가 발생했습니다.",
+                APPLICATION_ERROR: "애플리케이션 오류가 발생했습니다.",
+                DB_ERROR: "데이터베이스 오류가 발생했습니다.",
                 NODATA_ERROR: "데이터가 없습니다.",
-                HTTP_ERROR: "HTTP 에러가 발생했습니다.",
+                HTTP_ERROR: "HTTP 오류가 발생했습니다.",
                 SERVICETIMEOUT_ERROR: "서비스 연결 시간이 초과되었습니다.",
                 INVALID_REQUEST_PARAMETER_ERROR: "잘못된 요청 파라미터입니다.",
                 NO_MANDATORY_REQUEST_PARAMETERS_ERROR: "필수 요청 파라미터가 누락되었습니다.",
@@ -566,12 +481,12 @@ class InternationalizationManager {
                 LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: "서비스 요청 제한 횟수를 초과했습니다.",
                 SERVICE_KEY_IS_NOT_REGISTERED_ERROR: "등록되지 않은 서비스 키입니다.",
                 DEADLINE_HAS_EXPIRED_ERROR: "서비스 키 사용 기간이 만료되었습니다.",
-                UNREGISTERED_IP_ERROR: "등록되지 않은 IP."
+                UNREGISTERED_IP_ERROR: "등록되지 않은 IP입니다."
             },
             en: {
                 API_ERROR: 'API error occurred (operation: ${operation}).',
                 VALIDATION_ERROR: 'Input validation error occurred.',
-                VALIDATION_ERROR_FIELD: "Validation error for field '${field}': ${message}",
+                VALIDATION_ERROR_FIELD: "Validation error for field '${field}': ${message}.",
                 API_TIMEOUT: 'API request timed out after ${timeout}ms for operation \'${operation}\'.',
                 RATE_LIMIT_EXCEEDED: 'Rate limit exceeded. Limit: ${limit}, Remaining: ${remaining}.',
                 SECURITY_ERROR: 'Security threat detected.',
@@ -580,16 +495,16 @@ class InternationalizationManager {
                 INVALID_API_KEY: 'The provided API key is invalid.',
                 UNSUPPORTED_OPERATION: "Unsupported operation: '${operation}'.",
                 BATCH_DISABLED: 'Batch request functionality is disabled.',
-                BATCH_SIZE_EXCEEDED: 'Maximum batch size of ${max} exceeded. (Requested: ${actual})',
-                INVALID_RANGE: "Field '${field}' is out of valid range. (Allowed: ${min} - ${max})",
+                BATCH_SIZE_EXCEEDED: 'Maximum batch size of ${max} exceeded. (Requested: ${actual}).',
+                INVALID_RANGE: "Field '${field}' is out of valid range. (Allowed: ${min} - ${max}).",
                 NUMERIC_ERROR: "Field '${field}' must be a number.",
                 INVALID_FORMAT: "Field '${field}' has an invalid format.",
                 INVALID_COORDINATES: "Invalid coordinates (Latitude: ${lat}, Longitude: ${lng}).",
-                MIN_LENGTH_ERROR: "Minimum length is ${minLength}. (Actual: ${actual})",
-                MAX_LENGTH_ERROR: "Maximum length is ${maxLength}. (Actual: ${actual})",
-                ENUM_ERROR: "Must be one of the allowed values: ${values}",
-                API_RESPONSE_ERROR: "API response error. Status: ${status} ${statusText}",
-                API_LOGIC_ERROR: "API internal processing error. Code: ${resultCode}",
+                MIN_LENGTH_ERROR: "Minimum length is ${minLength}. (Actual: ${actual}).",
+                MAX_LENGTH_ERROR: "Maximum length is ${maxLength}. (Actual: ${actual}).",
+                ENUM_ERROR: "Must be one of the allowed values: ${values}.",
+                API_RESPONSE_ERROR: "API response error. Status: ${status} ${statusText}.",
+                API_LOGIC_ERROR: "API internal processing error. Code: ${resultCode}.",
                 NETWORK_ERROR: "Network error occurred, unable to process API request.",
                 APPLICATION_ERROR: "Application error occurred.",
                 DB_ERROR: "Database error occurred.",
@@ -609,10 +524,6 @@ class InternationalizationManager {
         };
     }
 
-    /**
-     * 현재 언어를 설정합니다. 지원하지 않는 언어일 경우 경고를 출력하고 기본 언어를 유지합니다.
-     * @param {string} language - 설정할 언어 코드 (예: 'ko', 'en')
-     */
     setLanguage(language) {
         if (this.messages[language]) {
             this.currentLanguage = language;
@@ -621,368 +532,197 @@ class InternationalizationManager {
         }
     }
 
-    /**
-     * 현재 설정된 언어를 반환합니다.
-     * @returns {string} 현재 언어 코드
-     */
     getCurrentLanguage() {
         return this.currentLanguage;
     }
 
-    /**
-     * 지정된 키에 해당하는 메시지를 가져오고, 플레이스홀더를 대체합니다.
-     * @param {string} key - 메시지 키
-     * @param {object} params - 플레이스홀더 대체에 사용할 파라미터 객체
-     * @returns {string} 포맷된 메시지
-     */
     getMessage(key, params = {}) {
         const langMessages = this.messages[this.currentLanguage] || this.messages.ko;
-        let message = langMessages[key] || key; // 메시지가 없으면 키 자체를 반환
+        let message = langMessages[key] || key;
+
         for (const paramKey in params) {
             message = message.replace(new RegExp(`\\$\\{${paramKey}\\}`, 'g'), params[paramKey]);
         }
         return message;
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // console.log('InternationalizationManager destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
+    destroy() { /* No-op */ }
 }
 
 // ===== 상수 관리자 =====
-/**
- * 애플리케이션 전반에 걸쳐 사용되는 상수들을 관리합니다.
- */
 class ConstantsManager {
     constructor() {
-        // 한국관광공사 API의 content type ID 목록 및 다국어 이름
         this.CONTENT_TYPES = {
-            '12': { ko: '관광지', en: 'Tourist Destination' },
-            '14': { ko: '문화시설', en: 'Cultural Facility' },
-            '15': { ko: '축제/공연/행사', en: 'Festival/Performance/Event' },
-            '25': { ko: '여행코스', en: 'Travel Course' },
-            '28': { ko: '레포츠', en: 'Leisure/Sports' },
-            '32': { ko: '숙박', en: 'Accommodation' },
-            '38': { ko: '쇼핑', en: 'Shopping' },
-            '39': { ko: '음식점', en: 'Restaurant' }
+            '12': { ko: '관광지', en: 'Tourist Destination' }, '14': { ko: '문화시설', en: 'Cultural Facility' },
+            '15': { ko: '축제/공연/행사', en: 'Festival/Performance/Event' }, '25': { ko: '여행코스', en: 'Travel Course' },
+            '28': { ko: '레포츠', en: 'Leisure/Sports' }, '32': { ko: '숙박', en: 'Accommodation' },
+            '38': { ko: '쇼핑', en: 'Shopping' }, '39': { ko: '음식점', en: 'Restaurant' }
         };
-        // 한국관광공사 API의 지역 코드 목록 및 다국어 이름
         this.AREA_CODES = {
-            '1': { ko: '서울', en: 'Seoul' },
-            '2': { ko: '인천', en: 'Incheon' },
-            '3': { ko: '대전', en: 'Daejeon' },
-            '4': { ko: '대구', en: 'Daegu' },
-            '5': { ko: '광주', en: 'Gwangju' },
-            '6': { ko: '부산', en: 'Busan' },
-            '7': { ko: '울산', en: 'Ulsan' },
-            '8': { ko: '세종', en: 'Sejong' },
-            '31': { ko: '경기도', en: 'Gyeonggi-do' },
-            '32': { ko: '강원도', en: 'Gangwon-do' },
-            '33': { ko: '충청북도', en: 'Chungcheongbuk-do' },
-            '34': { ko: '충청남도', en: 'Chungcheongnam-do' },
-            '35': { ko: '경상북도', en: 'Gyeongsangbuk-do' },
-            '36': { ko: '경상남도', en: 'Gyeongsangnam-do' },
-            '37': { ko: '전라북도', en: 'Jeollabuk-do' },
-            '38': { ko: '전라남도', en: 'Jeollanam-do' },
-            '39': { ko: '제주도', en: 'Jeju-do' }
+            '1': { ko: '서울', en: 'Seoul' }, '2': { ko: '인천', en: 'Incheon' }, '3': { ko: '대전', en: 'Daejeon' },
+            '4': { ko: '대구', en: 'Daegu' }, '5': { ko: '광주', en: 'Gwangju' }, '6': { ko: '부산', en: 'Busan' },
+            '7': { ko: '울산', en: 'Ulsan' }, '8': { ko: '세종', en: 'Sejong' }, '31': { ko: '경기도', en: 'Gyeonggi-do' },
+            '32': { ko: '강원도', en: 'Gangwon-do' }, '33': { ko: '충청북도', en: 'Chungcheongbuk-do' },
+            '34': { ko: '충청남도', en: 'Chungcheongnam-do' }, '35': { ko: '경상북도', en: 'Gyeongsangbuk-do' },
+            '36': { ko: '경상남도', en: 'Gyeongsangnam-do' }, '37': { ko: '전라북도', en: 'Jeollabuk-do' },
+            '38': { ko: '전라남도', en: 'Jeollanam-do' }, '39': { ko: '제주도', en: 'Jeju-do' }
         };
-        // 지원하는 API 오퍼레이션 목록
         this.OPERATIONS = [
-            'areaBasedList',
-            'detailCommon',
-            'detailIntro',
-            'detailInfo',
-            'detailImage',
-            'searchKeyword',
-            'searchFestival',
-            'locationBasedList',
-            'areaCode',
-            'categoryCode'
+            'areaBasedList', 'detailCommon', 'detailIntro', 'detailInfo', 'detailImage',
+            'searchKeyword', 'searchFestival', 'locationBasedList', 'areaCode', 'categoryCode'
         ];
-        // 캐시 설정
         this.CACHE_SETTINGS = {
             defaultTTL: 60 * 60 * 1000, // 1시간
             shortTTL: 5 * 60 * 1000,    // 5분
             longTTL: 24 * 60 * 60 * 1000 // 24시간
         };
-        // 외부 API 호출 설정
         this.API_SETTINGS = {
-            baseUrl: 'https://apis.data.go.kr/B551011/KorService', // 한국관광공사 API 기본 URL (HTTPS로 변경)
-            // 모든 API 호출에 기본으로 포함될 파라미터
-            defaultParams: {
-                MobileOS: 'ETC', // 모바일 OS 구분 (ETC: 기타, AND: 안드로이드, IOS: iOS)
-                MobileApp: 'TourismAPI', // 서비스명
-                _type: 'json' // 응답 포맷 (json 또는 xml)
-            }
+            baseUrl: 'https://apis.data.go.kr/B551011/KorService2',
+            defaultParams: { MobileOS: 'ETC', MobileApp: 'TourismAPI', _type: 'json' }
         };
     }
 
-    /**
-     * Content Type ID에 해당하는 이름을 반환합니다.
-     * @param {string} contentTypeId - Content Type ID
-     * @param {string} language - 언어 코드
-     * @returns {string} Content Type 이름
-     */
     getContentTypeName(contentTypeId, language = 'ko') {
         return this.CONTENT_TYPES[contentTypeId]?.[language] || contentTypeId;
     }
 
-    /**
-     * 지역 코드에 해당하는 이름을 반환합니다.
-     * @param {string} areaCode - 지역 코드
-     * @param {string} language - 언어 코드
-     * @returns {string} 지역 이름
-     */
     getAreaName(areaCode, language = 'ko') {
         return this.AREA_CODES[areaCode]?.[language] || areaCode;
     }
 
-    /**
-     * 주어진 오퍼레이션이 유효한지 확인합니다.
-     * @param {string} operation - 확인할 오퍼레이션 이름
-     * @returns {boolean} 유효성 여부
-     */
     isValidOperation(operation) {
         return this.OPERATIONS.includes(operation);
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // console.log('ConstantsManager destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
+    destroy() { /* No-op */ }
 }
 
 // ===== 설정 관리자 =====
-/**
- * 애플리케이션의 설정을 관리합니다.
- */
 class ConfigManager {
     constructor(container) {
         this.container = container;
         this.config = {
-            version: '2.1.2', // 버전 업데이트
-            environment: hasProcess ? process.env.NODE_ENV || 'development' : 'browser', // Node.js 환경에서만 process.env 사용
-            apiKey: hasProcess ? process.env.TOURISM_API_KEY : null, // Node.js 환경에서만 환경 변수에서 API 키 가져옴
-            apiBaseUrl: 'https://apis.data.go.kr/B551011/KorService', // 기본 API URL (HTTPS로 변경)
+            version: '2.1.3', // 버전 업데이트
+            environment: hasProcess ? process.env.NODE_ENV || 'development' : 'browser',
+            apiKey: hasProcess ? process.env.TOURISM_API_KEY : null,
+            apiBaseUrl: 'https://apis.data.go.kr/B551011/KorService2',
             defaultLanguage: 'ko',
             cacheEnabled: true,
-            cacheTTL: 60 * 60 * 1000, // 1시간
+            cacheTTL: 60 * 60 * 1000, // 1시간 (AdvancedCache의 defaultTTL과 연동됨)
             rateLimitEnabled: true,
             rateLimit: 100, // 분당 요청 수
             rateLimitWindow: 60 * 1000, // 1분
-            enableBatching: true, // 배치 요청 활성화 여부
-            batchMaxOperations: 20, // 배치 요청 시 한 번에 처리할 최대 작업 수 (새로운 설정)
+            enableBatching: true,
+            batchMaxOperations: 20,
             logLevel: 'info', // 'debug', 'info', 'warn', 'error'
             logFormat: 'json', // 'json' 또는 'text'
             logToConsole: true,
-            logToFile: false, // 파일 로깅 활성화 여부 (Node.js 전용)
-            logFilePath: './logs/tourism-api.log',
-            metricsEnabled: true, // 메트릭 수집 활성화 여부
-            metricsInterval: 60 * 1000, // 1분
-            allowedOrigins: '*' // CORS 허용 Origin
+            // logToFile: false, // 파일 로깅은 서버리스 환경에서 권장되지 않음
+            // logFilePath: './logs/tourism-api.log',
+            metricsEnabled: true,
+            // metricsPrefix: 'tourism_api_', // Prometheus 포맷터에서 직접 사용
+            httpTimeout: 30000, // 30초 (HttpClient에서 사용)
+            maxRetries: 3,      // (HttpClient에서 사용)
+            retryDelay: 1000,   // 1초 (HttpClient에서 사용)
+            enableCors: true,
+            corsOrigins: ['*'], // 프로덕션에서는 구체적인 도메인으로 제한 권장
+            // enableSecurity: true, // 보안 관련 설정은 각 모듈(예: 새니타이저)에서 처리
+            // maxRequestSize: '10mb', // 서버리스 플랫폼 설정 또는 API Gateway에서 처리
+            // enableCompression: true, // 서버리스 플랫폼 또는 API Gateway에서 처리
+            // enableEtag: true, // 핸들러에서 처리
+            // 기타 웹 기술 관련 enable 플래그들은 API 핵심 기능과 직접 관련이 적어 제거
         };
     }
 
-    /**
-     * 특정 설정 값을 가져옵니다.
-     * @param {string} key - 설정 키
-     * @returns {*} 설정 값
-     */
-    get(key) {
-        return this.config[key];
+    get(key, defaultValue = undefined) {
+        return this.config[key] !== undefined ? this.config[key] : defaultValue;
     }
 
-    /**
-     * 특정 설정 값을 설정합니다.
-     * @param {string} key - 설정 키
-     * @param {*} value - 설정할 값
-     * @returns {ConfigManager} 현재 인스턴스 (체이닝용)
-     */
     set(key, value) {
         this.config[key] = value;
-        return this;
     }
 
-    /**
-     * 모든 설정 값을 복사하여 반환합니다.
-     * @returns {object} 모든 설정 값
-     */
+    update(updates) {
+        Object.assign(this.config, updates);
+    }
+
     getAll() {
         return { ...this.config };
     }
 
-    /**
-     * 민감한 정보를 제외한 공개 가능한 설정 값을 반환합니다.
-     * @returns {object} 공개 가능한 설정 값
-     */
-    getPublicConfig() {
-        const { apiKey, ...publicConfig } = this.config;
-        return publicConfig;
+    hasApiKey() {
+        return Boolean(this.config.apiKey);
     }
 
-    /**
-     * 설정 값의 유효성을 검사합니다.
-     * @returns {boolean} 설정 유효성 여부
-     */
-    validateConfig() {
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        let isValid = true;
-        if (!this.get('apiKey') && hasProcess) {
-            // Node.js 환경에서만 API 키 누락 경고
-            logger.warn(i18n.getMessage('MISSING_API_KEY'));
-        }
-        if (!['debug', 'info', 'warn', 'error'].includes(this.get('logLevel'))) {
-            logger.warn(`Invalid logLevel: ${this.get('logLevel')}. Defaulting to 'info'.`);
-            this.set('logLevel', 'info');
-        }
-        return isValid;
+    isDevelopment() {
+        return this.config.environment === 'development';
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // console.log('ConfigManager destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
+    isProduction() {
+        return this.config.environment === 'production';
     }
+
+    destroy() { /* No-op */ }
 }
 
 // ===== 로거 =====
-/**
- * 로그를 기록하고 관리하는 클래스입니다.
- */
 class Logger {
     constructor(container) {
         this.container = container;
         this.config = container.get('config');
+        this.logLevel = this.config.get('logLevel', 'info');
+        this.logFormat = this.config.get('logFormat', 'json');
+        this.logToConsole = this.config.get('logToConsole', true);
+        // this.logToFile = this.config.get('logToFile', false); // 파일 로깅 비활성화
+        // this.logFilePath = this.config.get('logFilePath', './logs/tourism-api.log');
+
         this.levels = { debug: 0, info: 1, warn: 2, error: 3 };
-        this.currentLevel = this.levels[this.config.get('logLevel')] || this.levels.info;
-        this.metrics = {};
+        this.currentLevel = this.levels[this.logLevel] || this.levels.info;
     }
 
-    /**
-     * 로그를 기록합니다.
-     * @param {string} level - 로그 레벨
-     * @param {string} message - 로그 메시지
-     * @param {object} data - 추가 데이터
-     * @private
-     */
-    _log(level, message, data = {}) {
-        if (this.levels[level] < this.currentLevel) return;
-        const logEntry = {
-            timestamp: new Date().toISOString(),
-            level,
-            message,
-            ...data,
-            environment: this.config.get('environment'),
-            version: this.config.get('version')
-        };
-        if (this.config.get('logToConsole')) {
-            if (this.config.get('logFormat') === 'json') {
-                // 브라우저 console은 객체를 바로 출력하므로 JSON.stringify 대신 객체 전달
-                console[level](logEntry);
-            } else {
-                console[level](`[${logEntry.timestamp}] [${level.toUpperCase()}] ${message}`, data);
-            }
-        }
-        if (this.config.get('logToFile') && hasProcess) {
-            // Node.js 환경에서만 파일 로깅 구현 (예: fs.appendFile)
-            // 이 부분은 실제 파일 시스템 접근 로직이 필요하며, 서버리스 환경에서는 제한될 수 있습니다.
-        }
-        this._updateMetrics(level, data);
-    }
+    formatMessage(level, message, data = {}) {
+        const timestamp = new Date().toISOString();
+        const logEntry = { timestamp, level: level.toUpperCase(), message, ...data };
 
-    /**
-     * 메트릭을 업데이트합니다.
-     * @param {string} level - 로그 레벨
-     * @param {object} data - 로그 데이터
-     * @private
-     */
-    _updateMetrics(level, data) {
-        if (!this.config.get('metricsEnabled')) return;
-        const metricKey = `log_${level}_count`;
-        this.metrics[metricKey] = (this.metrics[metricKey] || 0) + 1;
-        if (data.responseTime) {
-            const responseTimeKey = 'api_response_time_ms';
-            if (!this.metrics[responseTimeKey]) {
-                this.metrics[responseTimeKey] = { count: 0, sum: 0, avg: 0 };
-            }
-            this.metrics[responseTimeKey].count++;
-            this.metrics[responseTimeKey].sum += data.responseTime;
-            this.metrics[responseTimeKey].avg = this.metrics[responseTimeKey].sum / this.metrics[responseTimeKey].count;
+        if (this.logFormat === 'json') {
+            return JSON.stringify(logEntry);
+        } else {
+            return `[${timestamp}] ${level.toUpperCase()}: ${message} ${Object.keys(data).length > 0 ? JSON.stringify(SafeUtils.maskSensitiveData(data)) : ''}`;
         }
     }
 
-    /**
-     * 디버그 로그를 기록합니다.
-     * @param {string} message - 메시지
-     * @param {object} data - 데이터
-     */
-    debug(message, data = {}) { this._log('debug', message, data); }
-
-    /**
-     * 정보 로그를 기록합니다.
-     * @param {string} message - 메시지
-     * @param {object} data - 데이터
-     */
-    info(message, data = {}) { this._log('info', message, data); }
-
-    /**
-     * 경고 로그를 기록합니다.
-     * @param {string} message - 메시지
-     * @param {object} data - 데이터
-     */
-    warn(message, data = {}) { this._log('warn', message, data); }
-
-    /**
-     * 에러 로그를 기록합니다.
-     * @param {string} message - 메시지
-     * @param {object} data - 데이터
-     */
-    error(message, data = {}) { this._log('error', message, data); }
-
-    /**
-     * 현재 수집된 메트릭을 반환합니다.
-     * @returns {object} 메트릭 데이터
-     */
-    getMetrics() {
-        return { ...this.metrics };
-    }
-
-    /**
-     * 시스템 메모리 정보를 반환합니다 (Node.js 환경에서만).
-     * @returns {object} 메모리 정보
-     */
-    getMemoryInfo() {
-        if (hasProcess && process.memoryUsage) {
-            const usage = process.memoryUsage();
-            return {
-                rss: usage.rss, // Resident Set Size
-                heapTotal: usage.heapTotal, // V8's heap total size
-                heapUsed: usage.heapUsed, // V8's heap used size
-                external: usage.external, // External memory usage (C++ objects bound to JS objects)
-                arrayBuffers: usage.arrayBuffers // Memory allocated for ArrayBuffers and SharedArrayBuffers
-            };
+    log(level, message, data = {}) {
+        if (this.levels[level] < this.currentLevel) {
+            return;
         }
-        return {};
+
+        const formattedMessage = this.formatMessage(level, message, data);
+
+        if (this.logToConsole) {
+            console[level] ? console[level](formattedMessage) : console.log(formattedMessage);
+        }
+
+        // 파일 로깅은 서버리스 환경에서 권장되지 않으므로 주석 처리 또는 제거
+        // if (this.logToFile && hasProcess) {
+        //     this.writeToFile(formattedMessage);
+        // }
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // console.log('Logger destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
+    // writeToFile(message) { ... } // 파일 로깅 관련 메소드 제거 또는 주석 처리
+
+    debug(message, data = {}) { this.log('debug', message, data); }
+    info(message, data = {}) { this.log('info', message, data); }
+    warn(message, data = {}) { this.log('warn', message, data); }
+    error(message, data = {}) { this.log('error', message, data); }
+
+    destroy() { /* No-op */ }
 }
 
 // ===== 고급 캐시 =====
 /**
- * 고급 캐싱 기능을 제공하는 클래스입니다.
+ * 메모리 기반 캐시 시스템입니다.
+ * 서버리스 환경에 맞춰 setInterval을 사용한 주기적 정리를 제거하고,
+ * 요청 시점 정리(on-demand cleanup)를 강화합니다.
  */
 class AdvancedCache {
     constructor(container) {
@@ -990,2707 +730,1278 @@ class AdvancedCache {
         this.config = container.get('config');
         this.logger = container.get('logger');
         this.cache = new Map();
-        this.stats = {
-            hits: 0,
-            misses: 0,
-            sets: 0,
-            deletes: 0,
-            size: 0,
-            hitRate: 0
-        };
-        this.lastCleanup = Date.now();
-        this.cleanupInterval = 5 * 60 * 1000; // 5분마다 만료된 항목 정리
+        this.stats = { hits: 0, misses: 0, sets: 0, deletes: 0, clears: 0, expired: 0 };
+        this.enabled = this.config.get('cacheEnabled', true);
+        this.defaultTTL = this.config.get('cacheTTL', 60 * 60 * 1000);
+
+        // 서버리스 환경에서는 setInterval을 사용한 백그라운드 정리가 부적합하므로 제거합니다.
+        // this.cleanupInterval = setInterval(() => { this.cleanup(); }, 5 * 60 * 1000);
     }
 
-    /**
-     * 캐시 키를 생성합니다. 파라미터를 정렬하여 일관된 키를 생성합니다.
-     * @param {string} operation - API 오퍼레이션 이름
-     * @param {object} params - 요청 파라미터
-     * @returns {string} 생성된 캐시 키
-     */
-    generateKey(operation, params) {
-        try {
-            const sortedParams = {};
-            Object.keys(params)
-                .sort()
-                .forEach(key => {
-                    sortedParams[key] = params[key];
-                });
-            const keyString = `${operation}:${JSON.stringify(sortedParams)}`;
-            return keyString;
-        } catch (error) {
-            this.logger.warn('캐시 키 생성 오류', { error: error.message, operation, params });
-            // 오류 발생 시 랜덤 키 반환하여 캐시 사용 방지
-            return `${operation}:${Date.now()}:${Math.random()}`;
-        }
+    generateKey(operation, params = {}) {
+        const sortedParams = Object.keys(params)
+            .sort()
+            .reduce((result, key) => {
+                result[key] = params[key];
+                return result;
+            }, {});
+        return `${operation}:${JSON.stringify(sortedParams)}`;
     }
 
-    /**
-     * 캐시에서 값을 가져옵니다.
-     * @param {string} key - 캐시 키
-     * @returns {*} 캐시된 값 또는 null
-     */
     get(key) {
-        if (!this.config.get('cacheEnabled')) return null;
-        this._cleanup();
+        if (!this.enabled) return null;
+
         const item = this.cache.get(key);
+
         if (!item) {
             this.stats.misses++;
-            this._updateHitRate();
             return null;
         }
-        if (item.expires < Date.now()) {
+
+        if (Date.now() > item.expiry) {
             this.cache.delete(key);
-            this.stats.size = this.cache.size;
             this.stats.misses++;
-            this._updateHitRate();
+            this.stats.expired++;
+            this.logger.debug('Cache item expired and deleted on get', { key });
             return null;
         }
+
         this.stats.hits++;
-        this._updateHitRate();
-        item.lastAccessed = Date.now();
-        item.accessCount++;
+        this.logger.debug('Cache hit', { key, size: this.cache.size });
         return item.value;
     }
 
-    /**
-     * 캐시에 값을 설정합니다.
-     * @param {string} key - 캐시 키
-     * @param {*} value - 캐시할 값
-     * @param {number} ttl - 캐시 유지 시간 (밀리초). 기본값은 ConfigManager에서 가져옵니다.
-     */
-    set(key, value, ttl) {
-        if (!this.config.get('cacheEnabled')) return;
-        const defaultTTL = this.container.get('constants').CACHE_SETTINGS.defaultTTL;
-        const expires = Date.now() + (ttl || defaultTTL);
-        this.cache.set(key, {
-            value,
-            expires,
-            created: Date.now(),
-            lastAccessed: Date.now(),
-            accessCount: 0
-        });
+    set(key, value, ttl = this.defaultTTL) {
+        if (!this.enabled) return;
+
+        const expiry = Date.now() + ttl;
+        this.cache.set(key, { value, expiry });
         this.stats.sets++;
-        this.stats.size = this.cache.size;
-        this._cleanup();
+        this.logger.debug('Cache set', { key, ttl, size: this.cache.size });
+
+        // 선택적: 캐시 크기가 특정 임계값을 넘으면 오래된 항목 정리 로직 추가 가능
+        // if (this.cache.size > MAX_CACHE_SIZE) { this.evictOldest(); }
     }
 
-    /**
-     * 캐시에서 특정 키의 항목을 삭제합니다.
-     * @param {string} key - 삭제할 캐시 키
-     * @returns {boolean} 삭제 성공 여부
-     */
     delete(key) {
         const deleted = this.cache.delete(key);
         if (deleted) {
             this.stats.deletes++;
-            this.stats.size = this.cache.size;
+            this.logger.debug('Cache delete', { key, size: this.cache.size });
         }
         return deleted;
     }
 
-    /**
-     * 캐시를 완전히 비웁니다.
-     */
     clear() {
         this.cache.clear();
-        this.stats.size = 0;
-        this.stats.deletes++;
-        this.logger.info('캐시가 초기화되었습니다');
+        this.stats.clears++;
+        this.logger.info('Cache cleared');
     }
 
     /**
-     * 현재 캐시 통계를 반환합니다.
-     * @returns {object} 캐시 통계
+     * 만료된 캐시 항목을 정리합니다. (주로 get 호출 시 개별적으로 처리됨)
+     * 이 메소드는 수동으로 호출하거나, 특정 조건에서만 호출하도록 할 수 있습니다.
+     * 서버리스 환경에서는 모든 키를 순회하는 방식은 비효율적일 수 있습니다.
      */
-    getStats() {
-        return { ...this.stats };
-    }
-
-    /**
-     * 가장 많이 접근된 캐시 항목 목록을 반환합니다.
-     * @param {number} limit - 반환할 항목의 최대 개수
-     * @returns {Array<object>} 상위 캐시 항목 목록
-     */
-    getTopItems(limit = 10) {
-        const items = Array.from(this.cache.entries())
-            .map(([key, item]) => ({
-                key,
-                accessCount: item.accessCount,
-                lastAccessed: item.lastAccessed,
-                expires: item.expires,
-                ttl: item.expires - Date.now() // 남은 TTL 계산
-            }))
-            .sort((a, b) => b.accessCount - a.accessCount) // 접근 횟수 기준으로 내림차순 정렬
-            .slice(0, limit);
-        return items;
-    }
-
-    /**
-     * 캐시 적중률을 업데이트합니다.
-     * @private
-     */
-    _updateHitRate() {
-        const total = this.stats.hits + this.stats.misses;
-        this.stats.hitRate = total > 0 ? (this.stats.hits / total) * 100 : 0;
-    }
-
-    /**
-     * 만료된 캐시 항목을 정리합니다.
-     * @private
-     */
-    _cleanup() {
+    cleanup() {
         const now = Date.now();
-        if (now - this.lastCleanup < this.cleanupInterval) return; // 설정된 정리 주기 내에 있으면 스킵
-        this.lastCleanup = now;
-        let expiredCount = 0;
+        let cleanedCount = 0;
         for (const [key, item] of this.cache.entries()) {
-            if (item.expires < now) {
+            if (now > item.expiry) {
                 this.cache.delete(key);
-                expiredCount++;
+                cleanedCount++;
             }
         }
-        this.stats.size = this.cache.size;
-        if (expiredCount > 0) {
-            this.logger.debug('캐시 정리 완료', { expiredCount, remainingSize: this.cache.size });
+        if (cleanedCount > 0) {
+            this.stats.expired += cleanedCount;
+            this.logger.debug('Manual cache cleanup completed', { cleaned: cleanedCount, remaining: this.cache.size });
         }
     }
 
-    /**
-     * 인스턴스를 파괴하고 캐시를 비웁니다.
-     */
+
+    getStats() {
+        const totalLookups = this.stats.hits + this.stats.misses;
+        const hitRate = totalLookups > 0 ? (this.stats.hits / totalLookups) * 100 : 0;
+
+        return {
+            ...this.stats,
+            size: this.cache.size,
+            hitRate: parseFloat(hitRate.toFixed(2)), // 소수점 2자리
+            enabled: this.enabled
+        };
+    }
+
+    resetStats() {
+        this.stats = { hits: 0, misses: 0, sets: 0, deletes: 0, clears: 0, expired: 0 };
+        this.logger.info('Cache stats reset');
+    }
+
     destroy() {
-        this.cache.clear();
-        // console.log('캐시가 정리되었습니다'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
+        // 서버리스 환경에서는 setInterval을 사용하지 않으므로 clearInterval 불필요
+        this.clear(); // 컨테이너 파괴 시 캐시 비우기
+        this.logger.info('AdvancedCache destroyed');
     }
 }
 
-// ===== 속도 제한 관리자 =====
+// ===== 속도 제한기 =====
 /**
- * API 요청에 대한 속도 제한을 관리하는 클래스입니다.
+ * API 요청 속도를 제한하는 클래스입니다.
+ * 서버리스 환경에 맞춰 setInterval을 사용한 주기적 정리를 제거하고,
+ * 요청 시점 정리(on-demand cleanup)를 활용합니다.
  */
 class RateLimiter {
     constructor(container) {
         this.container = container;
         this.config = container.get('config');
         this.logger = container.get('logger');
-        this.requests = new Map(); // 요청 ID와 타임스탬프 저장
-        this.limit = this.config.get('rateLimit') || 100; // 기본값: 100회
-        this.window = this.config.get('rateLimitWindow') || 60 * 1000; // 기본값: 1분 (60초)
-        this.enabled = this.config.get('rateLimitEnabled') !== false; // 설정에 따라 활성화/비활성화
-        this.stats = {
-            totalRequests: 0, // 전체 요청 수
-            limitedRequests: 0, // 속도 제한으로 거부된 요청 수
-            currentWindowRequests: 0 // 현재 윈도우 내의 요청 수
+        this.i18n = container.get('i18n');
+        this.requests = new Map(); // clientId: [timestamp1, timestamp2, ...]
+        this.enabled = this.config.get('rateLimitEnabled', true);
+        this.limit = this.config.get('rateLimit', 100);
+        this.window = this.config.get('rateLimitWindow', 60 * 1000);
+        this.stats = { totalRequests: 0, limitedRequests: 0, currentWindowRequestsForLastCheckedClient: 0 };
+
+        // 서버리스 환경에서는 setInterval을 사용한 백그라운드 정리가 부적합하므로 제거합니다.
+        // this.cleanupInterval = setInterval(() => { this.cleanupOldRequests(); }, this.window);
+    }
+
+    getClientId(req) {
+        // Vercel 환경에서는 x-forwarded-for 헤더를 우선적으로 확인
+        return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || req.connection?.remoteAddress || 'unknown_client';
+    }
+
+    checkLimit(req) {
+        if (!this.enabled) {
+            return { allowed: true, remaining: this.limit, resetTime: Date.now() + this.window };
+        }
+
+        const clientId = this.getClientId(req);
+        const now = Date.now();
+        const windowStart = now - this.window;
+
+        if (!this.requests.has(clientId)) {
+            this.requests.set(clientId, []);
+        }
+
+        let clientRequestTimestamps = this.requests.get(clientId);
+
+        // 현재 윈도우 내의 유효한 요청 타임스탬프만 필터링 (오래된 기록 자동 정리)
+        clientRequestTimestamps = clientRequestTimestamps.filter(timestamp => timestamp > windowStart);
+        this.requests.set(clientId, clientRequestTimestamps);
+
+        this.stats.totalRequests++;
+        this.stats.currentWindowRequestsForLastCheckedClient = clientRequestTimestamps.length;
+
+        if (clientRequestTimestamps.length >= this.limit) {
+            this.stats.limitedRequests++;
+            this.logger.warn('Rate limit exceeded', { clientId, requestsInWindow: clientRequestTimestamps.length, limit: this.limit });
+            throw new RateLimitError(this.limit, 0, this.i18n);
+        }
+
+        clientRequestTimestamps.push(now); // 현재 요청 타임스탬프 추가
+        const remaining = this.limit - clientRequestTimestamps.length;
+
+        this.logger.debug('Rate limit check passed', { clientId, requestsInWindow: clientRequestTimestamps.length, remaining });
+
+        return {
+            allowed: true,
+            remaining,
+            resetTime: windowStart + this.window // 다음 윈도우 시작 시간 (대략적인 초기화 시간)
         };
     }
 
     /**
-     * 요청이 허용되는지 확인합니다.
-     * @param {string} requestId - 요청 ID
-     * @returns {boolean} 요청 허용 여부
+     * 모든 클라이언트의 만료된 요청 기록을 정리합니다. (주로 checkLimit에서 개별 클라이언트별로 처리됨)
+     * 이 메소드는 수동으로 호출하거나, 특정 조건에서만 호출하도록 할 수 있습니다.
+     * 서버리스 환경에서는 모든 키를 순회하는 방식은 비효율적일 수 있습니다.
      */
-    isAllowed(requestId) {
-        if (!this.enabled) return true; // 속도 제한 기능이 비활성화된 경우 항상 허용
+    cleanupOldRequests() {
         const now = Date.now();
-        this._cleanup(now); // 만료된 요청 정리
-        this.stats.totalRequests++;
-        this.stats.currentWindowRequests = this.requests.size; // 현재 윈도우 내 요청 수 업데이트
-        const currentCount = this._getCurrentCount(now);
-        if (currentCount >= this.limit) {
-            this.stats.limitedRequests++; // 거부된 요청 수 증가
-            this.logger.warn('속도 제한 초과', {
-                requestId,
-                currentCount,
-                limit: this.limit
-            });
-            return false; // 속도 제한 초과, 요청 거부
+        const windowStart = now - this.window;
+        let cleanedClients = 0;
+        for (const [clientId, requests] of this.requests.entries()) {
+            const validRequests = requests.filter(timestamp => timestamp > windowStart);
+            if (validRequests.length === 0) {
+                this.requests.delete(clientId);
+                cleanedClients++;
+            } else {
+                this.requests.set(clientId, validRequests);
+            }
         }
-        this._addRequest(requestId, now); // 요청 추가
-        return true; // 요청 허용
+        if (cleanedClients > 0) {
+            this.logger.debug('Rate limiter old request cleanup completed for inactive clients', { cleanedClients, activeClients: this.requests.size });
+        }
     }
 
-    /**
-     * 남은 요청 할당량을 반환합니다.
-     * @param {string} requestId - 요청 ID
-     * @returns {number} 남은 요청 할당량
-     */
-    getRemainingQuota(requestId) {
-        if (!this.enabled) return this.limit;
-        const now = Date.now();
-        this._cleanup(now);
-        const currentCount = this._getCurrentCount(now);
-        return Math.max(0, this.limit - currentCount);
-    }
-
-    /**
-     * 현재 속도 제한 통계를 반환합니다.
-     * @returns {object} 속도 제한 통계
-     */
     getStats() {
         return {
             ...this.stats,
+            activeClients: this.requests.size, // 현재 추적 중인 클라이언트 수
             enabled: this.enabled,
             limit: this.limit,
-            window: this.window,
-            remaining: this.limit - this.stats.currentWindowRequests // 남은 할당량
+            windowMs: this.window
         };
     }
 
-    /**
-     * 현재 윈도우 내의 요청 수를 반환합니다.
-     * @param {number} now - 현재 타임스탬프
-     * @returns {number} 현재 요청 수
-     * @private
-     */
-    _getCurrentCount(now) {
-        this._cleanup(now);
-        return this.requests.size;
+    resetStats() {
+        this.stats = { totalRequests: 0, limitedRequests: 0, currentWindowRequestsForLastCheckedClient: 0 };
+        this.logger.info('Rate limiter stats reset');
     }
 
-    /**
-     * 새 요청을 기록합니다.
-     * @param {string} requestId - 요청 ID
-     * @param {number} now - 현재 타임스탬프
-     * @private
-     */
-    _addRequest(requestId, now) {
-        this.requests.set(requestId, {
-            timestamp: now,
-            requestId
-        });
-    }
-
-    /**
-     * 속도 제한 윈도우를 벗어난 오래된 요청을 정리합니다.
-     * @param {number} now - 현재 타임스탬프
-     * @private
-     */
-    _cleanup(now) {
-        const cutoff = now - this.window;
-        for (const [id, request] of this.requests.entries()) {
-            if (request.timestamp < cutoff) {
-                this.requests.delete(id);
-            }
-        }
-        this.stats.currentWindowRequests = this.requests.size;
-    }
-
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
     destroy() {
+        // 서버리스 환경에서는 setInterval을 사용하지 않으므로 clearInterval 불필요
         this.requests.clear();
-        // this.logger.info('속도 제한 관리자가 정리되었습니다'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
+        this.logger.info('RateLimiter destroyed');
     }
 }
 
 // ===== HTTP 클라이언트 =====
-/**
- * 외부 API에 HTTP 요청을 보내는 클라이언트입니다.
- */
 class HttpClient {
     constructor(container) {
         this.container = container;
         this.config = container.get('config');
         this.logger = container.get('logger');
-        this.constants = container.get('constants');
         this.i18n = container.get('i18n');
-        this.stats = {
-            totalRequests: 0,
-            successfulRequests: 0,
-            failedRequests: 0,
-            totalResponseTime: 0,
-            averageResponseTime: 0
-        };
+        this.baseUrl = this.config.get('apiBaseUrl');
+        this.timeout = this.config.get('httpTimeout', 30000);
+        this.maxRetries = this.config.get('maxRetries', 3);
+        this.retryDelay = this.config.get('retryDelay', 1000);
     }
 
-    /**
-     * 한국관광공사 API에 데이터를 요청합니다.
-     * @param {string} operation - 호출할 API 오퍼레이션 (예: 'areaBasedList')
-     * @param {object} params - 요청 파라미터
-     * @param {object} options - 추가 옵션 (예: requestId)
-     * @returns {Promise<object>} API 응답 데이터
-     * @throws {TourismApiError} API 관련 오류 발생 시
-     */
-    async getTourismData(operation, params, options = {}) {
+    async request(operation, params = {}, options = {}) {
         const startTime = Date.now();
-        const requestId = options.requestId || SafeUtils.generateRequestId();
         const apiKey = this.config.get('apiKey');
-        const baseUrl = this.config.get('apiBaseUrl') || this.constants.API_SETTINGS.baseUrl;
-        if (!apiKey) {
-            this.logger.error(this.i18n.getMessage('MISSING_API_KEY'), { operation, requestId });
-            throw new TourismApiError(
-                'MISSING_API_KEY',
-                operation,
-                500, // 서버 설정 오류이므로 500 반환
-                { message: this.i18n.getMessage('MISSING_API_KEY') },
-                { requestId },
-                this.i18n
-            );
-        }
-        const url = new URL(`${baseUrl}/${operation}`); // 한국관광공사 API는 operation 뒤에 '1'이 붙지 않음
-        const defaultParams = {
-            // ServiceKey는 환경 변수에서 가져온 값을 URL 인코딩 전에 디코딩하여 사용
-            ServiceKey: decodeURIComponent(apiKey),
-            ...this.constants.API_SETTINGS.defaultParams // 기본 파라미터 추가
-        };
 
-        // 파라미터를 URLSearchParams에 추가
-        Object.entries({ ...defaultParams, ...params }).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                url.searchParams.append(key, String(value));
+        if (!apiKey) {
+            throw new TourismApiError('MISSING_API_KEY', operation, 500, {}, {}, this.i18n);
+        }
+
+        const url = new URL(`${this.baseUrl}/${operation}`);
+        const searchParams = new URLSearchParams();
+        searchParams.append('ServiceKey', apiKey);
+
+        const constants = this.container.get('constants');
+        const defaultParams = constants.API_SETTINGS.defaultParams;
+        Object.entries(defaultParams).forEach(([key, value]) => {
+            searchParams.append(key, String(value));
+        });
+
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                searchParams.append(key, String(value));
             }
         });
+        url.search = searchParams.toString();
 
-        this.logger.debug('API 요청 시작', {
-            requestId,
+        this.logger.debug('HTTP request starting', {
             operation,
-            url: url.toString().replace(apiKey, '***MASKED***') // 로그에 API 키 마스킹
+            url: url.toString().replace(apiKey, '***MASKED***'), // 로그에는 API 키 마스킹
+            params: SafeUtils.maskSensitiveData(params)
         });
 
-        this.stats.totalRequests++;
+        let lastError;
+        for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+            try {
+                const response = await this.makeRequest(url.toString(), operation, options); // operation 전달
+                const duration = Date.now() - startTime;
+                this.logger.info('HTTP request completed', { operation, attempt, duration, status: response.status });
+                return response;
+            } catch (error) {
+                lastError = error;
+                const duration = Date.now() - startTime;
+                this.logger.warn('HTTP request failed', { operation, attempt, duration, error: error.message, stack: error.stack });
+                if (attempt < this.maxRetries && this.shouldRetry(error)) {
+                    await SafeUtils.sleep(this.retryDelay * attempt);
+                    this.logger.info(`Retrying HTTP request for ${operation}, attempt ${attempt + 1}`);
+                    continue;
+                }
+                break;
+            }
+        }
+        throw lastError;
+    }
+
+    async makeRequest(urlString, operation, options = {}) { // operation 파라미터 추가
+        if (hasProcess) {
+            return this.makeNodeRequest(urlString, operation, options);
+        } else {
+            return this.makeBrowserRequest(urlString, operation, options);
+        }
+    }
+
+    async makeNodeRequest(urlString, operation, options = {}) { // operation 파라미터 추가
+        return new Promise((resolve, reject) => {
+            const urlObj = new URL(urlString);
+            const httpModule = urlObj.protocol === 'https:' ? require('https') : require('http');
+
+            const requestOptions = {
+                method: 'GET', // 대부분의 공공 API는 GET 사용
+                timeout: this.timeout,
+                headers: {
+                    'User-Agent': `TourismAPI/${this.config.get('version', 'unknown')}`,
+                    'Accept': 'application/json',
+                    ...options.headers
+                }
+            };
+
+            const req = httpModule.request(urlObj, requestOptions, (res) => {
+                let data = '';
+                res.setEncoding('utf8');
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    try {
+                        const jsonData = JSON.parse(data);
+                        resolve({
+                            status: res.statusCode,
+                            statusText: res.statusMessage,
+                            data: jsonData,
+                            headers: res.headers
+                        });
+                    } catch (parseError) {
+                        this.logger.error('Failed to parse API JSON response', { operation, responseData: data, parseError: parseError.message });
+                        reject(new TourismApiError('API_RESPONSE_ERROR', operation, 500, { reason: 'JSON parse error', parseError: parseError.message, responsePreview: data.substring(0, 200) }, {}, this.i18n));
+                    }
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy(new Error('Request timed out')); // 에러 객체와 함께 destroy
+                reject(new ApiTimeoutError(this.timeout, operation, this.i18n));
+            });
+
+            req.on('error', (networkError) => {
+                reject(new TourismApiError('NETWORK_ERROR', operation, 503, { networkError: networkError.message }, {}, this.i18n));
+            });
+
+            req.end();
+        });
+    }
+
+    async makeBrowserRequest(urlString, operation, options = {}) { // operation 파라미터 추가
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
         try {
-            let response;
-            // Node.js 환경에서 fetch가 기본 제공되지 않을 때 'node-fetch' 사용
-            // Node.js 18+에서는 fetch가 내장되어 있으므로 이 조건문이 불필요해질 수 있음
-            if (hasProcess && typeof fetch === 'undefined') {
-                const { default: nodeFetch } = await import('node-fetch');
-                response = await nodeFetch(url.toString());
-            } else {
-                // 브라우저 또는 최신 Node.js 환경
-                response = await fetch(url.toString());
-            }
+            const response = await fetch(urlString, {
+                method: 'GET',
+                signal: controller.signal,
+                headers: { 'Accept': 'application/json', ...options.headers }
+            });
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 let errorBody = null;
-                try {
-                    errorBody = await response.json(); // 에러 응답 본문 파싱 시도
-                } catch (e) {
-                    this.logger.warn('API 응답 에러 본문 파싱 실패', { requestId, operation, error: e.message });
-                }
-                this.logger.error('API 응답 오류', {
-                    requestId, operation, status: response.status, statusText: response.statusText, body: errorBody
-                });
-                throw new TourismApiError(
-                    'API_RESPONSE_ERROR',
-                    operation,
-                    response.status,
-                    {
-                        status: response.status,
-                        statusText: response.statusText,
-                        body: errorBody
-                    },
-                    { requestId },
-                    this.i18n
-                );
+                try { errorBody = await response.json(); } catch (e) { /* ignore */ }
+                throw new TourismApiError('API_RESPONSE_ERROR', operation, response.status, { status: response.status, statusText: response.statusText, body: errorBody }, {}, this.i18n);
             }
 
             const data = await response.json();
-            const responseTime = Date.now() - startTime;
-            const resultCode = data.response?.header?.resultCode;
-            const resultMsg = data.response?.header?.resultMsg;
-
-            // 한국관광공사 API의 고유한 결과 코드 처리
-            if (resultCode !== '0000') {
-                this.logger.warn('API 결과 코드 오류', {
-                    requestId, operation, resultCode, resultMsg
-                });
-                let customErrorCode = 'API_LOGIC_ERROR';
-                let statusCode = 500;
-                switch (resultCode) {
-                    case '0001': customErrorCode = 'APPLICATION_ERROR'; break; // 어플리케이션 에러
-                    case '0002': customErrorCode = 'DB_ERROR'; break; // 데이터베이스 에러
-                    case '0003': customErrorCode = 'NODATA_ERROR'; break; // 데이터 없음 (200 OK지만 데이터가 없는 경우)
-                    case '0004': customErrorCode = 'HTTP_ERROR'; break; // HTTP 에러
-                    case '0005': customErrorCode = 'SERVICETIMEOUT_ERROR'; break; // 서비스 연결 실패
-                    case '0010': customErrorCode = 'INVALID_REQUEST_PARAMETER_ERROR'; statusCode = 400; break; // 잘못된 요청 파라메터
-                    case '0011': customErrorCode = 'NO_MANDATORY_REQUEST_PARAMETERS_ERROR'; statusCode = 400; break; // 필수 요청 파라메터 없음
-                    case '0012': customErrorCode = 'END_OF_SERVICE_ERROR'; break; // 해당 오픈 API 서비스가 없거나 폐기됨
-                    case '0020': customErrorCode = 'SERVICE_ACCESS_DENIED_ERROR'; statusCode = 403; break; // 서비스 접근 거부
-                    case '0021': customErrorCode = 'TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR'; statusCode = 403; break; // 일시적으로 사용할 수 없는 서비스 키
-                    case '0022': customErrorCode = 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR'; statusCode = 429; break; // 서비스 요청제한횟수 초과
-                    case '0030': customErrorCode = 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR'; statusCode = 401; break; // 등록되지 않은 서비스키
-                    case '0031': customErrorCode = 'DEADLINE_HAS_EXPIRED_ERROR'; statusCode = 403; break; // 서비스 키 사용기간 만료
-                    case '0032': customErrorCode = 'UNREGISTERED_IP_ERROR'; statusCode = 403; break; // 등록되지 않은 IP
-                    case '9999': customErrorCode = 'UNKNOWN_ERROR'; break; // 기타 에러
-                }
-                throw new TourismApiError(
-                    customErrorCode,
-                    operation,
-                    statusCode,
-                    {
-                        resultCode,
-                        resultMsg
-                    },
-                    { requestId },
-                    this.i18n
-                );
-            }
-
-            this.stats.successfulRequests++;
-            this.stats.totalResponseTime += responseTime;
-            this.stats.averageResponseTime = this.stats.totalResponseTime / this.stats.successfulRequests;
-            this.logger.debug('API 요청 성공', {
-                requestId,
-                operation,
-                responseTime,
-                resultCode
-            });
-            return data;
+            return { status: response.status, statusText: response.statusText, data, headers: Object.fromEntries(response.headers.entries()) };
         } catch (error) {
-            const responseTime = Date.now() - startTime;
-            this.stats.failedRequests++;
-            if (error instanceof TourismApiError || error instanceof BaseError) {
-                throw error; // 이미 처리된 에러는 그대로 throw
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new ApiTimeoutError(this.timeout, operation, this.i18n);
             }
-            // 예상치 못한 네트워크 오류 등
-            this.logger.error('HTTP 클라이언트 오류', {
-                requestId,
-                operation,
-                error: error.message,
-                stack: error.stack,
-                responseTime
-            });
-            throw new TourismApiError(
-                'NETWORK_ERROR', // 더 구체적인 에러 코드
-                operation,
-                503, // Service Unavailable
-                {
-                    originalError: error.message
-                },
-                { requestId },
-                this.i18n
-            );
+            if (error instanceof TourismApiError) { throw error; } // 이미 처리된 에러
+            throw new TourismApiError('NETWORK_ERROR', operation, 500, { networkError: error.message }, {}, this.i18n);
         }
     }
 
-    /**
-     * HTTP 클라이언트의 통계를 반환합니다.
-     * @returns {object} 통계 데이터
-     */
-    getStats() {
-        return { ...this.stats };
+    shouldRetry(error) {
+        if (error instanceof ApiTimeoutError) return true;
+        if (error instanceof TourismApiError) {
+            // 5xx 서버 오류 또는 네트워크 오류 시 재시도
+            return error.statusCode >= 500 || error.code === 'NETWORK_ERROR' || error.statusCode === 429; // 429(Too Many Requests)도 재시도 대상에 포함 가능
+        }
+        return false;
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // this.logger.info('HTTP 클라이언트가 정리되었습니다'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
+    destroy() { /* No-op */ }
 }
 
 // ===== API 응답 처리기 =====
 /**
- * 한국관광공사 API 응답 데이터를 추출하고 가공하는 클래스입니다.
+ * API 응답을 처리하고 검증하는 클래스입니다.
+ * HTML 콘텐츠 새니타이징 시 전문 라이브러리 사용이 권장됩니다.
  */
 class ApiResponseProcessor {
-    /**
-     * API 응답에서 아이템 목록을 추출합니다.
-     * @param {object} data - API 응답 원본 데이터
-     * @returns {Array<object>} 추출된 아이템 목록
-     */
-    static extractItems(data) {
-        try {
-            const items = data.response?.body?.items?.item;
-            if (!items) return [];
-            return Array.isArray(items) ? items : [items]; // 단일 항목일 경우 배열로 변환
-        } catch (error) {
-            console.warn('Error extracting items from API response:', error);
-            return []; // 에러 발생 시에도 빈 배열 반환 (방어적 코딩)
+    constructor(container) {
+        this.container = container;
+        this.logger = container.get('logger');
+        this.i18n = container.get('i18n');
+        this.constants = container.get('constants');
+        // HTML 새니타이징을 위해 isomorphic-dompurify와 같은 라이브러리를 여기서 초기화하거나,
+        // 필요시 enhanceItem 메소드 내에서 require/import 할 수 있습니다.
+        // 예: this.DOMPurify = require('isomorphic-dompurify'); (사전에 npm install isomorphic-dompurify 필요)
+    }
+
+    async processResponse(response, operation) {
+        this.logger.debug('Processing API response', { operation, status: response.status });
+
+        if (response.status !== 200) { // 공공 API는 종종 오류도 200으로 주지만, 일반적인 HTTP 오류 처리
+            throw new TourismApiError('API_RESPONSE_ERROR', operation, response.status, { status: response.status, statusText: response.statusText, responseData: response.data }, {}, this.i18n);
         }
-    }
 
-    /**
-     * 기본 관광지 아이템 데이터를 처리하고 정규화합니다.
-     * @param {object} item - 원본 아이템 객체
-     * @param {ServiceContainer} container - 서비스 컨테이너
-     * @returns {object|null} 처리된 아이템 객체 또는 null
-     */
-    static processBasicItem(item, container) {
-        try {
-            if (!item) return null;
-            const constants = container.get('constants');
-            const i18n = container.get('i18n');
-            const lang = i18n.getCurrentLanguage();
-            return {
-                contentid: item.contentid,
-                contenttypeid: item.contenttypeid,
-                title: SafeUtils.sanitizeInput(item.title),
-                addr1: SafeUtils.sanitizeInput(item.addr1),
-                addr2: SafeUtils.sanitizeInput(item.addr2),
-                zipcode: item.zipcode,
-                tel: SafeUtils.sanitizeInput(item.tel),
-                firstimage: this.validateImageUrl(item.firstimage),
-                firstimage2: this.validateImageUrl(item.firstimage2),
-                mapx: this.sanitizeCoordinate(item.mapx), // 경도
-                mapy: this.sanitizeCoordinate(item.mapy), // 위도
-                areacode: item.areacode,
-                sigungucode: item.sigungucode,
-                cat1: item.cat1,
-                cat2: item.cat2,
-                cat3: item.cat3,
-                // overview 필드에 HTML 태그 허용하도록 SafeUtils.sanitizeInput 옵션 추가
-                overview: SafeUtils.sanitizeInput(item.overview, 4000, {
-                    allowedTags: ['p', 'br', 'a', 'strong', 'em', 'ul', 'ol', 'li', 'b', 'i', 'u', 's', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td']
-                }),
-                // homepage 필드는 URL 문자열이므로, URL 유효성 검사만 수행
-                homepage: SafeUtils.isValidUrl(item.homepage) ? item.homepage : null,
-                createdtime: this.formatDate(item.createdtime),
-                modifiedtime: this.formatDate(item.modifiedtime),
-                meta: {
-                    contentTypeName: constants.getContentTypeName(item.contenttypeid, lang),
-                    areaName: constants.getAreaName(item.areacode, lang),
-                    hasImage: !!(item.firstimage || item.firstimage2),
-                    hasCoordinates: !!(item.mapx && item.mapy && GeoUtils.isValidCoordinate(item.mapy, item.mapx)),
-                    hasOverview: !!item.overview,
-                    hasHomepage: !!item.homepage,
-                    completeness: this.calculateCompleteness(item),
-                    lastUpdated: item.modifiedtime ? this.formatDate(item.modifiedtime) : null
-                }
-            };
-        } catch (error) {
-            console.warn('Error processing basic item:', { item, error: error.message, stack: error.stack });
-            return null;
+        const data = response.data;
+        if (!data || typeof data !== 'object' || !data.response || !data.response.header) {
+            this.logger.error('Invalid API response structure', { operation, responseData: data });
+            throw new TourismApiError('API_RESPONSE_ERROR', operation, 500, { reason: 'Invalid response structure from API', responsePreview: JSON.stringify(data).substring(0,200) }, {}, this.i18n);
         }
-    }
 
-    /**
-     * 이미지 URL의 유효성을 검증합니다.
-     * @param {string} url - 이미지 URL
-     * @returns {string|null} 유효한 URL 또는 null
-     */
-    static validateImageUrl(url) {
-        if (!url || typeof url !== 'string') return null;
-        // SafeUtils.isValidUrl은 이미 http/https 프로토콜을 확인하므로 재확인 불필요
-        if (!SafeUtils.isValidUrl(url)) return null;
+        const resultCode = data.response.header.resultCode;
+        const resultMsg = data.response.header.resultMsg;
 
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-        const hasValidExtension = imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
-        return hasValidExtension ? url : null;
-    }
-
-    /**
-     * 좌표 문자열을 숫자로 변환하고 유효성을 검증합니다.
-     * @param {string} coord - 좌표 문자열
-     * @returns {number|null} 유효한 숫자 좌표 또는 null
-     */
-    static sanitizeCoordinate(coord) {
-        if (!coord) return null;
-        const num = SafeUtils.safeParseFloat(coord);
-        if (isNaN(num)) return null;
-        // 위도/경도 범위는 GeoUtils.isValidCoordinate에서 더 자세히 검증
-        // 여기서는 숫자 변환만
-        return num;
-    }
-
-    /**
-     * 날짜 문자열을 ISO 8601 형식으로 변환합니다.
-     * 한국관광공사 API는 YYYYMMDDHHMMSS 또는 YYYYMMDD 형식을 반환합니다.
-     * @param {string} dateString - 날짜 문자열
-     * @returns {string|null} ISO 8601 형식의 날짜 문자열 또는 null
-     */
-    static formatDate(dateString) {
-        if (!dateString) return null;
-        try {
-            if (/^\d{14}$/.test(dateString)) { // YYYYMMDDHHMMSS
-                const y = parseInt(dateString.substring(0, 4));
-                const m = parseInt(dateString.substring(4, 6));
-                const d = parseInt(dateString.substring(6, 8));
-                const h = parseInt(dateString.substring(8, 10));
-                const min = parseInt(dateString.substring(10, 12));
-                const s = parseInt(dateString.substring(12, 14));
-                if (!this.isValidDateTime(y, m, d, h, min, s)) return null;
-                return new Date(y, m - 1, d, h, min, s).toISOString();
+        if (resultCode !== '0000') { // '0000'이 성공 코드
+            const errorCode = this.mapApiErrorCode(resultCode);
+            let statusCode = 400; // 기본적으로 클라이언트 오류로 간주
+            if (errorCode.startsWith('SERVICE_') || errorCode.startsWith('DB_') || errorCode.startsWith('APPLICATION_') || errorCode === 'API_LOGIC_ERROR') {
+                statusCode = 500; // 서버 측 문제로 간주될 수 있는 경우
             }
-            if (/^\d{8}$/.test(dateString)) { // YYYYMMDD
-                const y = parseInt(dateString.substring(0, 4));
-                const m = parseInt(dateString.substring(4, 6));
-                const d = parseInt(dateString.substring(6, 8));
-                if (!this.isValidDate(y, m, d)) return null;
-                return new Date(y, m - 1, d).toISOString().split('T')[0]; // 날짜 부분만
-            }
-            // 이미 ISO 8601 또는 다른 유효한 형식일 경우 Date 객체로 변환 시도
-            const date = new Date(dateString);
-            return isNaN(date.getTime()) ? null : date.toISOString();
-        } catch (error) {
-            console.warn('날짜 형식 변환 오류:', { dateString, error: error.message });
-            return null;
+            if (errorCode === 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR') statusCode = 429;
+            if (errorCode === 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR' || errorCode === 'DEADLINE_HAS_EXPIRED_ERROR' || errorCode === 'SERVICE_ACCESS_DENIED_ERROR') statusCode = 401; // 또는 403
+
+            this.logger.warn('API returned an error code', { operation, resultCode, resultMsg });
+            throw new TourismApiError(errorCode, operation, statusCode, { resultCode, resultMsg }, {}, this.i18n);
         }
+
+        const processedData = this.enhanceResponseData(data, operation);
+        this.logger.debug('API response processed successfully', { operation, itemCount: this.getItemCount(processedData) });
+        return processedData;
     }
 
-    /**
-     * 날짜 구성 요소가 유효한 날짜를 형성하는지 확인합니다.
-     * @param {number} year - 년도
-     * @param {number} month - 월 (1-12)
-     * @param {number} day - 일 (1-31)
-     * @returns {boolean} 유효성 여부
-     */
-    static isValidDate(year, month, day) {
-        if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return false;
-        const date = new Date(year, month - 1, day);
-        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day && !isNaN(date.getTime());
+    mapApiErrorCode(apiErrorCode) {
+        // 한국관광공사 API 문서 기준 주요 에러 코드 매핑
+        const errorCodeMap = {
+            '0001': 'APPLICATION_ERROR', // 어플리케이션 에러
+            '0002': 'DB_ERROR',          // 데이터베이스 에러
+            '0003': 'NODATA_ERROR',       // 데이터없음 에러
+            '0004': 'HTTP_ERROR',         // HTTP 에러
+            '0005': 'SERVICETIMEOUT_ERROR',// 서비스 타임아웃
+            '0010': 'INVALID_REQUEST_PARAMETER_ERROR', // 잘못된 요청 파라메터 에러
+            '0011': 'NO_MANDATORY_REQUEST_PARAMETERS_ERROR', // 필수요청 파라메터가 없음
+            '0012': 'END_OF_SERVICE_ERROR', // 해당 오픈 API 서비스가 없거나 폐기됨
+            '0020': 'SERVICE_ACCESS_DENIED_ERROR', // 서비스 접근거부 에러
+            '0021': 'TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR', // 일시적으로 사용할 수 없는 서비스키
+            '0022': 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', // 서비스 요청제한횟수 초과에러
+            '0030': 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR', // 등록되지 않은 서비스키
+            '0031': 'DEADLINE_HAS_EXPIRED_ERROR', // 서비스 키 사용기간 만료
+            '0032': 'UNREGISTERED_IP_ERROR',   // 등록되지 않은 IP
+            '9999': 'UNKNOWN_ERROR' // 기타에러
+        };
+        return errorCodeMap[apiErrorCode] || `API_LOGIC_ERROR_CODE_${apiErrorCode}`; // 매핑 안된 코드는 그대로 노출
     }
 
-    /**
-     * 날짜 및 시간 구성 요소가 유효한 날짜 및 시간을 형성하는지 확인합니다.
-     * @param {number} year - 년도
-     * @param {number} month - 월 (1-12)
-     * @param {number} day - 일 (1-31)
-     * @param {number} hour - 시 (0-23)
-     * @param {number} minute - 분 (0-59)
-     * @param {number} second - 초 (0-59)
-     * @returns {boolean} 유효성 여부
-     */
-    static isValidDateTime(year, month, day, hour, minute, second) {
-        if (!this.isValidDate(year, month, day) || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return false;
-        const date = new Date(year, month - 1, day, hour, minute, second);
-        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day &&
-            date.getHours() === hour && date.getMinutes() === minute && date.getSeconds() === second && !isNaN(date.getTime());
+    enhanceResponseData(data, operation) {
+        const enhanced = { ...data };
+        if (data.response?.body?.items) {
+            const itemsData = data.response.body.items.item;
+            // item이 단일 객체로 올 경우 배열로 만들어 일관성 유지
+            const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData ? [itemsData] : []);
+            enhanced.response.body.items.item = this.enhanceItems(itemsArray, operation);
+        }
+        return enhanced;
     }
 
-    /**
-     * 아이템의 데이터 완전성(Completeness)을 계산합니다.
-     * @param {object} item - 아이템 객체
-     * @returns {number} 완전성 백분율 (0-100)
-     */
-    static calculateCompleteness(item) {
-        const fields = ['title', 'addr1', 'tel', 'firstimage', 'mapx', 'mapy', 'overview', 'homepage', 'cat1', 'cat2', 'cat3'];
-        const filledFields = fields.filter(field => {
-            const value = item[field];
-            // 값이 존재하고, 비어있지 않거나, "0", "null" 문자열이 아닌 경우 유효하다고 판단
-            return value && value !== '' && value !== '0' && value !== 'null';
-        }).length;
-        return Math.round((filledFields / fields.length) * 100);
+    enhanceItems(items, operation) {
+        if (!Array.isArray(items)) return [];
+        return items.map(item => this.enhanceItem(item, operation));
     }
 
-    /**
-     * 이미지 아이템 데이터를 처리하고 정규화합니다.
-     * @param {object} item - 원본 이미지 아이템 객체
-     * @returns {object|null} 처리된 이미지 아이템 객체 또는 null
-     */
-    static processImageItem(item) {
-        try {
-            if (!item) return null;
-            return {
-                contentid: item.contentid,
-                imgname: SafeUtils.sanitizeInput(item.imgname),
-                originimgurl: this.validateImageUrl(item.originimgurl),
-                smallimageurl: this.validateImageUrl(item.smallimageurl),
-                serialnum: item.serialnum,
-                cpyrhtDivCd: item.cpyrhtDivCd // 저작권 유형 (Type1:제1유형(출처표시), Type3:제3유형(제1유형+변경금지))
+    enhanceItem(item, operation) {
+        const enhanced = { ...item };
+        const lang = this.i18n.getCurrentLanguage();
+
+        if (item.contenttypeid) {
+            enhanced.contentTypeName = this.constants.getContentTypeName(item.contenttypeid, lang);
+        }
+        if (item.areacode) {
+            enhanced.areaName = this.constants.getAreaName(item.areacode, lang);
+        }
+        if (item.homepage) {
+            enhanced.homepage = this.cleanupHomepage(item.homepage);
+        }
+        if (item.mapx && item.mapy) {
+            enhanced.coordinates = {
+                longitude: SafeUtils.safeParseFloat(item.mapx),
+                latitude: SafeUtils.safeParseFloat(item.mapy),
+                isValid: GeoUtils.isValidCoordinate(item.mapy, item.mapx)
             };
-        } catch (error) {
-            console.warn('Error processing image item:', { item, error: error.message, stack: error.stack });
-            return null;
         }
+
+        // overview 필드와 같이 HTML을 포함할 수 있는 경우, 전문 라이브러리로 새니타이징
+        // 예시: isomorphic-dompurify 사용 (라이브러리 설치 및 import 필요)
+        // if (item.overview && this.DOMPurify) { // DOMPurify 인스턴스가 있다고 가정
+        //   enhanced.overview = this.DOMPurify.sanitize(item.overview, {
+        //     ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'ul', 'ol', 'li', 'a'],
+        //     ALLOWED_ATTR: ['href', 'target']
+        //   });
+        // } else if (item.overview) {
+        //   // DOMPurify가 없을 경우, SafeUtils.sanitizeInput 사용 (덜 안전함)
+        //   enhanced.overview = SafeUtils.sanitizeInput(item.overview, 4000, {
+        //      allowedTags: ['p', 'br', 'b', 'strong', 'i', 'em', 'ul', 'ol', 'li', 'a']
+        //   });
+        // }
+        // 현재는 SafeUtils.sanitizeInput을 사용하도록 두되, 주석으로 강력 권고
+        if (item.overview) {
+             enhanced.overview = SafeUtils.sanitizeInput(item.overview, 4000, {
+                 allowedTags: ['p', 'br', 'b', 'strong', 'i', 'em', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'hr', 'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'caption', 'div', 'span']
+                 // 주의: allowedTags가 많아질수록 XSS 위험 증가. 반드시 isomorphic-dompurify 사용 고려.
+                 // img 태그의 src, a 태그의 href 등 속성 필터링이 중요.
+             });
+        }
+
+
+        // 추가적으로 날짜 포맷팅, 카테고리명 변환 등을 여기에 추가할 수 있습니다.
+        // 예: if (item.createdtime) enhanced.createdtimeISO = this.formatDateToISO(item.createdtime);
+
+        return enhanced;
     }
 
-    /**
-     * 코드 아이템(지역 코드, 카테고리 코드 등) 데이터를 처리하고 정규화합니다.
-     * @param {object} item - 원본 코드 아이템 객체
-     * @returns {object|null} 처리된 코드 아이템 객체 또는 null
-     */
-    static processCodeItem(item) {
-        try {
-            if (!item) return null;
-            return {
-                code: item.code,
-                name: SafeUtils.sanitizeInput(item.name),
-                rnum: item.rnum
-            };
-        } catch (error) {
-            console.warn('Error processing code item:', { item, error: error.message, stack: error.stack });
-            return null;
+    cleanupHomepage(homepage) {
+        if (!homepage || typeof homepage !== 'string') return null;
+        let cleaned = homepage.replace(/<[^>]*>/g, '').trim(); // 기본적인 HTML 태그 제거
+        if (!cleaned) return null;
+
+        // URL 유효성 검사 및 프로토콜 추가 시도
+        if (SafeUtils.isValidUrl(cleaned)) return cleaned;
+        if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+            const withHttp = `http://${cleaned}`;
+            if (SafeUtils.isValidUrl(withHttp)) return withHttp;
         }
+        this.logger.warn('Invalid homepage URL detected after cleanup', { original: homepage, cleaned });
+        return null; // 유효하지 않으면 null 반환
     }
 
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        // console.log('ApiResponseProcessor destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
+    getItemCount(data) {
+        const items = data.response?.body?.items?.item;
+        if (!items) return 0;
+        return Array.isArray(items) ? items.length : 1; // 단일 아이템도 1로 카운트
     }
+
+    destroy() { /* No-op */ }
 }
 
-// ===== 고급 입력 검증기 =====
-/**
- * API 요청 파라미터의 유효성을 검증하는 클래스입니다.
- */
+// ===== 입력 검증기 =====
 class InputValidator {
     constructor(container) {
         this.container = container;
         this.logger = container.get('logger');
         this.i18n = container.get('i18n');
-        this.schemas = new Map(); // 각 API 오퍼레이션에 대한 스키마
-        this.customValidators = new Map(); // 사용자 정의 유효성 검사 함수
-        this._destroyed = false;
-        this.initializeDefaultSchemas();
-        this.initializeCustomValidators();
+        this.constants = container.get('constants');
     }
 
-    /**
-     * 사용자 정의 유효성 검사 함수를 초기화합니다.
-     */
-    initializeCustomValidators() {
-        this.addCustomValidator('contentId', (value) => /^\d+$/.test(value) && SafeUtils.safeParseInt(value) > 0);
-        this.addCustomValidator('latitude', (value) => GeoUtils.isValidCoordinate(SafeUtils.safeParseFloat(value), 0));
-        this.addCustomValidator('longitude', (value) => GeoUtils.isValidCoordinate(0, SafeUtils.safeParseFloat(value)));
-        this.addCustomValidator('areaCode', (value) => {
-            const constants = this.container.get('constants');
-            return Object.keys(constants.AREA_CODES).includes(String(value));
-        });
-        this.addCustomValidator('dateFormat', (value) => /^\d{8}$/.test(value) && ApiResponseProcessor.isValidDate(
-            SafeUtils.safeParseInt(value.substring(0, 4)),
-            SafeUtils.safeParseInt(value.substring(4, 6)),
-            SafeUtils.safeParseInt(value.substring(6, 8))
-        ));
+    validateParams(operation, params) {
+        this.logger.debug('Validating input parameters', { operation, params: SafeUtils.maskSensitiveData(params) });
+
+        if (!this.constants.isValidOperation(operation)) {
+            throw new ValidationError(this.i18n.getMessage('UNSUPPORTED_OPERATION', { operation }), 'operation', operation, this.i18n);
+        }
+
+        const validated = {};
+        const rules = this.getValidationRules(operation);
+
+        for (const [key, rule] of Object.entries(rules)) {
+            const value = params[key];
+            try {
+                validated[key] = this.validateField(key, value, rule);
+            } catch (error) {
+                if (error instanceof ValidationError) throw error; // 이미 ValidationError면 그대로 throw
+                // 그 외의 경우 ValidationError로 래핑
+                this.logger.warn('Unexpected error during field validation', { field: key, value, rule, error: error.message });
+                throw new ValidationError(error.message, key, value, this.i18n);
+            }
+        }
+        
+        // 작업별 추가 비즈니스 로직 검증
+        this.performOperationSpecificValidation(operation, validated);
+
+        this.logger.debug('Input validation completed', { operation, validatedParams: SafeUtils.maskSensitiveData(validated) });
+        return validated;
     }
 
-    /**
-     * 기본 스키마들을 초기화합니다.
-     */
-    initializeDefaultSchemas() {
-        // detailCommon API 요청 스키마
-        this.schemas.set('detailCommon', {
-            contentId: {
-                type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true
+    validateField(fieldName, value, rule) {
+        // 1. 기본값 처리: 값이 제공되지 않았고 기본값이 정의된 경우
+        if ((value === undefined || value === null || String(value).trim() === '') && rule.default !== undefined) {
+            return rule.default;
+        }
+
+        // 2. 필수 필드 검증: 기본값 처리 후에도 값이 없는 경우
+        if (rule.required && (value === undefined || value === null || String(value).trim() === '')) {
+            throw new ValidationError(this.i18n.getMessage('NO_MANDATORY_REQUEST_PARAMETERS_ERROR') + `: ${fieldName}`, fieldName, value, this.i18n);
+        }
+        
+        // 3. 값이 없는 비필수 필드는 더 이상 검증하지 않음
+        if (value === undefined || value === null || String(value).trim() === '') {
+            return value; // 또는 undefined나 null을 명시적으로 반환
+        }
+
+
+        // 4. 타입 검증 및 변환
+        let validatedValue = this.validateType(fieldName, value, rule.type);
+
+        // 5. 추가 검증 (길이, 범위, 열거형, 패턴, 사용자 정의) - validatedValue에 대해 수행
+        if (rule.minLength !== undefined || rule.maxLength !== undefined) {
+            this.validateLength(fieldName, validatedValue, rule.minLength, rule.maxLength);
+        }
+        if (rule.min !== undefined || rule.max !== undefined) {
+            this.validateRange(fieldName, validatedValue, rule.min, rule.max);
+        }
+        if (rule.enum) {
+            this.validateEnum(fieldName, validatedValue, rule.enum);
+        }
+        if (rule.pattern) {
+            this.validatePattern(fieldName, validatedValue, rule.pattern);
+        }
+        if (rule.custom && typeof rule.custom === 'function') {
+            validatedValue = rule.custom(validatedValue, fieldName, this.i18n); // custom validator에 i18n 전달
+        }
+        return validatedValue;
+    }
+
+    validateType(fieldName, value, type) {
+        switch (type) {
+            case 'string': return String(value);
+            case 'number':
+                const num = SafeUtils.safeParseFloat(value);
+                if (isNaN(num)) throw new ValidationError(this.i18n.getMessage('NUMERIC_ERROR', { field: fieldName }), fieldName, value, this.i18n);
+                return num;
+            case 'integer':
+                const int = SafeUtils.safeParseInt(value);
+                if (isNaN(int)) throw new ValidationError(this.i18n.getMessage('NUMERIC_ERROR', { field: fieldName }) + " (정수 필요)", fieldName, value, this.i18n);
+                return int;
+            case 'boolean':
+                if (typeof value === 'boolean') return value;
+                if (typeof value === 'string') {
+                    const lower = value.toLowerCase();
+                    if (lower === 'true' || lower === '1' || lower === 'y') return true;
+                    if (lower === 'false' || lower === '0' || lower === 'n') return false;
+                }
+                throw new ValidationError(this.i18n.getMessage('INVALID_FORMAT', { field: fieldName }) + " (boolean 필요)", fieldName, value, this.i18n);
+            default: return value; // 정의되지 않은 타입은 원본 값 반환
+        }
+    }
+
+    validateLength(fieldName, value, minLength, maxLength) {
+        const strValue = String(value); // 숫자도 문자열로 변환 후 길이 체크
+        if (minLength !== undefined && strValue.length < minLength) {
+            throw new ValidationError(this.i18n.getMessage('MIN_LENGTH_ERROR', { field: fieldName, minLength, actual: strValue.length }), fieldName, value, this.i18n);
+        }
+        if (maxLength !== undefined && strValue.length > maxLength) {
+            throw new ValidationError(this.i18n.getMessage('MAX_LENGTH_ERROR', { field: fieldName, maxLength, actual: strValue.length }), fieldName, value, this.i18n);
+        }
+    }
+
+    validateRange(fieldName, value, min, max) {
+        // value는 이미 validateType을 통해 숫자로 변환되었음을 가정
+        if (min !== undefined && value < min) {
+            throw new ValidationError(this.i18n.getMessage('INVALID_RANGE', { field: fieldName, min, max: max ?? '∞' }), fieldName, value, this.i18n);
+        }
+        if (max !== undefined && value > max) {
+            throw new ValidationError(this.i18n.getMessage('INVALID_RANGE', { field: fieldName, min: min ?? '-∞', max }), fieldName, value, this.i18n);
+        }
+    }
+
+    validateEnum(fieldName, value, enumValues) {
+        // value가 문자열이 아닐 수도 있으므로, enumValues도 비교를 위해 문자열화 하거나 타입을 맞춤
+        const strValue = String(value);
+        const strEnumValues = enumValues.map(String);
+        if (!strEnumValues.includes(strValue)) {
+            throw new ValidationError(this.i18n.getMessage('ENUM_ERROR', { field: fieldName, values: enumValues.join(', ') }), fieldName, value, this.i18n);
+        }
+    }
+
+    validatePattern(fieldName, value, pattern) {
+        if (!pattern.test(String(value))) { // 정규식은 문자열에 대해 테스트
+            throw new ValidationError(this.i18n.getMessage('INVALID_FORMAT', { field: fieldName }) + `: ${pattern.toString()}`, fieldName, value, this.i18n);
+        }
+    }
+    
+    performOperationSpecificValidation(operation, params) {
+        // 예: 축제 검색 시 시작일이 종료일보다 늦으면 안됨
+        if (operation === 'searchFestival' && params.eventStartDate && params.eventEndDate) {
+            if (parseInt(params.eventStartDate, 10) > parseInt(params.eventEndDate, 10)) {
+                throw new ValidationError(
+                    '축제 시작일은 종료일보다 이전이거나 같아야 합니다.',
+                    'eventStartDate/eventEndDate',
+                    `${params.eventStartDate}-${params.eventEndDate}`,
+                    this.i18n
+                );
+            }
+        }
+        // 예: 위치 기반 검색 시 mapX, mapY 좌표 유효성
+        if (operation === 'locationBasedList' && params.mapX && params.mapY) {
+            if (!GeoUtils.isValidCoordinate(params.mapY, params.mapX)) { // mapY가 위도, mapX가 경도
+                 throw new ValidationError(this.i18n.getMessage('INVALID_COORDINATES', { lat: params.mapY, lng: params.mapX }), 'mapX/mapY', `${params.mapX},${params.mapY}`, this.i18n);
+            }
+        }
+    }
+
+
+    getValidationRules(operation) {
+        // 공통 파라미터 규칙
+        const commonPaginationRules = {
+            numOfRows: { type: 'integer', min: 1, max: 1000, default: 10 },
+            pageNo: { type: 'integer', min: 1, default: 1 },
+        };
+        const commonArrangeRule = {
+             arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E', 'O', 'P', 'Q', 'R'], default: 'A' } // API별로 유효한 arrange 값이 다를 수 있음, 필요시 오버라이드
+        };
+        const commonContentFilterRules = {
+            contentTypeId: { type: 'string', enum: Object.keys(this.constants.CONTENT_TYPES), required: false }, // API에 따라 필수가 될 수 있음
+            areaCode: { type: 'string', enum: Object.keys(this.constants.AREA_CODES), required: false },
+            sigunguCode: { type: 'string', pattern: /^\d*$/, required: false }, // 숫자로만 구성, 비어있을 수 있음
+            cat1: { type: 'string', pattern: /^[A-Z]\d{2}$/, required: false },
+            cat2: { type: 'string', pattern: /^[A-Z]\d{4}$/, required: false },
+            cat3: { type: 'string', pattern: /^[A-Z]\d{6}$/, required: false },
+        };
+        
+        // 작업별 특정 규칙
+        const operationRules = {
+            areaBasedList: {
+                ...commonPaginationRules,
+                ...commonArrangeRule, // areaBasedList는 'E'(거리순) 포함
+                ...commonContentFilterRules,
+                listYN: { type: 'string', enum: ['Y', 'N'], default: 'Y'},
+                modifiedtime: { type: 'string', pattern: /^\d{14}$/, required: false } // YYYYMMDDHHMMSS
             },
-            contentTypeId: {
-                type: 'string', enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true
+            detailCommon: {
+                contentId: { type: 'string', required: true, pattern: /^\d+$/ },
+                contentTypeId: { type: 'string', enum: Object.keys(this.constants.CONTENT_TYPES), required: false }, // contentId만으로 조회가 가능할 수 있음
+                defaultYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                firstImageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                areacodeYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                catcodeYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                addrinfoYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                mapinfoYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                overviewYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' }
             },
-            defaultYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            firstImageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            areacodeYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            catcodeYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            addrinfoYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            mapinfoYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            overviewYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' }
-        });
-        // areaBasedList API 요청 스키마
-        this.schemas.set('areaBasedList', {
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '10' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' },
-            arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E', 'O', 'P', 'Q', 'R'], default: 'A' }, // A: 제목순, B: 콘텐츠ID순, C: 수정일순, D: 생성일순, E:거리순, O:제목 가나다순, P:조회순, Q:수정일순, R:생성일순
-            contentTypeId: { type: 'string', enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true },
-            areaCode: { type: 'string', pattern: /^\d{1,2}$/, custom: 'areaCode', sanitize: true },
-            sigunguCode: { type: 'string', pattern: /^\d{1,5}$/, sanitize: true },
-            cat1: { type: 'string', pattern: /^[A-Z]\d{2}$/, sanitize: true },
-            cat2: { type: 'string', pattern: /^[A-Z]\d{4}$/, sanitize: true },
-            cat3: { type: 'string', pattern: /^[A-Z]\d{6}$/, sanitize: true },
-            listYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            modifiedtime: { type: 'string', pattern: /^\d{14}$/, sanitize: true } // YYYYMMDDHHMMSS
-        });
-        // searchKeyword API 요청 스키마
-        this.schemas.set('searchKeyword', {
-            keyword: { type: 'string', required: true, minLength: 1, maxLength: 100, sanitize: true },
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '10' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' },
-            arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'O', 'P', 'Q', 'R'], default: 'A' },
-            contentTypeId: { type: 'string', enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true },
-            areaCode: { type: 'string', pattern: /^\d{1,2}$/, custom: 'areaCode', sanitize: true },
-            sigunguCode: { type: 'string', pattern: /^\d{1,5}$/, sanitize: true }
-        });
-        this.setupDetailSchemas();
-        this.setupLocationSchemas();
-        this.setupCodeSchemas();
+            detailIntro: {
+                contentId: { type: 'string', required: true, pattern: /^\d+$/ },
+                contentTypeId: { type: 'string', enum: Object.keys(this.constants.CONTENT_TYPES), required: true }
+            },
+            detailInfo: {
+                contentId: { type: 'string', required: true, pattern: /^\d+$/ },
+                contentTypeId: { type: 'string', enum: Object.keys(this.constants.CONTENT_TYPES), required: true }
+            },
+            detailImage: {
+                ...commonPaginationRules,
+                contentId: { type: 'string', required: true, pattern: /^\d+$/ },
+                imageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+                subImageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
+            },
+            searchKeyword: {
+                ...commonPaginationRules,
+                arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'O', 'P', 'Q', 'R'], default: 'A' }, // 'E' 제외
+                ...commonContentFilterRules,
+                keyword: { type: 'string', required: true, minLength: 1, maxLength: 100 },
+                listYN: { type: 'string', enum: ['Y', 'N'], default: 'Y'},
+            },
+            searchFestival: {
+                ...commonPaginationRules,
+                arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'O', 'Q', 'R'], default: 'A' }, // 'E', 'P' 제외
+                areaCode: commonContentFilterRules.areaCode,
+                sigunguCode: commonContentFilterRules.sigunguCode,
+                eventStartDate: { type: 'string', pattern: /^\d{8}$/, required: true }, // YYYYMMDD
+                eventEndDate: { type: 'string', pattern: /^\d{8}$/, required: false }, // YYYYMMDD
+                modifiedtime: { type: 'string', pattern: /^\d{14}$/, required: false }
+            },
+            locationBasedList: {
+                ...commonPaginationRules,
+                arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E'], default: 'A' }, // 'E' (거리순) 필수적 의미
+                contentTypeId: commonContentFilterRules.contentTypeId,
+                mapX: { type: 'number', required: true /*, min:-180, max:180 (GeoUtils에서 검증) */ }, // 경도
+                mapY: { type: 'number', required: true /*, min:-90, max:90 (GeoUtils에서 검증) */ },   // 위도
+                radius: { type: 'integer', required: true, min: 1, max: 20000, default: 1000 }, // 미터 단위
+                listYN: { type: 'string', enum: ['Y', 'N'], default: 'Y'},
+                modifiedtime: { type: 'string', pattern: /^\d{14}$/, required: false }
+            },
+            areaCode: {
+                ...commonPaginationRules,
+                areaCode: { type: 'string', enum: Object.keys(this.constants.AREA_CODES), required: false } // 특정 지역의 시군구 조회시 사용
+            },
+            categoryCode: {
+                ...commonPaginationRules,
+                contentTypeId: { type: 'string', enum: Object.keys(this.constants.CONTENT_TYPES), required: false },
+                cat1: commonContentFilterRules.cat1,
+                cat2: commonContentFilterRules.cat2,
+                cat3: commonContentFilterRules.cat3, // API 문서에는 cat3 파라미터가 명시되어 있지 않으나, 구조상 포함
+            }
+        };
+        return operationRules[operation] || {};
     }
 
-    /**
-     * 상세 정보 관련 API 스키마를 설정합니다.
-     */
-    setupDetailSchemas() {
-        this.schemas.set('detailIntro', {
-            contentId: { type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true },
-            contentTypeId: { type: 'string', required: true, enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true }
-        });
-        this.schemas.set('detailInfo', {
-            contentId: { type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true },
-            contentTypeId: { type: 'string', required: true, enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true }
-        });
-        this.schemas.set('detailImage', {
-            contentId: { type: 'string', required: true, pattern: /^\d+$/, custom: 'contentId', sanitize: true },
-            imageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            subImageYN: { type: 'string', enum: ['Y', 'N'], default: 'Y' },
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '10' }, // 추가
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' } // 추가
-        });
-    }
 
-    /**
-     * 위치 기반 및 축제 검색 API 스키마를 설정합니다.
-     */
-    setupLocationSchemas() {
-        this.schemas.set('locationBasedList', {
-            mapX: { type: 'string', required: true, pattern: /^-?\d+(\.\d+)?$/, custom: 'longitude', sanitize: true },
-            mapY: { type: 'string', required: true, pattern: /^-?\d+(\.\d+)?$/, custom: 'latitude', sanitize: true },
-            radius: { type: 'string', pattern: /^\d+$/, min: 1, max: 20000, default: '1000' }, // 반경 1m ~ 20000m (20km)
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '10' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' },
-            arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E'], default: 'A' },
-            contentTypeId: { type: 'string', enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true }
-        });
-        this.schemas.set('searchFestival', {
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '10' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' },
-            arrange: { type: 'string', enum: ['A', 'B', 'C', 'D', 'E', 'O', 'Q', 'R'], default: 'A' },
-            eventStartDate: { type: 'string', pattern: /^\d{8}$/, custom: 'dateFormat', sanitize: true }, // YYYYMMDD
-            eventEndDate: { type: 'string', pattern: /^\d{8}$/, custom: 'dateFormat', sanitize: true }, // YYYYMMDD
-            areaCode: { type: 'string', pattern: /^\d{1,2}$/, custom: 'areaCode', sanitize: true },
-            sigunguCode: { type: 'string', pattern: /^\d{1,5}$/, sanitize: true }
-        });
-    }
-
-    /**
-     * 코드 정보 관련 API 스키마를 설정합니다.
-     */
-    setupCodeSchemas() {
-        this.schemas.set('areaCode', {
-            areaCode: { type: 'string', pattern: /^\d{1,2}$/, custom: 'areaCode', sanitize: true }, // 시군구 코드 조회 시 사용
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '100' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' }
-        });
-        this.schemas.set('categoryCode', {
-            contentTypeId: { type: 'string', enum: Object.keys(this.container.get('constants').CONTENT_TYPES), sanitize: true },
-            cat1: { type: 'string', pattern: /^[A-Z]\d{2}$/, sanitize: true }, // 대분류
-            cat2: { type: 'string', pattern: /^[A-Z]\d{4}$/, sanitize: true }, // 중분류
-            cat3: { type: 'string', pattern: /^[A-Z]\d{6}$/, sanitize: true }, // 소분류
-            numOfRows: { type: 'string', pattern: /^\d+$/, min: 1, max: 1000, default: '100' },
-            pageNo: { type: 'string', pattern: /^\d+$/, min: 1, default: '1' }
-        });
-    }
-
-    /**
-     * 주어진 스키마에 따라 파라미터의 유효성을 검사합니다.
-     * @param {string} operation - API 오퍼레이션 이름
-     * @param {object} params - 검증할 파라미터 객체
-     * @returns {object} 유효성 검사를 통과한 파라미터
-     * @throws {ValidationError} 유효성 검사 실패 시
-     */
-    validate(operation, params) {
-        if (this._destroyed) throw new Error('InputValidator has been destroyed.');
-        const schema = this.schemas.get(operation);
-        if (!schema) {
-            this.logger.warn('검증 스키마 없음. 파라미터 유효성 검사 생략.', { operation });
-            return params; // 스키마가 없으면 원본 파라미터 반환 (또는 에러 throw)
-        }
-        const validatedParams = {};
-        const errors = [];
-        const i18n = this.i18n; // i18n 인스턴스 가져오기
-
-        for (const field in schema) {
-            const rules = schema[field];
-            let value = params[field];
-
-            // 필수 항목 검사
-            if ((value === undefined || value === null || value === '') && rules.required) {
-                errors.push(i18n.getMessage('VALIDATION_ERROR_FIELD', { field, message: '필수 항목입니다.' }));
-                continue;
-            }
-
-            // 기본값 설정 (값이 없거나 비어있을 때)
-            if ((value === undefined || value === null || value === '') && rules.default !== undefined) {
-                value = rules.default;
-            }
-
-            if (value !== undefined && value !== null && value !== '') {
-                const validationResult = this._validateField(field, value, rules, i18n);
-                if (validationResult.errors.length > 0) {
-                    errors.push(...validationResult.errors);
-                } else {
-                    validatedParams[field] = validationResult.value;
-                }
-            }
-        }
-
-        // 추가적인 비즈니스 로직 검증 (예: 시작일이 종료일보다 늦을 수 없음)
-        this.validateBusinessLogic(operation, { ...params, ...validatedParams }, errors, i18n);
-
-        if (errors.length > 0) {
-            this.logger.warn('입력값 검증 실패', { operation, errors, originalParams: params });
-            throw new ValidationError(errors.join('; '), 'multiple', params, i18n); // 모든 에러 메시지 합치기
-        }
-        return validatedParams;
-    }
-
-    /**
-     * 단일 필드의 유효성을 검사합니다.
-     * @param {string} field - 필드 이름
-     * @param {*} value - 필드 값
-     * @param {object} rules - 검증 규칙
-     * @param {InternationalizationManager} i18n - 국제화 매니저
-     * @returns {{value: *, errors: string[]}} 검증 결과 객체
-     * @private
-     */
-    _validateField(field, value, rules, i18n) {
-        const result = { value: undefined, errors: [] };
-        let processedValue = value;
-        try {
-            // 1. Sanitize
-            if (rules.sanitize && typeof processedValue === 'string') {
-                processedValue = SafeUtils.sanitizeInput(processedValue, rules.maxLength || 1000);
-            }
-
-            // 2. Type conversion/check
-            if (rules.type) {
-                if (rules.type === 'string') {
-                    processedValue = String(processedValue); // 모든 값을 문자열로 변환
-                } else if (rules.type === 'number') {
-                    const numValue = SafeUtils.safeParseFloat(processedValue);
-                    if (isNaN(numValue)) {
-                        result.errors.push(i18n.getMessage('NUMERIC_ERROR', { field }));
-                        return result;
-                    }
-                    processedValue = numValue;
-                }
-                // 다른 타입 검증 추가 가능 (boolean 등)
-            }
-
-            // 3. Pattern (Regex)
-            if (rules.pattern && typeof processedValue === 'string') {
-                const regex = new RegExp(rules.pattern);
-                if (!regex.test(processedValue)) {
-                    result.errors.push(i18n.getMessage('INVALID_FORMAT', { field, message: `패턴 불일치: ${rules.pattern}` }));
-                    return result;
-                }
-            }
-
-            // 4. Length (for strings)
-            if (typeof processedValue === 'string') {
-                if (rules.minLength && processedValue.length < rules.minLength) {
-                    result.errors.push(i18n.getMessage('MIN_LENGTH_ERROR', {
-                        minLength: rules.minLength,
-                        actual: processedValue.length,
-                        field
-                    }));
-                    return result;
-                }
-                if (rules.maxLength && processedValue.length > rules.maxLength) {
-                    result.errors.push(i18n.getMessage('MAX_LENGTH_ERROR', {
-                        maxLength: rules.maxLength,
-                        actual: processedValue.length,
-                        field
-                    }));
-                    return result;
-                }
-            }
-
-            // 5. Range (for numbers)
-            if (rules.min !== undefined || rules.max !== undefined) {
-                const numValue = SafeUtils.safeParseFloat(processedValue);
-                if (isNaN(numValue)) { // 이미 위에서 number type check로 걸러졌을 수 있지만, 한 번 더
-                    result.errors.push(i18n.getMessage('NUMERIC_ERROR', { field }));
-                    return result;
-                }
-                if (rules.min !== undefined && numValue < rules.min) {
-                    result.errors.push(i18n.getMessage('INVALID_RANGE', {
-                        field,
-                        min: rules.min,
-                        max: rules.max || '∞'
-                    }));
-                    return result;
-                }
-                if (rules.max !== undefined && numValue > rules.max) {
-                    result.errors.push(i18n.getMessage('INVALID_RANGE', {
-                        field,
-                        min: rules.min || '-∞',
-                        max: rules.max
-                    }));
-                    return result;
-                }
-            }
-
-            // 6. Enum
-            if (rules.enum && !rules.enum.includes(processedValue)) {
-                result.errors.push(i18n.getMessage('ENUM_ERROR', {
-                    values: rules.enum.join(', '),
-                    field
-                }));
-                return result;
-            }
-
-            // 7. Custom validator
-            if (rules.custom && this.customValidators.has(rules.custom)) {
-                const customValidator = this.customValidators.get(rules.custom);
-                if (!customValidator(processedValue)) {
-                    result.errors.push(i18n.getMessage('INVALID_FORMAT', { field, message: '사용자 정의 검증 실패' }));
-                    return result;
-                }
-            }
-
-            result.value = processedValue;
-            return result;
-        } catch (error) {
-            this.logger.error('Field validation error', {
-                field, value, rules, error: error.message, stack: error.stack
-            });
-            result.errors.push(`${field}: ${i18n.getMessage('UNKNOWN_ERROR')} (${error.message})`);
-            return result;
-        }
-    }
-
-    /**
-     * API 오퍼레이션별 비즈니스 로직 유효성을 검사합니다.
-     * @param {string} operation - API 오퍼레이션 이름
-     * @param {object} params - 검증된 파라미터 객체
-     * @param {string[]} errors - 에러 메시지 배열 (여기에 추가)
-     * @param {InternationalizationManager} i18n - 국제화 매니저
-     */
-    validateBusinessLogic(operation, params, errors, i18n) {
-        try {
-            // 축제 검색: 시작일이 종료일보다 늦을 수 없음
-            if (operation === 'searchFestival' && params.eventStartDate && params.eventEndDate) {
-                const startDateNum = SafeUtils.safeParseInt(params.eventStartDate);
-                const endDateNum = SafeUtils.safeParseInt(params.eventEndDate);
-                if (!isNaN(startDateNum) && !isNaN(endDateNum) && startDateNum > endDateNum) {
-                    errors.push(i18n.getMessage('INVALID_RANGE', {
-                        field: 'eventStartDate/eventEndDate',
-                        min: params.eventEndDate,
-                        max: params.eventStartDate,
-                        message: '시작일은 종료일보다 빠르거나 같아야 합니다.'
-                    }));
-                }
-            }
-            // 위치 기반 목록: mapX, mapY 필수
-            if (operation === 'locationBasedList') {
-                if (!params.mapX || !params.mapY) {
-                    errors.push(i18n.getMessage('VALIDATION_ERROR_FIELD', { field: 'mapX, mapY', message: '위치 기반 검색에는 mapX, mapY가 필수입니다.' }));
-                } else if (!GeoUtils.isValidCoordinate(params.mapY, params.mapX)) { // mapY가 위도, mapX가 경도
-                    errors.push(i18n.getMessage('INVALID_COORDINATES', {
-                        lat: params.mapY,
-                        lng: params.mapX
-                    }));
-                }
-            }
-            // areaCode 조회 시, areaCode 파라미터가 있으면 시군구 코드 조회
-            if (operation === 'areaCode' && params.areaCode && !this.customValidators.get('areaCode')(params.areaCode)) {
-                errors.push(i18n.getMessage('VALIDATION_ERROR_FIELD', { field: 'areaCode', message: '유효하지 않은 지역 코드입니다.' }));
-            }
-        } catch (error) {
-            this.logger.error('Business logic validation error', {
-                operation,
-                error: error.message,
-                stack: error.stack
-            });
-            errors.push(i18n.getMessage('UNKNOWN_ERROR', { message: `비즈니스 로직 검증 중 오류 발생: ${error.message}` }));
-        }
-    }
-
-    /**
-     * 사용자 정의 유효성 검사 함수를 추가합니다.
-     * @param {string} name - 검사기 이름
-     * @param {function(*): boolean} validator - 유효성 검사 함수
-     * @throws {Error} 함수가 아닌 경우
-     */
-    addCustomValidator(name, validator) {
-        if (typeof validator !== 'function') {
-            throw new Error('Validator must be a function');
-        }
-        this.customValidators.set(name, validator);
-    }
-
-    /**
-     * 사용자 정의 유효성 검사 함수를 제거합니다.
-     * @param {string} name - 제거할 검사기 이름
-     * @returns {boolean} 제거 성공 여부
-     */
-    removeCustomValidator(name) {
-        return this.customValidators.delete(name);
-    }
-
-    /**
-     * 특정 오퍼레이션의 유효성 검사 스키마를 반환합니다.
-     * @param {string} operation - 오퍼레이션 이름
-     * @returns {object|undefined} 스키마 객체
-     */
-    getValidationSchema(operation) {
-        return this.schemas.get(operation);
-    }
-
-    /**
-     * 인스턴스를 파괴하고 리소스를 정리합니다.
-     */
-    destroy() {
-        if (this._destroyed) return;
-        this.schemas.clear();
-        this.customValidators.clear();
-        this._destroyed = true;
-        // this.logger.info('Input validator destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
+    destroy() { /* No-op */ }
 }
 
 // ===== 메인 API 클래스 =====
-/**
- * 한국관광공사 API와 상호작용하는 메인 클래스입니다.
- * 모든 API 호출은 이 클래스를 통해 이루어지며, 의존성 주입을 활용합니다.
- */
 class AllTourismAPI {
-    constructor() {
-        this.container = new ServiceContainer();
-        this.setupServices();
-        this.container.initialize();
-        this.container.get('config').validateConfig(); // 설정 유효성 검사
+    constructor(container) {
+        this.container = container;
+        this.config = container.get('config');
+        this.logger = container.get('logger');
+        this.cache = container.get('cache');
+        this.rateLimiter = container.get('rateLimiter');
+        this.httpClient = container.get('httpClient');
+        this.responseProcessor = container.get('responseProcessor');
+        this.inputValidator = container.get('inputValidator');
+        this.i18n = container.get('i18n');
     }
 
-    /**
-     * 서비스 컨테이너에 필요한 서비스들을 등록합니다.
-     * (의존성 주입 설정)
-     */
-    setupServices() {
-        this.container
-            .register('config', (container) => new ConfigManager(container))
-            .register('i18n', () => new InternationalizationManager())
-            .register('constants', () => new ConstantsManager())
-            .register('logger', (container) => new Logger(container))
-            .register('cache', (container) => new AdvancedCache(container))
-            .register('rateLimiter', (container) => new RateLimiter(container))
-            .register('validator', (container) => new InputValidator(container))
-            .register('httpClient', (container) => new HttpClient(container));
-    }
-
-    /**
-     * 시스템 상태 정보를 가져옵니다.
-     * @returns {object} 시스템 상태 정보
-     */
-    getSystemStatus() {
-        try {
-            const config = this.container.get('config');
-            const logger = this.container.get('logger');
-            const cache = this.container.get('cache');
-            const rateLimiter = this.container.get('rateLimiter');
-            const httpClient = this.container.get('httpClient');
-            return {
-                success: true,
-                timestamp: new Date().toISOString(),
-                system: {
-                    version: config.get('version'),
-                    environment: config.get('environment'),
-                    isInitialized: this.container.isInitialized(),
-                    services: this.container.getInstancedServices(),
-                    uptime: Date.now() - SERVICE_START_TIME,
-                    memory: logger.getMemoryInfo(),
-                    apiKeyConfigured: !!config.get('apiKey')
-                },
-                config: config.getPublicConfig(),
-                cache: cache.getStats(),
-                rateLimiter: rateLimiter.getStats(),
-                httpClient: httpClient.getStats()
-            };
-        } catch (error) {
-            return {
-                success: false,
-                timestamp: new Date().toISOString(),
-                error: {
-                    message: error.message,
-                    stack: error.stack
-                }
-            };
-        }
-    }
-
-    /**
-     * 캐시를 초기화합니다.
-     * @returns {object} 캐시 초기화 결과
-     */
-    clearCache() {
-        try {
-            const cache = this.container.get('cache');
-            cache.clear();
-            return {
-                success: true,
-                message: '캐시가 성공적으로 초기화되었습니다',
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            return {
-                success: false,
-                error: {
-                    message: error.message,
-                    stack: error.stack
-                },
-                timestamp: new Date().toISOString()
-            };
-        }
-    }
-
-    /**
-     * 지역 기반 관광 정보를 조회합니다.
-     * @param {object} params - 요청 파라미터
-     * @returns {Promise<object>} 관광 정보 목록
-     * @throws {BaseError} API 호출 또는 검증 오류 발생 시
-     */
-    async areaBasedList(params = {}) {
+    async request(operation, params = {}, req = null) { // req는 속도 제한용 HTTP 요청 객체
+        const startTime = Date.now();
         const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('areaBasedList 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('areaBasedList', params);
-            const cacheKey = cache.generateKey('areaBasedList', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('areaBasedList 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = {
-                ...validatedParams,
-                // 필수 기본 파라미터는 HttpClient에서 추가되므로 여기서는 제외
-            };
-            const data = await httpClient.getTourismData('areaBasedList', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            // GeoUtils.addDistanceInfo 호출 시 mapx와 mapy 필드를 mapy(위도)와 mapx(경도)로 전달해야 함.
-            // 한국관광공사 API의 mapx, mapy 필드명과 GeoUtils의 lat, lng 인자 순서에 유의.
-            const processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, this.container))
-                .filter(Boolean); // 유효하지 않은 항목 필터링
+        let responseResult = null;
 
-            // 사용자 위치 정보가 있다면 거리 정보 추가 및 필터링
-            if (validatedParams.mapX && validatedParams.mapY && validatedParams.radius) {
-                // mapY가 위도, mapX가 경도
-                const userLat = SafeUtils.safeParseFloat(validatedParams.mapY);
-                const userLng = SafeUtils.safeParseFloat(validatedParams.mapX);
-                const radius = SafeUtils.safeParseFloat(validatedParams.radius);
-                if (GeoUtils.isValidCoordinate(userLat, userLng) && radius > 0) {
-                    logger.info('위치 기반 필터링 및 거리 계산 적용', { requestId, userLat, userLng, radius });
-                    const filteredAndSortedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
-                    processedItems.splice(0, processedItems.length, ...filteredAndSortedItems); // 배열 교체
-                } else {
-                    logger.warn('유효하지 않은 사용자 위치 또는 반경. 위치 기반 필터링 건너뜀.', { requestId, userLat, userLng, radius });
+        this.logger.info('API request received', { requestId, operation, params: SafeUtils.maskSensitiveData(params) });
+
+        try {
+            if (req && this.config.get('rateLimitEnabled')) { // rateLimiter 사용 여부 설정값 확인
+                this.rateLimiter.checkLimit(req);
+            }
+
+            const validatedParams = this.inputValidator.validateParams(operation, params);
+            const cacheKey = this.cache.generateKey(operation, validatedParams);
+
+            if (this.config.get('cacheEnabled')) { // cache 사용 여부 설정값 확인
+                const cachedResult = this.cache.get(cacheKey);
+                if (cachedResult) {
+                    const duration = Date.now() - startTime;
+                    this.logger.info('API request completed (from cache)', { requestId, operation, duration });
+                    return ResponseFormatter.addCacheInfo(cachedResult, true, { key: cacheKey, hitTime: new Date().toISOString() });
                 }
             }
 
-            const result = ResponseFormatter.formatSuccess('areaBasedList', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            cache.set(cacheKey, result); // 캐시 저장
-            logger.info('areaBasedList 요청 완료', {
-                requestId,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('areaBasedList 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'areaBasedList';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'areaBasedList',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 공통 정보 조회 (단일 콘텐츠의 상세 정보)
-     * @param {object} params - 요청 파라미터 (contentId, contentTypeId 등)
-     * @returns {Promise<object>} 상세 정보 객체
-     */
-    async detailCommon(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('detailCommon 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('detailCommon', params);
-            const cacheKey = cache.generateKey('detailCommon', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('detailCommon 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('detailCommon', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItem = items.length > 0 ? ApiResponseProcessor.processBasicItem(items[0], this.container) : null;
-            const result = ResponseFormatter.formatSuccess('detailCommon', {
-                item: processedItem
-            });
-            cache.set(cacheKey, result);
-            logger.info('detailCommon 요청 완료', {
-                requestId,
-                contentId: validatedParams.contentId,
-                success: !!processedItem
-            });
-            return result;
-        } catch (error) {
-            logger.error('detailCommon 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'detailCommon';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'detailCommon',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 소개 정보 조회 (단일 콘텐츠의 소개 정보)
-     * @param {object} params - 요청 파라미터 (contentId, contentTypeId)
-     * @returns {Promise<object>} 소개 정보 객체
-     */
-    async detailIntro(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('detailIntro 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('detailIntro', params);
-            const cacheKey = cache.generateKey('detailIntro', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('detailIntro 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('detailIntro', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItem = items.length > 0 ? items[0] : null; // detailIntro는 단일 아이템을 반환하는 경우가 많음
-            const result = ResponseFormatter.formatSuccess('detailIntro', {
-                item: processedItem
-            });
-            cache.set(cacheKey, result);
-            logger.info('detailIntro 요청 완료', {
-                requestId,
-                contentId: validatedParams.contentId,
-                success: !!processedItem
-            });
-            return result;
-        } catch (error) {
-            logger.error('detailIntro 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'detailIntro';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'detailIntro',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 반복 정보 조회 (숙박, 음식점 등의 추가 정보)
-     * @param {object} params - 요청 파라미터 (contentId, contentTypeId)
-     * @returns {Promise<object>} 반복 정보 목록
-     */
-    async detailInfo(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('detailInfo 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('detailInfo', params);
-            const cacheKey = cache.generateKey('detailInfo', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('detailInfo 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('detailInfo', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            // detailInfo는 여러 아이템을 반환할 수 있으므로, 각 아이템을 개별적으로 처리 (필요시)
-            // 현재는 원본 아이템 반환
-            const result = ResponseFormatter.formatSuccess('detailInfo', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: items
-            });
-            cache.set(cacheKey, result);
-            logger.info('detailInfo 요청 완료', {
-                requestId,
-                contentId: validatedParams.contentId,
-                itemCount: items.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('detailInfo 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'detailInfo';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'detailInfo',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 이미지 정보 조회 (콘텐츠의 이미지 목록)
-     * @param {object} params - 요청 파라미터 (contentId, imageYN, subImageYN)
-     * @returns {Promise<object>} 이미지 정보 목록
-     */
-    async detailImage(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('detailImage 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('detailImage', params);
-            const cacheKey = cache.generateKey('detailImage', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('detailImage 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('detailImage', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processImageItem(item))
-                .filter(Boolean);
-            const result = ResponseFormatter.formatSuccess('detailImage', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            cache.set(cacheKey, result);
-            logger.info('detailImage 요청 완료', {
-                requestId,
-                contentId: validatedParams.contentId,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('detailImage 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'detailImage';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'detailImage',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 키워드 검색 (제목, 개요 기반)
-     * @param {object} params - 요청 파라미터 (keyword, areaCode 등)
-     * @returns {Promise<object>} 검색 결과 목록
-     */
-    async searchKeyword(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('searchKeyword 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('searchKeyword', params);
-            const cacheKey = cache.generateKey('searchKeyword', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('searchKeyword 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('searchKeyword', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, this.container))
-                .filter(Boolean);
-            const result = ResponseFormatter.formatSuccess('searchKeyword', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            cache.set(cacheKey, result);
-            logger.info('searchKeyword 요청 완료', {
-                requestId,
-                keyword: validatedParams.keyword,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('searchKeyword 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'searchKeyword';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'searchKeyword',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 축제/공연/행사 정보 검색
-     * @param {object} params - 요청 파라미터 (eventStartDate, areaCode 등)
-     * @returns {Promise<object>} 축제 정보 목록
-     */
-    async searchFestival(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('searchFestival 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('searchFestival', params);
-            const cacheKey = cache.generateKey('searchFestival', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('searchFestival 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('searchFestival', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, this.container))
-                .filter(Boolean);
-            const result = ResponseFormatter.formatSuccess('searchFestival', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            cache.set(cacheKey, result);
-            logger.info('searchFestival 요청 완료', {
-                requestId,
-                eventStartDate: validatedParams.eventStartDate,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('searchFestival 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'searchFestival';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'searchFestival',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 위치 기반 관광 정보 조회 (현재 위치 주변)
-     * @param {object} params - 요청 파라미터 (mapX, mapY, radius 등)
-     * @returns {Promise<object>} 관광 정보 목록
-     */
-    async locationBasedList(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('locationBasedList 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('locationBasedList', params);
-            const cacheKey = cache.generateKey('locationBasedList', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('locationBasedList 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('locationBasedList', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processBasicItem(item, this.container))
-                .filter(Boolean);
-            // GeoUtils.addDistanceInfo 함수는 API 응답의 mapx, mapy를 기반으로 거리 계산을 수행합니다.
-            // 여기서는 이미 API 호출 시 radius를 파라미터로 넘겨 필터링이 된 상태일 수 있으므로
-            // 추가적인 거리 계산 및 필터링은 필요에 따라 주석 처리 또는 재활용.
-            // 만약 API에서 거리순 정렬이나 반경 필터링이 완벽하지 않다면 여기서 추가 처리 가능.
-            // 예를 들어, API 응답에 distance 필드가 없는 경우 GeoUtils.addDistanceInfo를 호출하여 추가할 수 있습니다.
-            if (processedItems.length > 0 && !processedItems[0].distance && validatedParams.mapX && validatedParams.mapY && validatedParams.radius) {
-                const userLat = SafeUtils.safeParseFloat(validatedParams.mapY); // mapY가 위도
-                const userLng = SafeUtils.safeParseFloat(validatedParams.mapX); // mapX가 경도
-                const radius = SafeUtils.safeParseFloat(validatedParams.radius);
-                if (GeoUtils.isValidCoordinate(userLat, userLng) && radius > 0) {
-                    logger.info('위치 기반 필터링 및 거리 계산 (API 응답 후 재처리)', { requestId, userLat, userLng, radius });
-                    const filteredAndSortedItems = GeoUtils.addDistanceInfo(processedItems, userLat, userLng, radius);
-                    processedItems.splice(0, processedItems.length, ...filteredAndSortedItems); // 배열 교체
-                }
-            }
-            const result = ResponseFormatter.formatSuccess('locationBasedList', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            cache.set(cacheKey, result);
-            logger.info('locationBasedList 요청 완료', {
-                requestId,
-                mapX: validatedParams.mapX,
-                mapY: validatedParams.mapY,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('locationBasedList 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'locationBasedList';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'locationBasedList',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 지역 코드 목록을 조회합니다.
-     * @param {object} params - 요청 파라미터 (areaCode: 시군구 코드 조회 시)
-     * @returns {Promise<object>} 지역 코드 목록
-     */
-    async areaCode(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('areaCode 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('areaCode', params);
-            const cacheKey = cache.generateKey('areaCode', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('areaCode 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('areaCode', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processCodeItem(item))
-                .filter(Boolean);
-            const result = ResponseFormatter.formatSuccess('areaCode', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            const constants = this.container.get('constants');
-            cache.set(cacheKey, result, constants.CACHE_SETTINGS.longTTL); // 코드 정보는 자주 변하지 않으므로 긴 TTL 적용
-            logger.info('areaCode 요청 완료', {
-                requestId,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('areaCode 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'areaCode';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'areaCode',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 서비스 분류 코드 목록을 조회합니다 (대/중/소분류).
-     * @param {object} params - 요청 파라미터 (contentTypeId, cat1, cat2)
-     * @returns {Promise<object>} 분류 코드 목록
-     */
-    async categoryCode(params = {}) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const validator = this.container.get('validator');
-        const cache = this.container.get('cache');
-        const rateLimiter = this.container.get('rateLimiter');
-        const httpClient = this.container.get('httpClient');
-        try {
-            logger.info('categoryCode 요청 시작', {
-                requestId,
-                params: SafeUtils.maskSensitiveData(params)
-            });
-            if (!rateLimiter.isAllowed(requestId)) {
-                throw new RateLimitError(
-                    rateLimiter.limit,
-                    rateLimiter.getRemainingQuota(requestId),
-                    i18n
-                );
-            }
-            const validatedParams = validator.validate('categoryCode', params);
-            const cacheKey = cache.generateKey('categoryCode', validatedParams);
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) {
-                logger.info('categoryCode 캐시 히트', { requestId, cacheKey });
-                return ResponseFormatter.addCacheInfo(cachedData, true, {
-                    key: cacheKey,
-                    timestamp: new Date().toISOString()
-                });
-            }
-            const apiParams = { ...validatedParams };
-            const data = await httpClient.getTourismData('categoryCode', apiParams, { requestId });
-            const items = ApiResponseProcessor.extractItems(data);
-            const processedItems = items.map(item => ApiResponseProcessor.processCodeItem(item))
-                .filter(Boolean);
-            const result = ResponseFormatter.formatSuccess('categoryCode', {
-                totalCount: data.response?.body?.totalCount || 0,
-                pageNo: SafeUtils.safeParseInt(data.response?.body?.pageNo, 1),
-                numOfRows: SafeUtils.safeParseInt(data.response?.body?.numOfRows, 10),
-                items: processedItems
-            });
-            const constants = this.container.get('constants');
-            cache.set(cacheKey, result, constants.CACHE_SETTINGS.longTTL);
-            logger.info('categoryCode 요청 완료', {
-                requestId,
-                itemCount: processedItems.length
-            });
-            return result;
-        } catch (error) {
-            logger.error('categoryCode 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'categoryCode';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'categoryCode',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
-
-    /**
-     * 여러 API 요청을 일괄 처리합니다.
-     * @param {Array<object>} operations - 실행할 작업 목록 (각 { operation: 'API_NAME', params: {} } 형태)
-     * @returns {Promise<object>} 배치 처리 결과
-     */
-    async batchRequest(operations = []) {
-        const requestId = SafeUtils.generateRequestId();
-        const logger = this.container.get('logger');
-        const i18n = this.container.get('i18n');
-        const config = this.container.get('config');
-        try {
-            logger.info('배치 요청 시작', {
-                requestId,
-                operationCount: operations.length
-            });
-            if (!config.get('enableBatching')) {
-                throw new TourismApiError(
-                    'BATCH_DISABLED',
-                    'batch',
-                    403,
-                    {},
-                    { requestId },
-                    i18n
-                );
-            }
-            if (!Array.isArray(operations) || operations.length === 0) {
-                throw new ValidationError(
-                    'operations 배열이 필요합니다',
-                    'operations',
-                    operations,
-                    i18n
-                );
-            }
-            const maxBatchSize = config.get('batchMaxOperations'); // ConfigManager에서 최대 배치 크기 가져오기
-            if (operations.length > maxBatchSize) {
-                throw new ValidationError(
-                    i18n.getMessage('BATCH_SIZE_EXCEEDED', {
-                        max: maxBatchSize,
-                        actual: operations.length
-                    }),
-                    'operations',
-                    operations.length,
-                    i18n
-                );
-            }
-            const results = [];
-            const errors = [];
-            const constants = this.container.get('constants');
-            for (let i = 0; i < operations.length; i++) {
-                const op = operations[i];
-                const { operation, params = {} } = op;
-                try {
-                    if (!constants.isValidOperation(operation)) {
-                        throw new ValidationError(
-                            i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-                            'operation',
-                            operation,
-                            i18n
-                        );
-                    }
-                    let result;
-                    // 각 API 호출은 이미 자체적으로 try-catch로 감싸져 있으므로, 여기서는 호출만 수행
-                    switch (operation) {
-                        case 'areaBasedList': result = await this.areaBasedList(params); break;
-                        case 'detailCommon': result = await this.detailCommon(params); break;
-                        case 'detailIntro': result = await this.detailIntro(params); break;
-                        case 'detailInfo': result = await this.detailInfo(params); break;
-                        case 'detailImage': result = await this.detailImage(params); break;
-                        case 'searchKeyword': result = await this.searchKeyword(params); break;
-                        case 'searchFestival': result = await this.searchFestival(params); break;
-                        case 'locationBasedList': result = await this.locationBasedList(params); break;
-                        case 'areaCode': result = await this.areaCode(params); break;
-                        case 'categoryCode': result = await this.categoryCode(params); break;
-                        default:
-                            // isValidOperation에서 걸러지지만, 만약을 위해 추가
-                            throw new ValidationError(
-                                i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-                                'operation',
-                                operation,
-                                i18n
-                            );
-                    }
-                    results.push({
-                        index: i,
-                        success: true,
-                        operation,
-                        data: result.data,
-                        metadata: result.metadata
-                    });
-                } catch (error) {
-                    const errorResponse = ResponseFormatter.formatError(error, operation);
-                    errors.push({
-                        index: i,
-                        success: false,
-                        operation,
-                        error: errorResponse.error,
-                        metadata: errorResponse.metadata // 에러 발생 시의 메타데이터 포함
-                    });
-                    logger.warn('배치 작업 중 오류 발생', { requestId, operation, error: error.message });
-                }
+            const httpResponse = await this.httpClient.request(operation, validatedParams);
+            const processedData = await this.responseProcessor.processResponse(httpResponse, operation);
+            
+            // 위치 기반 검색 결과에 거리 정보 추가 (만약 API가 기본으로 제공하지 않는다면)
+            if ((operation === 'locationBasedList' || operation === 'areaBasedList') && validatedParams.mapX && validatedParams.mapY && processedData.response?.body?.items?.item) {
+                 if (!processedData.response.body.items.item.some(it => it.distance !== undefined)) { // API 응답에 distance가 없다면
+                    this.addDistanceInfoToItems(processedData, validatedParams);
+                 }
             }
 
-            const summary = {
-                total: operations.length,
-                successful: results.length,
-                failed: errors.length
-            };
-            logger.info('배치 요청 완료', {
-                requestId,
-                summary
-            });
-            return ResponseFormatter.formatSuccess('batch', {
-                summary,
-                results,
-                errors
-            });
-        } catch (error) {
-            logger.error('배치 요청 처리 중 심각한 오류', {
-                requestId,
-                error: error.message,
-                stack: error.stack
-            });
-            if (error instanceof BaseError) {
-                error.operation = 'batch';
-                throw error;
-            }
-            throw new TourismApiError(
-                'API_ERROR',
-                'batch',
-                500,
-                { originalError: error.message },
-                { requestId },
-                i18n
-            );
-        }
-    }
 
-    /**
-     * API 인스턴스를 파괴하고 모든 의존성 리소스를 정리합니다.
-     */
-    destroy() {
-        if (this.container) {
-            this.container.destroy();
-        }
-        // console.log('AllTourismAPI instance destroyed'); // 주석 처리: 로거가 파괴될 때 불필요한 로그 방지
-    }
-}
-
-// ===== CORS 헤더 설정 유틸리티 함수 =====
-/**
- * HTTP 응답에 CORS 헤더를 설정합니다.
- * @param {object} res - HTTP 응답 객체
- * @param {string} allowedOrigins - 허용할 Origin (기본값: '*')
- */
-function setCorsHeaders(res, allowedOrigins = '*') {
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigins);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization,X-API-KEY');
-    res.setHeader('Access-Control-Allow-Credentials', true);
-}
-
-// ===== 헬스체크 함수 (서버리스 환경에서 사용) =====
-/**
- * API 서비스의 건강 상태를 확인하는 함수입니다.
- * @returns {Promise<object>} 헬스체크 결과
- */
-async function healthCheck() {
-    let api = null;
-    try {
-        api = new AllTourismAPI();
-        const config = api.container.get('config');
-        const apiKey = config.get('apiKey');
-        const i18n = api.container.get('i18n');
-        // Node.js 환경에서 API 키가 설정되지 않았다면 오류 반환
-        if (!apiKey && hasProcess) {
-            return {
-                status: 'error',
-                message: i18n.getMessage('MISSING_API_KEY'),
-                details: {
-                    apiKeyConfigured: false,
-                    environment: config.get('environment')
-                }
-            };
-        }
-        // 간단한 API 호출 테스트 (예: areaCode)를 통해 실제 API 서버와의 연결 및 키 유효성 간접 확인
-        // numOfRows를 1로 설정하여 최소한의 데이터를 요청
-        await api.areaCode({ numOfRows: '1' });
-        return {
-            status: 'ok',
-            message: 'API is healthy and running',
-            details: {
-                version: config.get('version'),
-                environment: config.get('environment'),
-                apiKeyConfigured: !!apiKey, // 실제 API 키가 설정되었는지 여부
-                timestamp: new Date().toISOString()
-            }
-        };
-    } catch (error) {
-        console.warn('Health check failed:', error.message, error.stack);
-        return {
-            status: 'error',
-            message: 'API health check failed.',
-            details: {
-                error: error.message,
-                code: error.code || 'UNKNOWN_HEALTH_ERROR',
-                statusCode: error.statusCode || 500,
-                apiKeyConfigured: !!(api && api.container.get('config').get('apiKey')),
-                timestamp: new Date().toISOString()
-            }
-        };
-    } finally {
-        if (api) {
-            api.destroy(); // 리소스 정리
-        }
-    }
-}
-
-// ===== 메인 서버리스 함수 핸들러 =====
-/**
- * Vercel 등 서버리스 환경에서 요청을 처리하는 메인 핸들러입니다.
- * @param {object} req - HTTP 요청 객체
- * @param {object} res - HTTP 응답 객체
- */
-async function handler(req, res) {
-    const requestId = SafeUtils.generateRequestId();
-    const startTime = Date.now();
-    let api = null;
-    let logger = null;
-    let i18n = null;
-    let configManager = null;
-    try {
-        setCorsHeaders(res); // CORS 헤더 설정
-        if (req.method === 'OPTIONS') {
-            res.status(200).end(); // Pre-flight 요청 처리
-            return;
-        }
-
-        api = new AllTourismAPI();
-        logger = api.container.get('logger');
-        i18n = api.container.get('i18n');
-        configManager = api.container.get('config');
-
-        // 요청 언어 설정 (쿼리 파라미터 'lang' 또는 'Accept-Language' 헤더에서 가져오기)
-        const lang = req.query?.lang || req.headers?.['accept-language']?.split(',')[0]?.split('-')[0] || 'ko';
-        i18n.setLanguage(lang);
-
-        logger.info('요청 수신', {
-            requestId,
-            method: req.method,
-            url: req.url,
-            ip: req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress, // req.connection.remoteAddress 대신 req.socket.remoteAddress 사용
-            userAgent: req.headers?.['user-agent'],
-            language: lang
-        });
-
-        let params;
-        try {
-            if (req.method === 'GET') {
-                params = req.query || {};
-            } else if (req.method === 'POST') {
-                const contentType = req.headers['content-type'] || '';
-                if (contentType.includes('application/json')) {
-                    // Vercel 환경에서는 req.body가 이미 JSON으로 파싱되어 있을 수 있음
-                    // 아닐 경우 raw body를 JSON.parse
-                    params = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-                } else if (contentType.includes('application/x-www-form-urlencoded')) {
-                    // 서버리스 환경에서는 req.body가 이미 파싱된 객체이거나 문자열일 수 있음
-                    params = typeof req.body === 'string' ? require('querystring').parse(req.body) : req.body || {};
-                } else {
-                    logger.warn('지원하지 않는 Content-Type', { contentType });
-                    throw new ValidationError(
-                        '지원하지 않는 Content-Type입니다. application/json 또는 application/x-www-form-urlencoded를 사용해주세요.',
-                        'contentType',
-                        contentType,
-                        i18n
-                    );
-                }
-            } else {
-                throw new ValidationError(
-                    '지원하지 않는 HTTP 메서드입니다',
-                    'method',
-                    req.method,
-                    i18n
-                );
-            }
-        } catch (parseError) {
-            logger.error('요청 데이터 파싱 실패', { error: parseError.message, stack: parseError.stack });
-            throw new ValidationError(
-                '요청 데이터 파싱 실패: ' + parseError.message,
-                'body',
-                'malformed',
-                i18n
-            );
-        }
-
-        const { operation = 'areaBasedList', ...apiParams } = params; // 기본 오퍼레이션 설정
-
-        // 특수 오퍼레이션 (health, systemStatus, clearCache, batch) 처리
-        if (operation === 'health' || operation === 'healthCheck') {
-            const healthStatus = await healthCheck();
-            const response = {
-                ...healthStatus,
-                metadata: {
-                    requestId,
-                    totalTime: Date.now() - startTime,
-                    version: configManager.get('version'),
-                    timestamp: new Date().toISOString()
-                }
-            };
-            res.status(200).json(response);
-            return;
-        }
-
-        if (operation === 'systemStatus') {
-            const systemStatus = api.getSystemStatus();
-            systemStatus.metadata = {
-                requestId,
-                totalTime: Date.now() - startTime,
-                version: configManager.get('version'),
-                timestamp: new Date().toISOString()
-            };
-            res.status(200).json(systemStatus);
-            return;
-        }
-
-        if (operation === 'clearCache') {
-            const result = api.clearCache();
-            result.metadata = {
-                requestId,
-                totalTime: Date.now() - startTime,
-                version: configManager.get('version')
-            };
-            res.status(200).json(result);
-            return;
-        }
-
-        if (operation === 'batch') {
-            if (req.method !== 'POST') {
-                throw new ValidationError(
-                    '배치 요청은 POST 메서드만 지원합니다',
-                    'method',
-                    req.method,
-                    i18n
-                );
-            }
-            // 배치 요청은 별도의 핸들러 `batchHandler`에서 처리되므로, 여기서는 그 함수를 호출하거나 직접 구현
-            const { operations: batchOperations } = apiParams; // 배치 요청의 실제 작업 목록
-            const batchResult = await api.batchRequest(batchOperations);
-            batchResult.metadata = {
-                ...batchResult.metadata,
-                requestId,
-                totalTime: Date.now() - startTime,
-                version: configManager.get('version')
-            };
-            res.status(200).json(batchResult);
-            return;
-        }
-
-        // 일반 API 오퍼레이션 처리
-        const constants = api.container.get('constants');
-        if (!constants.isValidOperation(operation)) {
-            throw new ValidationError(
-                i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-                'operation',
+            responseResult = ResponseFormatter.formatSuccess(
                 operation,
-                i18n
+                processedData,
+                { requestId, validatedParams: SafeUtils.maskSensitiveData(validatedParams) },
+                { duration: Date.now() - startTime, cached: false }
             );
-        }
 
-        let result;
-        switch (operation) {
-            case 'areaBasedList': result = await api.areaBasedList(apiParams); break;
-            case 'detailCommon': result = await api.detailCommon(apiParams); break;
-            case 'detailIntro': result = await api.detailIntro(apiParams); break;
-            case 'detailInfo': result = await api.detailInfo(apiParams); break;
-            case 'detailImage': result = await api.detailImage(apiParams); break;
-            case 'searchKeyword': result = await api.searchKeyword(apiParams); break;
-            case 'searchFestival': result = await api.searchFestival(apiParams); break;
-            case 'locationBasedList': result = await api.locationBasedList(apiParams); break;
-            case 'areaCode': result = await api.areaCode(apiParams); break;
-            case 'categoryCode': result = await api.categoryCode(apiParams); break;
-            default:
-                // isValidOperation에서 걸러지므로 이 코드는 실행되지 않음
-                throw new ValidationError(
-                    i18n.getMessage('UNSUPPORTED_OPERATION', { operation }),
-                    'operation',
-                    operation,
-                    i18n
-                );
-        }
-
-        // 응답 메타데이터 추가
-        if (!result.metadata) {
-            result.metadata = {};
-        }
-        result.metadata = {
-            ...result.metadata,
-            requestId,
-            totalTime: Date.now() - startTime,
-            version: configManager.get('version'),
-            timestamp: new Date().toISOString(),
-            environment: configManager.get('environment'),
-            language: i18n.getCurrentLanguage()
-        };
-
-        logger.info('요청 완료', {
-            requestId,
-            operation,
-            success: result.success,
-            totalTime: result.metadata.totalTime
-        });
-        res.status(200).json(result);
-    } catch (error) {
-        const errorResponse = ResponseFormatter.formatError(error, error.operation || 'unknown');
-        if (!errorResponse.metadata) {
-            errorResponse.metadata = {};
-        }
-        errorResponse.metadata = {
-            ...errorResponse.metadata,
-            requestId,
-            totalTime: Date.now() - startTime,
-            timestamp: new Date().toISOString(),
-            version: configManager ? configManager.get('version') : 'unknown',
-            environment: configManager ? configManager.get('environment') : (hasProcess ? process.env.NODE_ENV || 'development' : 'unknown')
-        };
-        const statusCode = error.statusCode || 500;
-        if (logger) {
-            logger.error('핸들러 에러', {
-                requestId,
-                error: error.message,
-                stack: error.stack,
-                statusCode,
-                operation: error.operation || 'unknown',
-                details: error.details
-            });
-        } else {
-            // 로거가 초기화되기 전에 에러 발생 시
-            console.error('핸들러 에러 (로거 미초기화):', {
-                requestId, error: error.message, stack: error.stack, statusCode, operation: error.operation || 'unknown', details: error.details
-            });
-        }
-        res.status(statusCode).json(errorResponse);
-    } finally {
-        if (api) {
-            try {
-                api.destroy(); // API 인스턴스 리소스 정리
-            } catch (cleanupError) {
-                if (logger) logger.warn('리소스 정리 경고:', { error: cleanupError.message });
-                else console.warn('리소스 정리 경고 (로거 미초기화):', cleanupError);
+            if (this.config.get('cacheEnabled')) {
+                this.cache.set(cacheKey, responseResult); // 전체 응답 객체 캐싱
             }
+
+            const duration = Date.now() - startTime;
+            this.logger.info('API request completed (from API)', { requestId, operation, duration, itemCount: this.responseProcessor.getItemCount(processedData) });
+            return responseResult;
+
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            // BaseError의 인스턴스이고, 이미 operation 정보가 있다면 그것을 사용
+            const errorOperation = (error instanceof BaseError && error.operation) ? error.operation : operation;
+            this.logger.error('API request failed', { requestId, operation: errorOperation, duration, error: error.message, errorCode: error.code, statusCode: error.statusCode, details: error.details, stack: error.stack });
+            
+            // formatError는 BaseError가 아니면 기본 operation을 사용하므로, error 객체에 operation을 명시적으로 넣어줄 수 있음
+            if (!(error instanceof BaseError)) {
+                error.operation = operation; // 일반 Error 객체에 operation 추가
+            }
+            return ResponseFormatter.formatError(error, errorOperation);
         }
+    }
+    
+    addDistanceInfoToItems(processedData, params) {
+        const items = processedData.response.body.items.item;
+        if (Array.isArray(items) && params.mapY && params.mapX && params.radius) {
+            const userLat = params.mapY; // 이미 validateType에서 숫자로 변환됨
+            const userLng = params.mapX;
+            const radius = params.radius;
+            
+            // GeoUtils.addDistanceInfo는 아이템 배열을 직접 수정하지 않고 새 배열을 반환하므로, 결과를 다시 할당해야 함.
+            // 또한, 필터링 및 정렬 기능이 포함되어 있으므로 주의.
+            // 여기서는 거리 정보만 추가하고, 필터링/정렬은 API 파라미터 또는 클라이언트에서 처리하도록 가정.
+            processedData.response.body.items.item = items.map(item => {
+                const itemLat = SafeUtils.safeParseFloat(item.mapy);
+                const itemLng = SafeUtils.safeParseFloat(item.mapx);
+                if (GeoUtils.isValidCoordinate(itemLat, itemLng)) {
+                    item.distance = GeoUtils.getDistance(userLat, userLng, itemLat, itemLng);
+                }
+                return item;
+            }).sort((a,b) => (a.distance === undefined && b.distance === undefined) ? 0 : (a.distance === undefined) ? 1 : (b.distance === undefined) ? -1 : a.distance - b.distance);
+            // 만약 API에서 이미 거리순 정렬(arrange='E')을 지원하고 사용했다면, 여기서 재정렬은 불필요하거나 의도와 다를 수 있음.
+        }
+    }
+
+
+    destroy() {
+        this.logger.info('AllTourismAPI instance destroyed');
+        // 각 의존성들도 destroy 메소드가 있다면 호출
+        // this.cache.destroy();
+        // this.rateLimiter.destroy();
+        // ...
     }
 }
 
-// ===== 배치 처리 전용 핸들러 (서버리스 환경에서 사용) =====
-/**
- * 배치 요청을 처리하는 전용 핸들러입니다.
- * @param {object} req - HTTP 요청 객체
- * @param {object} res - HTTP 응답 객체
- */
-async function batchHandler(req, res) {
-    const requestId = SafeUtils.generateRequestId();
+// ===== 서비스 컨테이너 설정 =====
+function createServiceContainer() {
+    const container = new ServiceContainer();
+    container
+        .register('config', (c) => new ConfigManager(c))
+        .register('i18n', () => new InternationalizationManager()) // i18n은 다른 서비스에 의존하지 않음
+        .register('constants', () => new ConstantsManager())     // constants도 다른 서비스에 의존하지 않음
+        .register('logger', (c) => new Logger(c))
+        .register('cache', (c) => new AdvancedCache(c))
+        .register('rateLimiter', (c) => new RateLimiter(c))
+        .register('httpClient', (c) => new HttpClient(c))
+        .register('responseProcessor', (c) => new ApiResponseProcessor(c))
+        .register('inputValidator', (c) => new InputValidator(c))
+        .register('api', (c) => new AllTourismAPI(c));
+    
+    container.initialize(); // 모든 서비스 인스턴스화
+    return container;
+}
+
+// ===== 전역 컨테이너 인스턴스 관리 =====
+// 서버리스 환경에서는 매 요청마다 새로운 컨테이너를 생성하거나,
+// 컨테이너 재사용 시 상태 초기화를 보장해야 합니다.
+// 여기서는 요청마다 컨테이너를 가져오고, 핸들러 종료 시 destroy를 호출합니다.
+let globalContainerInstance = null;
+
+function getGlobalContainer() {
+    if (!globalContainerInstance || !globalContainerInstance.isInitialized()) {
+        globalContainerInstance = createServiceContainer();
+    }
+    return globalContainerInstance;
+}
+
+// ===== 서버리스 핸들러 함수들 =====
+async function mainHandler(req, res, operationExtractor) {
+    let container; // try 블록 외부에서 선언
+    let api;
+    let logger;
+    let config;
+    const requestId = SafeUtils.generateRequestId(); // 요청 ID 먼저 생성
     const startTime = Date.now();
-    let api = null;
-    let logger = null;
+
     try {
-        setCorsHeaders(res);
+        container = getGlobalContainer(); // 요청 시작 시 컨테이너 가져오기 또는 생성
+        api = container.get('api');
+        logger = container.get('logger');
+        config = container.get('config');
+
+        // CORS 헤더 설정 (ConfigManager 설정값에 따라)
+        if (config.get('enableCors', true)) {
+            const corsOrigins = config.get('corsOrigins', ['*']); // 기본값 '*'
+            const requestOrigin = req.headers.origin;
+            
+            // 요청 Origin이 허용 목록에 있거나, 허용 목록이 '*'인 경우
+            if (corsOrigins.includes('*') || (requestOrigin && corsOrigins.includes(requestOrigin))) {
+                res.setHeader('Access-Control-Allow-Origin', requestOrigin || '*');
+            } else if (corsOrigins.length > 0 && !corsOrigins.includes('*')) {
+                 // 구체적인 Origin 목록이 있고, 요청 Origin이 매칭되지 않으면 CORS 헤더를 설정하지 않거나 특정 값으로 설정
+                 // 여기서는 요청 Origin이 허용 목록에 없으면 '*'도 설정하지 않도록 수정 (더 안전)
+                 logger.warn('CORS: Request origin not in allowed list.', { requestOrigin, allowedOrigins: corsOrigins });
+            }
+
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-KEY'); // X-API-KEY 등 커스텀 헤더 허용
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            res.setHeader('Access-Control-Max-Age', '86400'); // 24시간
+        }
+
         if (req.method === 'OPTIONS') {
-            res.status(200).end();
+            res.status(204).end(); // No Content for pre-flight
             return;
         }
+        
+        const { operation, params } = operationExtractor(req);
 
-        if (req.method !== 'POST') {
-            throw new ValidationError(
-                '배치 요청은 POST 메서드만 지원합니다',
-                'method',
-                req.method
-            );
+        if (!operation) {
+            throw new ValidationError('Operation parameter is required.', 'operation', undefined, container.get('i18n'));
         }
+        
+        // 헬스체크, 메트릭스 등 특수 핸들러는 AllTourismAPI 클래스 외부에서 처리하거나,
+        // AllTourismAPI 클래스 내에 메소드로 구현 후 여기서 호출할 수 있습니다.
+        // 여기서는 AllTourismAPI.request를 통하는 것으로 가정.
+        // 또는, operation에 따라 분기하여 특수 함수 호출
 
-        api = new AllTourismAPI();
-        logger = api.container.get('logger');
-        const i18n = api.container.get('i18n');
-        const config = api.container.get('config'); // ConfigManager 인스턴스 가져오기
+        const result = await api.request(operation, params, req); // req 객체를 rateLimiter에 전달
 
-        logger.info('배치 요청 수신', {
-            requestId,
-            method: req.method
-        });
-
-        // 요청 본문에서 operations와 options를 파싱
-        // req.body는 서버리스 환경에서 이미 파싱되어 있을 수 있음
-        const { operations, options = {} } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-
-        if (!Array.isArray(operations) || operations.length === 0) {
-            throw new ValidationError(
-                'operations 배열이 필요합니다',
-                'operations',
-                operations,
-                i18n
-            );
-        }
-
-        const maxBatchSize = options.maxBatchSize || config.get('batchMaxOperations'); // ConfigManager에서 가져온 값 우선, 없으면 기본값 사용
-        if (operations.length > maxBatchSize) {
-            throw new ValidationError(
-                i18n.getMessage('BATCH_SIZE_EXCEEDED', { max: maxBatchSize, actual: operations.length }),
-                'operations',
-                operations.length,
-                i18n
-            );
-        }
-
-        const batchOptions = {
-            concurrency: Math.min(options.concurrency || 5, 10), // 동시성 제한 (최대 10)
-            timeout: options.timeout || 30000, // 개별 요청 타임아웃
-            stopOnError: options.stopOnError || false // 오류 발생 시 중단 여부
-        };
-
-        logger.info('배치 처리 시작', {
-            requestId,
-            operationCount: operations.length,
-            options: batchOptions
-        });
-
-        const batchResult = await api.batchRequest(operations); // AllTourismAPI의 batchRequest 메서드 호출
-
-        batchResult.metadata = {
-            ...batchResult.metadata,
-            requestId,
-            totalTime: Date.now() - startTime,
-            version: api.container.get('config').get('version'),
-            timestamp: new Date().toISOString(),
-            batchOptions
-        };
-
-        logger.info('배치 처리 완료', {
-            requestId,
-            total: operations.length,
-            successful: batchResult.data.summary.successful,
-            failed: batchResult.data.summary.failed,
-            totalTime: batchResult.metadata.totalTime
-        });
-
-        res.status(200).json(batchResult);
-
-    } catch (error) {
-        const errorResponse = ResponseFormatter.formatError(error, 'batch');
-        errorResponse.metadata = {
-            requestId,
-            totalTime: Date.now() - startTime,
-            version: api ? api.container.get('config').get('version') : 'unknown',
-            timestamp: new Date().toISOString()
-        };
-        if (logger) {
-            logger.error('배치 핸들러 에러', {
-                requestId,
-                error: error.message,
-                stack: error.stack,
-                details: error.details
-            });
-        } else {
-            console.error('배치 핸들러 에러 (로거 미초기화):', { requestId, error: error.message, stack: error.stack, details: error.details });
-        }
-        res.status(error.statusCode || 500).json(errorResponse);
-    } finally {
-        if (api) {
+        // ETag 설정 (ConfigManager 설정값에 따라)
+        if (config.get('enableEtag', true) && result.success && result.data) {
             try {
-                api.destroy();
-            } catch (destroyError) {
-                if (logger) logger.warn('배치 API 인스턴스 정리 경고:', { error: destroyError.message });
-                else console.warn('배치 API 인스턴스 정리 경고 (로거 미초기화):', destroyError);
+                const etagPayload = JSON.stringify(result.data); // 데이터 부분만으로 ETag 생성
+                // crypto 모듈을 사용하여 더 강력한 해시 ETag 생성 권장
+                // const crypto = require('crypto');
+                // const etag = `"${crypto.createHash('md5').update(etagPayload).digest('hex')}"`;
+                // 간단한 Base64 ETag (Vercel은 자동 ETag 생성 기능도 있음)
+                const etag = `W/"${Buffer.from(etagPayload).toString('base64')}"`; // 약한 ETag
+                res.setHeader('ETag', etag);
+
+                // Cache-Control 헤더 설정 (선택적)
+                // res.setHeader('Cache-Control', 'public, max-age=3600'); // 예: 1시간
+            } catch (etagError) {
+                logger.warn('Failed to generate ETag', { error: etagError.message });
             }
+        }
+        
+        const responseStatusCode = result.success ? 200 : (result.error?.statusCode || 500);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(responseStatusCode).json(result);
+
+    } catch (error) { // 핸들러 수준의 예외 처리
+        const localLogger = container ? container.get('logger') : console; // 컨테이너 생성 전 에러 대비
+        localLogger.error('Unhandled error in mainHandler', {
+            requestId, // 요청 ID 로깅
+            error: error.message,
+            stack: error.stack,
+            method: req.method,
+            url: req.url
+        });
+        
+        const i18nInstance = container ? container.get('i18n') : new InternationalizationManager(); // 임시 i18n
+        const errorResponse = ResponseFormatter.formatError(error, error.operation || 'handlerError'); // operation 정보가 있으면 사용
+        const responseStatusCode = errorResponse.error?.statusCode || 500;
+
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(responseStatusCode).json(errorResponse);
+    } finally {
+        if (container && typeof container.destroy === 'function') {
+            // 서버리스 환경에서는 destroy 호출이 필수는 아닐 수 있으나,
+            // 명시적인 리소스 정리(예: DB 커넥션 풀)가 있다면 유용합니다.
+            // 현재 코드에서는 주로 Map 클리어 및 로그 출력 정도.
+            // container.destroy(); // 매 요청마다 파괴하면 초기화 비용 발생. 인스턴스 재사용 시 상태 관리가 중요.
+            // 여기서는 destroy를 호출하지 않고, 플랫폼의 인스턴스 관리에 맡기되,
+            // 내부 서비스들이 상태를 공유하지 않도록 설계하는 것이 더 중요.
+            // 만약 destroy가 필수적인 서비스가 있다면, 그 서비스만 특정 시점에 정리.
+            logger?.info('Request processing finished.', { requestId, duration: Date.now() - startTime });
         }
     }
 }
 
-// ===== 메트릭 수집 핸들러 (서버리스 환경에서 사용) =====
-/**
- * 시스템 메트릭을 수집하고 반환하는 핸들러입니다.
- * @param {object} req - HTTP 요청 객체
- * @param {object} res - HTTP 응답 객체
- */
+
+function defaultOperationExtractor(req) {
+    let operation, params;
+    if (req.method === 'GET') {
+        operation = req.query.operation;
+        params = { ...req.query };
+        delete params.operation;
+    } else if (req.method === 'POST') {
+        // Vercel/Next.js는 req.body를 자동으로 파싱해줌
+        const body = req.body || {}; 
+        operation = body.operation;
+        params = { ...body };
+        delete params.operation;
+    } else {
+        // 이 부분은 mainHandler try-catch 외부에서 발생할 수 있으므로, mainHandler 내부로 옮기거나 별도 처리 필요.
+        // 여기서는 mainHandler 내부에서 처리한다고 가정하고, 이 함수는 단순히 추출만 담당.
+        // throw new ValidationError('Only GET and POST methods are supported', 'method', req.method);
+        return { operation: null, params: null}; // 오류는 mainHandler에서 처리
+    }
+    return { operation, params };
+}
+
+async function handler(req, res) {
+    return mainHandler(req, res, defaultOperationExtractor);
+}
+
+async function batchHandler(req, res) {
+    // 배치 핸들러는 요청 본문에서 operations 배열을 추출해야 함
+    const batchOperationExtractor = (request) => {
+        if (request.method !== 'POST') {
+            // throw new ValidationError('Batch requests must use POST method', 'method', request.method);
+            return { operation: 'batchError', params: { message: 'Batch requests must use POST method'} };
+        }
+        const body = request.body || {};
+        // 실제 배치 작업은 AllTourismAPI 클래스의 batchRequest 메소드 또는 유사한 로직에서 처리
+        // 여기서는 핸들러가 'batch'라는 operation을 받고, params로 operations 배열을 받는다고 가정
+        return { operation: 'batch', params: body }; 
+    };
+    return mainHandler(req, res, batchOperationExtractor);
+}
+
+
 async function metricsHandler(req, res) {
-    let api = null;
-    let logger = null;
+    let container;
     try {
-        setCorsHeaders(res);
-        if (req.method === 'OPTIONS') {
-            res.status(200).end();
+        container = getGlobalContainer();
+        const config = container.get('config');
+        const cache = container.get('cache');
+        const rateLimiter = container.get('rateLimiter');
+        const logger = container.get('logger'); // 로거 인스턴스
+
+        if (!config.get('metricsEnabled', true)) {
+            res.status(404).json({ success: false, error: { message: 'Metrics not enabled' } });
             return;
         }
 
-        api = new AllTourismAPI();
-        logger = api.container.get('logger');
-        const cache = api.container.get('cache');
-        const rateLimiter = api.container.get('rateLimiter');
-        const config = api.container.get('config');
-
-        const metrics = {
-            timestamp: new Date().toISOString(),
-            uptime: Date.now() - SERVICE_START_TIME,
-            system: {
-                memory: logger.getMemoryInfo(),
+        const metricsData = {
+            service: {
+                name: 'tourism-api',
                 version: config.get('version'),
-                environment: config.get('environment')
+                uptimeMs: Date.now() - SERVICE_START_TIME,
+                environment: config.get('environment'),
+                nodeVersion: hasProcess ? process.version : 'N/A',
+                platform: hasProcess ? process.platform : 'browser/unknown',
             },
-            metrics: logger.getMetrics(), // 로거에서 수집된 메트릭
-            cache: {
-                ...cache.getStats(),
-                topItems: cache.getTopItems(10) // 상위 캐시 항목 10개
-            },
-            rateLimiter: rateLimiter.getStats()
+            cache: cache.getStats(),
+            rateLimiter: rateLimiter.getStats(),
+            memory: hasProcess && process.memoryUsage ? {
+                rssBytes: process.memoryUsage().rss,
+                heapUsedBytes: process.memoryUsage().heapUsed,
+                heapTotalBytes: process.memoryUsage().heapTotal,
+                externalBytes: process.memoryUsage().external,
+                arrayBuffersBytes: process.memoryUsage().arrayBuffers
+            } : null,
+            // 추가적인 커스텀 메트릭 (예: 로거에서 수집한 에러 카운트 등)
+            // customMetrics: logger.getMetrics ? logger.getMetrics() : {} 
         };
 
-        // Prometheus 형식 요청 처리
-        if (req.headers.accept?.includes('text/plain')) {
-            const prometheusMetrics = formatPrometheusMetrics(metrics);
+        const acceptHeader = req.headers.accept || '';
+        if (acceptHeader.includes('text/plain')) {
+            const prometheusMetrics = formatPrometheusMetrics(metricsData, config.get('metricsPrefix', 'tourism_api_'));
             res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
             res.status(200).send(prometheusMetrics);
         } else {
-            res.status(200).json(metrics);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.status(200).json({ success: true, data: metricsData });
         }
-
     } catch (error) {
-        const errorMsg = 'Metrics Handler Error: ' + error.message;
-        if (logger) logger.error(errorMsg, { stack: error.stack });
-        else console.error(errorMsg, error.stack);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-    } finally {
-        if (api) {
-            try {
-                api.destroy();
-            } catch (destroyError) {
-                if (logger) logger.warn('Metrics API 인스턴스 정리 경고:', { error: destroyError.message });
-                else console.warn('Metrics API 인스턴스 정리 경고 (로거 미초기화):', destroyError);
-            }
-        }
+        const localLogger = container ? container.get('logger') : console;
+        localLogger.error('Metrics handler error', { error: error.message, stack: error.stack });
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(500).json({ success: false, error: { message: 'Failed to retrieve metrics', details: error.message } });
     }
 }
 
-// ===== Prometheus 메트릭 포맷터 =====
-/**
- * JSON 형식의 메트릭 데이터를 Prometheus 텍스트 형식으로 변환합니다.
- * @param {object} metrics - 메트릭 데이터 객체
- * @returns {string} Prometheus 형식의 메트릭 문자열
- */
-function formatPrometheusMetrics(metrics) {
+
+async function healthCheck(req, res) {
+    let container;
+    let config;
+    let i18n;
+    let status = 'healthy';
+    let statusCode = 200;
+    const checks = {};
+
+    try {
+        container = getGlobalContainer();
+        config = container.get('config');
+        i18n = container.get('i18n');
+
+        checks.apiKeyConfigured = config.hasApiKey();
+        if (!checks.apiKeyConfigured && hasProcess) { // Node.js 환경에서 API 키 필수
+            status = 'unhealthy';
+            checks.apiKeyError = i18n.getMessage('MISSING_API_KEY');
+        }
+        
+        checks.serviceContainerInitialized = container.isInitialized();
+        if (!checks.serviceContainerInitialized) status = 'unhealthy';
+
+        // (선택적) 외부 API 실제 호출 테스트 (매우 간단하게, 리소스 소모 최소화)
+        // try {
+        //   const api = container.get('api');
+        //   // 가장 가벼운 API 호출 (예: areaCode 파라미터 없이 호출 시 전체 지역 코드 목록)
+        //   // 또는 특정 contentId로 detailCommon 호출 (존재하는 ID 사용)
+        //   await api.request('areaCode', { numOfRows: 1 }, {}); // req 객체는 null 또는 가짜로 전달
+        //   checks.externalApiConnection = 'ok';
+        // } catch (apiError) {
+        //   status = 'unhealthy';
+        //   checks.externalApiConnection = `failed: ${apiError.message}`;
+        //   checks.externalApiErrorCode = apiError.code;
+        // }
+
+        if (status === 'unhealthy') statusCode = 503; // Service Unavailable
+
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(statusCode).json({
+            status,
+            timestamp: new Date().toISOString(),
+            uptimeMs: Date.now() - SERVICE_START_TIME,
+            version: config.get('version'),
+            environment: config.get('environment'),
+            checks
+        });
+
+    } catch (error) {
+        console.error('Health check handler critical error:', { error: error.message, stack: error.stack });
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.status(503).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: 'Health check process failed.',
+            details: error.message
+        });
+    }
+}
+
+
+function formatPrometheusMetrics(metrics, prefix = 'tourism_api_') {
     const lines = [];
-    const prefix = 'tourism_api_';
 
-    lines.push(`# HELP ${prefix}uptime_seconds API uptime in seconds`);
-    lines.push(`# TYPE ${prefix}uptime_seconds gauge`);
-    lines.push(`${prefix}uptime_seconds ${Math.floor(metrics.uptime / 1000)}`);
+    const addMetric = (name, value, type = 'gauge', help = '') => {
+        if (value === undefined || value === null || isNaN(parseFloat(value))) return; // 유효한 숫자 값만
+        const metricName = `${prefix}${name}`;
+        if (help) lines.push(`# HELP ${metricName} ${help}`);
+        lines.push(`# TYPE ${metricName} ${type}`);
+        lines.push(`${metricName} ${value}`);
+    };
 
-    if (metrics.system.memory.rss) {
-        lines.push(`# HELP ${prefix}memory_rss_bytes Resident Set Size in bytes`);
-        lines.push(`# TYPE ${prefix}memory_rss_bytes gauge`);
-        lines.push(`${prefix}memory_rss_bytes ${metrics.system.memory.rss}`);
+    addMetric('service_uptime_seconds', Math.floor(metrics.service.uptimeMs / 1000), 'gauge', 'Service uptime in seconds');
+
+    // Cache metrics
+    if (metrics.cache) {
+        addMetric('cache_hits_total', metrics.cache.hits, 'counter', 'Total cache hits');
+        addMetric('cache_misses_total', metrics.cache.misses, 'counter', 'Total cache misses');
+        addMetric('cache_sets_total', metrics.cache.sets, 'counter', 'Total cache sets');
+        addMetric('cache_deletes_total', metrics.cache.deletes, 'counter', 'Total cache deletes');
+        addMetric('cache_clears_total', metrics.cache.clears, 'counter', 'Total cache clears');
+        addMetric('cache_expired_total', metrics.cache.expired, 'counter', 'Total cache items expired');
+        addMetric('cache_size_items', metrics.cache.size, 'gauge', 'Current number of items in cache');
+        addMetric('cache_hit_rate_percent', metrics.cache.hitRate, 'gauge', 'Cache hit rate percentage');
+        addMetric('cache_enabled', metrics.cache.enabled ? 1 : 0, 'gauge', 'Cache enabled status (1=true, 0=false)');
     }
-    if (metrics.system.memory.heapUsed) {
-        lines.push(`# HELP ${prefix}memory_heap_used_bytes V8 heap used in bytes`);
-        lines.push(`# TYPE ${prefix}memory_heap_used_bytes gauge`);
-        lines.push(`${prefix}memory_heap_used_bytes ${metrics.system.memory.heapUsed}`);
+
+    // Rate limiter metrics
+    if (metrics.rateLimiter) {
+        addMetric('rate_limiter_total_requests_checked_total', metrics.rateLimiter.totalRequests, 'counter', 'Total requests checked by rate limiter');
+        addMetric('rate_limiter_limited_requests_total', metrics.rateLimiter.limitedRequests, 'counter', 'Total requests limited by rate limiter');
+        addMetric('rate_limiter_active_clients_gauge', metrics.rateLimiter.activeClients, 'gauge', 'Number of active clients tracked by rate limiter');
+        addMetric('rate_limiter_enabled', metrics.rateLimiter.enabled ? 1 : 0, 'gauge', 'Rate limiter enabled status (1=true, 0=false)');
     }
-
-    lines.push(`# HELP ${prefix}cache_hit_rate Cache hit rate percentage`);
-    lines.push(`# TYPE ${prefix}cache_hit_rate gauge`);
-    lines.push(`${prefix}cache_hit_rate ${metrics.cache.hitRate.toFixed(2)}`);
-
-    lines.push(`# HELP ${prefix}cache_size Current cache size (number of items)`);
-    lines.push(`# TYPE ${prefix}cache_size gauge`);
-    lines.push(`${prefix}cache_size ${metrics.cache.size}`);
-
-    // logger에서 수집된 커스텀 메트릭 처리
-    Object.entries(metrics.metrics).forEach(([key, metric]) => {
-        // Prometheus 메트릭 이름 규칙에 맞게 변환
-        const metricName = `${prefix}${key.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-        lines.push(`# HELP ${metricName} ${metric.name || key}`);
-        lines.push(`# TYPE ${metricName} gauge`); // 또는 counter
-        lines.push(`${metricName} ${metric.avg || metric.count || 0}`);
-    });
-
-    lines.push(`# HELP ${prefix}rate_limiter_limited_requests_total Total number of requests limited by rate limiter`);
-    lines.push(`# TYPE ${prefix}rate_limiter_limited_requests_total counter`);
-    lines.push(`${prefix}rate_limiter_limited_requests_total ${metrics.rateLimiter.limitedRequests}`);
-
-    lines.push(`# HELP ${prefix}rate_limiter_current_window_requests Current requests in rate limit window`);
-    lines.push(`# TYPE ${prefix}rate_limiter_current_window_requests gauge`);
-    lines.push(`${prefix}rate_limiter_current_window_requests ${metrics.rateLimiter.currentWindowRequests}`);
+    
+    // Memory metrics (Node.js only)
+    if (metrics.memory) {
+        addMetric('memory_rss_bytes', metrics.memory.rssBytes, 'gauge', 'Resident Set Size in bytes');
+        addMetric('memory_heap_used_bytes', metrics.memory.heapUsedBytes, 'gauge', 'V8 heap used in bytes');
+        addMetric('memory_heap_total_bytes', metrics.memory.heapTotalBytes, 'gauge', 'V8 heap total in bytes');
+        addMetric('memory_external_bytes', metrics.memory.externalBytes, 'gauge', 'Memory used by C++ objects bound to JavaScript objects');
+        if (metrics.memory.arrayBuffersBytes !== undefined) {
+             addMetric('memory_arraybuffers_bytes', metrics.memory.arrayBuffersBytes, 'gauge', 'Memory used by ArrayBuffers and SharedArrayBuffers');
+        }
+    }
+    
+    // Custom metrics from logger or other sources could be added here
+    // if (metrics.customMetrics) {
+    //   Object.entries(metrics.customMetrics).forEach(([key, value]) => {
+    //     addMetric(`custom_${key}`, value, 'gauge', `Custom metric ${key}`);
+    //   });
+    // }
 
     return lines.join('\n') + '\n';
 }
+
 
 // ===== 모듈 내보내기 (Node.js 환경 전용) =====
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = handler; // 기본 핸들러
     module.exports.handler = handler;
-    module.exports.batch = batchHandler; // 배치 요청 핸들러
-    module.exports.metrics = metricsHandler; // 메트릭 핸들러
-    module.exports.healthCheck = healthCheck; // 헬스체크 함수
+    module.exports.batch = batchHandler;
+    module.exports.metrics = metricsHandler;
+    module.exports.healthCheck = healthCheck;
 
-    // 테스트 또는 확장용으로 핵심 클래스들을 내보낼 수 있음
+    // 테스트 또는 확장용으로 핵심 클래스들 및 유틸리티 내보내기
     module.exports.AllTourismAPI = AllTourismAPI;
     module.exports.SafeUtils = SafeUtils;
     module.exports.GeoUtils = GeoUtils;
@@ -3711,53 +2022,45 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports.HttpClient = HttpClient;
     module.exports.ApiResponseProcessor = ApiResponseProcessor;
     module.exports.InputValidator = InputValidator;
+    module.exports.createServiceContainer = createServiceContainer; // 컨테이너 생성 함수도 내보내기
+    module.exports.getGlobalContainer = getGlobalContainer;
 } else if (typeof window !== 'undefined') {
     // 브라우저 환경에서는 이 서버리스 API 클라이언트의 핵심 로직을 직접 노출하지 않습니다.
-    // 이는 API 키와 같은 민감한 정보의 노출 위험을 방지하고,
-    // 클라이언트가 서버리스 함수를 통해서만 API에 접근하도록 강제하기 위함입니다.
-    // 필요 시, 브라우저 환경에서 사용할 별도의 공개용 유틸리티 또는 API 클라이언트를 구현해야 합니다.
+    // API 키 노출 위험 및 서버리스 함수를 통한 접근 강제.
+    console.warn('This script is intended for server-side (Node.js) execution.');
 }
 
 // ===== 전역 에러 핸들러 (Node.js 환경에서만) =====
 if (hasProcess) {
-    // 전역 에러 발생 시 사용할 간소화된 로거.
-    // 전체 DI 컨테이너를 초기화하는 것은 비효율적이며, 컨테이너가 파괴된 후에는 불가능합니다.
     const globalConsoleLogger = {
-        error: (message, data = {}) => {
-            console.error(`[GLOBAL ERROR] ${new Date().toISOString()} ${message}`, data);
-        },
-        warn: (message, data = {}) => {
-            console.warn(`[GLOBAL WARN] ${new Date().toISOString()} ${message}`, data);
-        }
+        error: (message, data = {}) => { console.error(`[GLOBAL_ERROR] ${new Date().toISOString()} ${message}`, SafeUtils.maskSensitiveData(data)); },
+        warn: (message, data = {}) => { console.warn(`[GLOBAL_WARN] ${new Date().toISOString()} ${message}`, SafeUtils.maskSensitiveData(data)); }
     };
 
     process.on('uncaughtException', (error) => {
-        globalConsoleLogger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
-        // 프로덕션 환경에서는 즉시 종료하지 않고, 로깅 후 그레이스풀 셧다운 시도 가능
-        // 서버리스 환경에서는 런타임이 보통 인스턴스를 종료합니다.
-        // process.exit(1);
+        globalConsoleLogger.error('Uncaught Exception:', { name: error.name, message: error.message, stack: error.stack });
+        // 프로덕션에서는 로깅 후 process.exit(1) 또는 그레이스풀 셧다운 고려.
+        // 서버리스 환경에서는 런타임이 인스턴스를 종료할 수 있음.
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-        globalConsoleLogger.error('Unhandled Rejection:', { promise, reason: reason?.message || String(reason), stack: reason?.stack });
+        let errorDetails = {};
+        if (reason instanceof Error) {
+            errorDetails = { name: reason.name, message: reason.message, stack: reason.stack };
+        } else {
+            errorDetails = { reason: String(reason) };
+        }
+        globalConsoleLogger.error('Unhandled Rejection at:', { promise, ...errorDetails });
     });
-
-    // SIGTERM, SIGINT 핸들러는 서버리스 환경에서는 Vercel이 관리하므로 불필요할 수 있음
-    // process.on('SIGTERM', () => { ... });
-    // process.on('SIGINT', () => { ... });
 }
 
 // ===== API 버전 정보 =====
-const API_VERSION = '2.1.2'; // 버전 업데이트
+const API_VERSION = '2.1.3'; // ConfigManager와 일치
 const API_BUILD_DATE = new Date().toISOString();
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports.VERSION = API_VERSION;
     module.exports.BUILD_DATE = API_BUILD_DATE;
-} else if (typeof window !== 'undefined') {
-    // 브라우저 환경에서는 버전 정보도 직접 노출하지 않습니다.
-    // window.TOURISM_API_VERSION = API_VERSION;
-    // window.TOURISM_API_BUILD_DATE = API_BUILD_DATE;
 }
 
-console.log(`🚀 All Tourism API v${API_VERSION} 로드 완료 (${new Date().toISOString()})`);
+console.log(`🚀 All Tourism API v${API_VERSION} (Build: ${API_BUILD_DATE}) loaded. Ready for requests.
