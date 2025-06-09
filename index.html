@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourism API 테스트 - healingk.vercel.app</title>
     <style>
+        /* CSS 스타일은 가독성을 위해 이전과 동일하게 유지합니다. */
         * {
             margin: 0;
             padding: 0;
@@ -324,6 +325,8 @@
                                 <option value="detailCommon">상세정보 조회</option>
                                 <option value="areaCode">지역코드 조회</option>
                                 <option value="categoryCode">카테고리코드 조회</option>
+                                <!-- detailIntro, detailInfo, detailImage는 contentId가 필수이므로,
+                                     개별 테스트에서는 주로 detailCommon을 사용하고 필요시 직접 파라미터 추가 -->
                             </select>
                         </div>
 
@@ -343,13 +346,28 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="keyword">검색 키워드</label>
+                            <label for="keyword">검색 키워드 (키워드 검색 시)</label>
                             <input type="text" id="keyword" placeholder="검색할 키워드를 입력하세요">
                         </div>
 
                         <div class="form-group">
-                            <label for="contentId">콘텐츠 ID (상세정보 조회시)</label>
+                            <label for="contentId">콘텐츠 ID (상세정보 조회 시)</label>
                             <input type="text" id="contentId" placeholder="예: 125633" value="125633">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mapX">경도 (위치 기반 검색 시)</label>
+                            <input type="text" id="mapX" placeholder="예: 126.9780">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mapY">위도 (위치 기반 검색 시)</label>
+                            <input type="text" id="mapY" placeholder="예: 37.5665">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="radius">반경 (위치 기반 검색 시, 미터)</label>
+                            <input type="text" id="radius" placeholder="예: 1000 (1km)">
                         </div>
 
                         <button onclick="testSingleAPI()">API 테스트 실행</button>
@@ -362,6 +380,8 @@
     </div>
 
     <script>
+        // 이 HTML 파일은 별도의 .js 파일을 불러오지 않고, 모든 클라이언트 사이드 JavaScript를 내장합니다.
+        // 모든 API 호출은 Vercel에 배포된 'tourism.js' 서버리스 함수 엔드포인트를 통합니다.
         const API_BASE_URL = 'https://healingk.vercel.app/api/tourism';
         
         // 카테고리 정의
@@ -390,10 +410,11 @@
             document.getElementById('status').style.display = 'none';
         }
 
-        // API 호출 함수
+        // API 호출 함수 (모든 요청은 서버리스 함수 엔드포인트를 통합니다)
         async function callAPI(params) {
             const url = new URL(API_BASE_URL);
             Object.keys(params).forEach(key => {
+                // 값이 유효한 경우에만 URL 파라미터로 추가
                 if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
                     url.searchParams.append(key, params[key]);
                 }
@@ -405,6 +426,7 @@
             const data = await response.json();
 
             if (!response.ok) {
+                // 서버리스 함수에서 반환된 에러 메시지를 활용
                 throw new Error(`HTTP ${response.status}: ${data.error?.message || '알 수 없는 오류'}`);
             }
 
@@ -414,13 +436,14 @@
         // 모든 카테고리 로드
         async function loadAllCategories() {
             const resultsDiv = document.getElementById('categoryResults');
-            resultsDiv.innerHTML = '';
+            resultsDiv.innerHTML = ''; // 기존 결과 지우기
             
             showStatus('<div class="loading-spinner"></div>모든 카테고리 데이터를 로딩 중입니다...', 'loading');
 
             let totalItems = 0;
             let successCount = 0;
 
+            // 각 카테고리에 대해 순차적으로 API 호출
             for (const [index, category] of categories.entries()) {
                 try {
                     showStatus(
@@ -429,9 +452,9 @@
                     );
 
                     const params = {
-                        operation: 'areaBasedList',
+                        operation: 'areaBasedList', // areaBasedList 오퍼레이션 사용
                         contentTypeId: category.id,
-                        numOfRows: '30',
+                        numOfRows: '30', // 각 카테고리별 30개 요청
                         pageNo: '1'
                     };
 
@@ -442,9 +465,10 @@
                     totalItems += items.length;
                     successCount++;
                     
-                    // API 호출 간격 조절 (Rate Limiting 방지)
+                    // API 호출 간격 조절 (Vercel 서버리스 함수 및 외부 API의 Rate Limiting 방지)
+                    // 너무 빠르게 호출하면 요청 제한에 걸릴 수 있습니다.
                     if (index < categories.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
+                        await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
                     }
                     
                 } catch (error) {
@@ -505,6 +529,7 @@
             const imageUrl = item.firstimage || item.firstimage2 || 'https://via.placeholder.com/300x200?text=이미지+없음';
             const title = item.title || '제목 없음';
             const address = [item.addr1, item.addr2].filter(Boolean).join(' ') || '주소 정보 없음';
+            // overview에서 HTML 태그 제거 및 텍스트 길이 제한
             const overview = item.overview ? item.overview.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : '설명 없음';
             const distance = item.distance ? `${(item.distance / 1000).toFixed(1)}km` : '';
 
@@ -531,18 +556,22 @@
             const contentTypeId = document.getElementById('contentTypeId').value;
             const keyword = document.getElementById('keyword').value;
             const contentId = document.getElementById('contentId').value;
+            const mapX = document.getElementById('mapX').value;
+            const mapY = document.getElementById('mapY').value;
+            const radius = document.getElementById('radius').value;
 
             const params = {
                 operation: operation,
-                numOfRows: '30'
+                numOfRows: '30' // 기본적으로 30개 요청
             };
 
             // 조건부 파라미터 추가
             if (contentTypeId) params.contentTypeId = contentTypeId;
-            if (keyword && operation === 'searchKeyword') params.keyword = keyword;
-            if (contentId && ['detailCommon', 'detailIntro', 'detailInfo', 'detailImage'].includes(operation)) {
-                params.contentId = contentId;
-            }
+            if (keyword) params.keyword = keyword; // searchKeyword에만 적용
+            if (contentId) params.contentId = contentId; // detail 계열에 적용
+            if (mapX) params.mapX = mapX; // locationBasedList에 적용
+            if (mapY) params.mapY = mapY; // locationBasedList에 적용
+            if (radius) params.radius = radius; // locationBasedList에 적용
 
             try {
                 showStatus('<div class="loading-spinner"></div>API 호출 중...', 'loading');
@@ -551,7 +580,7 @@
                 
                 document.getElementById('singleApiResult').style.display = 'block';
                 document.getElementById('singleApiResult').innerHTML = 
-                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    `<pre>${JSON.stringify(result, null, 2)}</pre>`; // JSON 예쁘게 출력
                 
                 showStatus(`✅ ${operation} API 호출 성공!`, 'success');
                 
@@ -564,7 +593,7 @@
             }
         }
 
-        // 헬스체크
+        // 헬스체크 (서버리스 함수 내부의 healthCheck 오퍼레이션 호출)
         async function testHealthCheck() {
             try {
                 showStatus('<div class="loading-spinner"></div>헬스체크 중...', 'loading');
@@ -577,10 +606,13 @@
                 showStatus('✅ 헬스체크 성공!', 'success');
             } catch (error) {
                 showStatus(`❌ 헬스체크 실패: ${error.message}`, 'error');
+                document.getElementById('singleApiResult').style.display = 'block';
+                document.getElementById('singleApiResult').innerHTML = 
+                    `<pre style="color: #f56565;">Error: ${error.message}</pre>`;
             }
         }
 
-        // 시스템 상태
+        // 시스템 상태 (서버리스 함수 내부의 systemStatus 오퍼레이션 호출)
         async function testSystemStatus() {
             try {
                 showStatus('<div class="loading-spinner"></div>시스템 상태 확인 중...', 'loading');
@@ -593,6 +625,9 @@
                 showStatus('✅ 시스템 상태 확인 완료!', 'success');
             } catch (error) {
                 showStatus(`❌ 시스템 상태 확인 실패: ${error.message}`, 'error');
+                document.getElementById('singleApiResult').style.display = 'block';
+                document.getElementById('singleApiResult').innerHTML = 
+                    `<pre style="color: #f56565;">Error: ${error.message}</pre>`;
             }
         }
 
