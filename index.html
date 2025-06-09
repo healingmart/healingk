@@ -17,7 +17,219 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        button {
+        button {<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tourism API Test - healingk.vercel.app</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        button { padding: 12px 24px; margin: 8px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .status { padding: 15px; margin: 15px 0; border-radius: 5px; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .category { margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .category-header { background: #007bff; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; padding: 20px; }
+        .item { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; transition: transform 0.2s; }
+        .item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .item img { width: 100%; height: 180px; object-fit: cover; }
+        .item-content { padding: 15px; }
+        .item-title { font-weight: bold; margin-bottom: 8px; color: #333; }
+        .item-addr { color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .item-id { color: #999; font-size: 0.8em; }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏛️ 한국관광공사 API 테스트</h1>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testHealth()">❤️ 헬스체크</button>
+            <button onclick="loadAll()">🏛️ 전체 카테고리 로드 (각 30개)</button>
+            <button onclick="testSingle()">🧪 단일 테스트</button>
+            <button onclick="clear()">🗑️ 지우기</button>
+        </div>
+        
+        <div id="status" style="display:none;"></div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // API 엔드포인트: healingk.vercel.app에 배포된 서버리스 함수 경로
+        // 현재 브라우저에서 직접 테스트하는 경우, 백엔드 서버가 CORS를 허용해야 합니다.
+        const API_BASE_URL = 'https://healingk.vercel.app/api/tourism'; 
+
+        const categories = [
+            {id:'12', name:'관광지', icon:'🏛️'},
+            {id:'14', name:'문화시설', icon:'🎭'},
+            {id:'15', name:'축제/공연/행사', icon:'🎪'},
+            {id:'25', name:'여행코스', icon:'🗺️'},
+            {id:'28', name:'레포츠', icon:'⛷️'},
+            {id:'32', name:'숙박', icon:'🏨'},
+            {id:'38', name:'쇼핑', icon:'🛍️'},
+            {id:'39', name:'음식점', icon:'🍽️'}
+        ];
+
+        function status(msg, type='loading') {
+            const div = document.getElementById('status');
+            div.innerHTML = msg;
+            div.className = `status ${type}`;
+            div.style.display = 'block';
+        }
+
+        async function call(params) {
+            const url = new URL(API_BASE_URL); 
+            // operation 파라미터를 다른 쿼리 파라미터와 함께 URLSearchParams에 추가
+            Object.entries(params).forEach(([k,v]) => {
+                if (v !== undefined && v !== null && String(v).trim() !== '') {
+                    url.searchParams.set(k, v);
+                }
+            });
+            
+            const res = await fetch(url.toString());
+            
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                // JSON 파싱 실패 시, 원시 응답 텍스트를 오류 메시지에 포함
+                const text = await res.text();
+                throw new Error(`JSON 파싱 오류: ${e.message}. 응답 내용: ${text.substring(0, 200)}... `);
+            }
+            
+            // 백엔드 응답 구조에 맞춰 에러 처리: success 필드가 false이고 error 객체가 있는 경우
+            if (data.success === false && data.error) {
+                const errorMessage = data.error.message || `알 수 없는 오류 (HTTP 상태: ${res.status}, 코드: ${data.error.code}) `;
+                throw new Error(errorMessage);
+            } else if (!res.ok) { // HTTP 상태 코드가 200이 아닌 경우 (success: true인데 res.ok가 false인 특이 케이스 대비)
+                const errorMessage = `HTTP 오류: ${res.status} ${res.statusText}. 메시지: ${data.error?.message || JSON.stringify(data) [cite: 270, 294]}`;
+                throw new Error(errorMessage);
+            }
+            return data;
+        }
+
+        async function testHealth() {
+            status('<span class="loading-spinner"></span>헬스체크 중... ');
+            try {
+                // G3.txt의 헬스체크 엔드포인트는 operation 파라미터를 'healthCheck'로 받습니다. 
+                const data = await call({ operation: 'healthCheck' });
+                // G3.txt의 healthCheck 응답 구조는 data.checks.apiKeyConfigured 입니다. 
+                const apiKeyConfigured = data.data?.checks?.apiKeyConfigured; 
+                status(`✅ 연결 성공! API 키: ${apiKeyConfigured ? '설정됨' : '누락'}. 상태: ${data.data?.status}. 버전: ${data.data?.version}. `, 'success');
+            } catch (e) {
+                status(`❌ 헬스체크 실패: ${e.message}`, 'error');
+            }
+        }
+
+        async function testSingle() {
+            status('<span class="loading-spinner"></span>단일 테스트 중... ');
+            try {
+                // contentTypeId '12' (관광지)에 대해 5개 항목 요청 
+                const data = await call({ operation: 'areaBasedList', contentTypeId: '12', numOfRows: '5' });
+                // G3.txt의 areaBasedList 성공 응답 구조는 data.data.response.body.items.item 입니다. 
+                const items = data.data?.response?.body?.items?.item || []; 
+                const totalCount = data.data?.response?.body?.totalCount || 0; 
+                
+                status(`✅ 단일 테스트 성공! ${items.length}개 아이템 로드됨. `, 'success');
+                showCategory({id:'12', name:'관광지 (단일 테스트)', icon:'🧪'}, items, totalCount);
+            } catch (e) {
+                status(`❌ 단일 테스트 실패: ${e.message}`, 'error');
+            }
+        }
+
+        async function loadAll() {
+            document.getElementById('results').innerHTML = '';
+            status('<span class="loading-spinner"></span>모든 카테고리 로딩 중... ');
+            
+            let totalItemsLoaded = 0;
+            let successfulCategories = 0;
+            
+            for(let i = 0; i < categories.length; i++) {
+                const cat = categories[i];
+                status(`<span class="loading-spinner"></span>${i+1}/${categories.length} ${cat.name} 로딩 중... `);
+                
+                try {
+                    const data = await call({
+                        operation: 'areaBasedList', // 
+                        contentTypeId: cat.id, // 
+                        numOfRows: '30' // 
+                    });
+                    
+                    // G3.txt의 응답 구조에 맞춰 아이템 및 총 개수 추출 
+                    const items = data.data?.response?.body?.items?.item || []; 
+                    const totalCount = data.data?.response?.body?.totalCount || 0; 
+                    
+                    showCategory(cat, items, totalCount);
+                    totalItemsLoaded += items.length;
+                    successfulCategories++;
+                    
+                    // 요청 간격 조절 (API 과부하 방지)
+                    if(i < categories.length - 1) await new Promise(r => setTimeout(r, 400)); 
+                } catch(e) {
+                    showError(cat, e.message);
+                }
+            }
+            
+            status(`✅ 완료! ${successfulCategories}/${categories.length} 카테고리에서 총 ${totalItemsLoaded}개 데이터 로드 `, 'success');
+        }
+
+        function showCategory(cat, items, totalCount) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span>${items.length}개 / 전체 ${totalCount}개</span>
+                </div>
+                <div class="items">
+                    ${items.map(item => `
+                        <div class="item">
+                            <img src="${item.firstimage || 'https://via.placeholder.com/280x180?text=이미지+없음'}" 
+                                 onerror="this.src='https://via.placeholder.com/280x180?text=이미지+없음'">
+                            <div class="item-content">
+                                <div class="item-title">${item.title || '제목없음'}</div>
+                                <div class="item-addr">📍 ${item.addr1 || '주소없음'}</div>
+                                <div class="item-id">ID: ${item.contentid}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function showError(cat, error) {
+            const div = document.createElement('div');
+            div.className = 'category';
+            div.innerHTML = `
+                <div class="category-header">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span style="color: #ffcdd2;">오류 발생</span>
+                </div>
+                <div style="padding:20px; color:#721c24; background:#f8d7da;">❌ ${error}</div>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clear() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('status').style.display = 'none';
+        }
+
+        // 페이지 로드시 자동 헬스체크
+        window.onload = () => testHealth();
+    </script>
+</body>
+</html>
             background-color: #007bff;
             color: white;
             padding: 10px 15px;
