@@ -3,165 +3,974 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관광 정보 API 테스터</title>
+    <title>한국관광공사 API 통합 테스터</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 0 20px;
-            background-color: #f4f7f6;
-        }
-        h1, h2 {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            color: #2c3e50;
-        }
-        .container {
-            background: #ffffff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        input[type="text"], input[type="number"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
         }
-        button {
-            background-color: #007bff;
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
-            padding: 10px 15px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .api-info {
+            background: #e8f4fd;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .api-info strong {
+            color: #007bff;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .test-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-header h3 {
+            font-size: 1.3em;
+            font-weight: 500;
+        }
+        
+        .toggle-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+        
+        .section-content {
+            padding: 25px;
+            display: none;
+        }
+        
+        .section-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .form-col {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        input[type="text"], 
+        input[type="number"], 
+        select, 
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, 
+        select:focus, 
+        textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 12px 25px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.2s ease-in-out;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
-        button:hover {
-            background-color: #0056b3;
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
         }
-        pre {
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+        }
+        
+        .status-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .status {
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-container {
             background: #2d2d2d;
-            color: #f8f8f2;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .result-header {
+            background: #1a1a1a;
+            color: white;
             padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 12px;
             border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .result-content {
+            color: #f8f8f2;
+            padding: 20px;
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-size: 14px;
-            max-height: 500px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 600px;
             overflow-y: auto;
-            border: 1px solid #3a3a3a;
+            line-height: 1.4;
         }
-        #status {
+        
+        .quick-tests {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
             font-weight: bold;
-            margin-bottom: 10px;
-            color: #34495e;
-        }
-        #apiUrlLink {
             color: #007bff;
-            text-decoration: none;
-            font-weight: bold;
         }
-        #apiUrlLink:hover {
-            text-decoration: underline;
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .quick-tests {
+                flex-direction: column;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="main-container">
+        <div class="header">
+            <h1>🏛️ 한국관광공사 API 통합 테스터</h1>
+            <p>관광 정보 API의 모든 기능을 테스트할 수 있는 완전한 도구</p>
+        </div>
 
-    <h1>관광 정보 API 테스터</h1>
-    <p>백엔드 API 주소: <a id="apiUrlLink" href="#" target="_blank"></a></p>
+        <div class="api-info">
+            <strong>🔗 API 엔드포인트:</strong> <span id="apiUrlDisplay">자동 감지 중...</span><br>
+            <strong>📝 지원 기능:</strong> 키워드 검색, 지역별 조회, 위치 기반 검색, 상세 정보 조회, 배치 요청
+        </div>
 
-    <div class="container">
-        <h2>키워드 검색 (searchKeyword)</h2>
-        <input type="text" id="keyword" placeholder="예: 경복궁, 서울타워" value="대구">
-        <button onclick="searchByKeyword()">검색 실행</button>
+        <div class="content">
+            <!-- 통계 정보 -->
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalRequests">0</div>
+                    <div class="stat-label">총 요청 수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="successRequests">0</div>
+                    <div class="stat-label">성공</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="errorRequests">0</div>
+                    <div class="stat-label">실패</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgResponseTime">0ms</div>
+                    <div class="stat-label">평균 응답시간</div>
+                </div>
+            </div>
+
+            <!-- 1. 키워드 검색 -->
+            <div class="test-section">
+                <div class="section-header" onclick="toggleSection('keyword')">
+                    <h3>🔍 키워드 검색 (searchKeyword)</h3>
+                    <span class="toggle-icon" id="keyword-icon">▼</span>
+                </div>
+                <div class="section-content active" id="keyword-content">
+                    <div class="quick-tests">
+                        <button class="btn btn-secondary" onclick="setKeywordTest('서울타워')">서울타워</button>
+                        <button class="btn btn-secondary" onclick="setKeywordTest('경복궁')">경복궁</button>
+                        <button class="btn btn-secondary" onclick="setKeywordTest('제주도')">제주도</button>
+                        <button class="btn btn-secondary" onclick="setKeywordTest('부산')">부산</button>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>검색 키워드 *</label>
+                            <input type="text" id="keyword" placeholder="예: 경복궁, 서울타워, 제주도" value="대구">
+                            <div class="help-text">관광지, 지역명, 축제명 등을 입력하세요</div>
+                        </div>
+                        <div class="form-col">
+                            <label>결과 수</label>
+                            <select id="keywordRows">
+                                <option value="10">10개</option>
+                                <option value="20">20개</option>
+                                <option value="50">50개</option>
+                                <option value="100">100개</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>콘텐츠 타입</label>
+                            <select id="keywordContentType">
+                                <option value="">전체</option>
+                                <option value="12">관광지</option>
+                                <option value="14">문화시설</option>
+                                <option value="15">축제공연행사</option>
+                                <option value="25">여행코스</option>
+                                <option value="28">레포츠</option>
+                                <option value="32">숙박</option>
+                                <option value="38">쇼핑</option>
+                                <option value="39">음식점</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label>지역 코드</label>
+                            <select id="keywordAreaCode">
+                                <option value="">전체</option>
+                                <option value="1">서울</option>
+                                <option value="2">인천</option>
+                                <option value="3">대전</option>
+                                <option value="4">대구</option>
+                                <option value="5">광주</option>
+                                <option value="6">부산</option>
+                                <option value="7">울산</option>
+                                <option value="8">세종</option>
+                                <option value="31">경기도</option>
+                                <option value="32">강원도</option>
+                                <option value="33">충청북도</option>
+                                <option value="34">충청남도</option>
+                                <option value="35">경상북도</option>
+                                <option value="36">경상남도</option>
+                                <option value="37">전라북도</option>
+                                <option value="38">전라남도</option>
+                                <option value="39">제주도</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="searchByKeyword()">🔍 키워드 검색 실행</button>
+                </div>
+            </div>
+
+            <!-- 2. 지역 기반 조회 -->
+            <div class="test-section">
+                <div class="section-header" onclick="toggleSection('area')">
+                    <h3>📍 지역 기반 조회 (areaBasedList)</h3>
+                    <span class="toggle-icon" id="area-icon">▼</span>
+                </div>
+                <div class="section-content" id="area-content">
+                    <div class="quick-tests">
+                        <button class="btn btn-secondary" onclick="setAreaTest(1)">서울</button>
+                        <button class="btn btn-secondary" onclick="setAreaTest(6)">부산</button>
+                        <button class="btn btn-secondary" onclick="setAreaTest(39)">제주도</button>
+                        <button class="btn btn-secondary" onclick="setAreaTest(4)">대구</button>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>지역 코드 *</label>
+                            <select id="areaCode">
+                                <option value="4">대구</option>
+                                <option value="1">서울</option>
+                                <option value="2">인천</option>
+                                <option value="3">대전</option>
+                                <option value="5">광주</option>
+                                <option value="6">부산</option>
+                                <option value="7">울산</option>
+                                <option value="8">세종</option>
+                                <option value="31">경기도</option>
+                                <option value="32">강원도</option>
+                                <option value="33">충청북도</option>
+                                <option value="34">충청남도</option>
+                                <option value="35">경상북도</option>
+                                <option value="36">경상남도</option>
+                                <option value="37">전라북도</option>
+                                <option value="38">전라남도</option>
+                                <option value="39">제주도</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label>시군구 코드</label>
+                            <input type="number" id="sigunguCode" placeholder="선택사항">
+                            <div class="help-text">지역별 상세 시군구 코드</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>콘텐츠 타입</label>
+                            <select id="areaContentType">
+                                <option value="">전체</option>
+                                <option value="12">관광지</option>
+                                <option value="14">문화시설</option>
+                                <option value="15">축제공연행사</option>
+                                <option value="25">여행코스</option>
+                                <option value="28">레포츠</option>
+                                <option value="32">숙박</option>
+                                <option value="38">쇼핑</option>
+                                <option value="39">음식점</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label>결과 수</label>
+                            <select id="areaRows">
+                                <option value="10">10개</option>
+                                <option value="20">20개</option>
+                                <option value="50">50개</option>
+                                <option value="100">100개</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="searchByArea()">📍 지역 조회 실행</button>
+                </div>
+            </div>
+
+            <!-- 3. 위치 기반 조회 -->
+            <div class="test-section">
+                <div class="section-header" onclick="toggleSection('location')">
+                    <h3>🗺️ 위치 기반 조회 (locationBasedList)</h3>
+                    <span class="toggle-icon" id="location-icon">▼</span>
+                </div>
+                <div class="section-content" id="location-content">
+                    <div class="quick-tests">
+                        <button class="btn btn-secondary" onclick="setLocationTest(128.601445, 35.871435, 1000)">대구 시청 1km</button>
+                        <button class="btn btn-secondary" onclick="setLocationTest(126.9780, 37.5665, 2000)">서울 시청 2km</button>
+                        <button class="btn btn-secondary" onclick="setLocationTest(129.0756, 35.1796, 3000)">부산 시청 3km</button>
+                        <button class="btn btn-secondary" onclick="getCurrentLocation()">내 위치 찾기</button>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>경도 (X) *</label>
+                            <input type="number" id="mapX" step="any" placeholder="예: 128.601445" value="128.601445">
+                            <div class="help-text">한국 범위: 124 ~ 132</div>
+                        </div>
+                        <div class="form-col">
+                            <label>위도 (Y) *</label>
+                            <input type="number" id="mapY" step="any" placeholder="예: 35.871435" value="35.871435">
+                            <div class="help-text">한국 범위: 33 ~ 43</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>검색 반경 (미터)</label>
+                            <select id="radius">
+                                <option value="1000">1km</option>
+                                <option value="2000" selected>2km</option>
+                                <option value="5000">5km</option>
+                                <option value="10000">10km</option>
+                                <option value="20000">20km</option>
+                            </select>
+                        </div>
+                        <div class="form-col">
+                            <label>결과 수</label>
+                            <select id="locationRows">
+                                <option value="10">10개</option>
+                                <option value="20">20개</option>
+                                <option value="50">50개</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="searchByLocation()">🗺️ 위치 조회 실행</button>
+                </div>
+            </div>
+
+            <!-- 4. 상세 정보 조회 -->
+            <div class="test-section">
+                <div class="section-header" onclick="toggleSection('detail')">
+                    <h3>📋 상세 정보 조회 (detailCommon)</h3>
+                    <span class="toggle-icon" id="detail-icon">▼</span>
+                </div>
+                <div class="section-content" id="detail-content">
+                    <div class="quick-tests">
+                        <button class="btn btn-secondary" onclick="setDetailTest(126508)">경복궁</button>
+                        <button class="btn btn-secondary" onclick="setDetailTest(128978)">서울타워</button>
+                        <button class="btn btn-secondary" onclick="setDetailTest(126092)">해운대해수욕장</button>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>콘텐츠 ID *</label>
+                            <input type="number" id="contentId" placeholder="예: 126508">
+                            <div class="help-text">다른 API 조회 결과에서 얻은 contentid 값을 입력</div>
+                        </div>
+                        <div class="form-col">
+                            <label>콘텐츠 타입 ID</label>
+                            <select id="detailContentType">
+                                <option value="">자동</option>
+                                <option value="12">관광지</option>
+                                <option value="14">문화시설</option>
+                                <option value="15">축제공연행사</option>
+                                <option value="25">여행코스</option>
+                                <option value="28">레포츠</option>
+                                <option value="32">숙박</option>
+                                <option value="38">쇼핑</option>
+                                <option value="39">음식점</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>조회할 정보 선택</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; margin-bottom: 0;">
+                                <input type="checkbox" id="defaultYN" checked style="margin-right: 8px; width: auto;">
+                                기본 정보
+                            </label>
+                            <label style="display: flex; align-items: center; margin-bottom: 0;">
+                                <input type="checkbox" id="overviewYN" checked style="margin-right: 8px; width: auto;">
+                                개요
+                            </label>
+                            <label style="display: flex; align-items: center; margin-bottom: 0;">
+                                <input type="checkbox" id="firstImageYN" checked style="margin-right: 8px; width: auto;">
+                                대표 이미지
+                            </label>
+                            <label style="display: flex; align-items: center; margin-bottom: 0;">
+                                <input type="checkbox" id="mapinfoYN" checked style="margin-right: 8px; width: auto;">
+                                지도 정보
+                            </label>
+                            <label style="display: flex; align-items: center; margin-bottom: 0;">
+                                <input type="checkbox" id="addrinfoYN" checked style="margin-right: 8px; width: auto;">
+                                주소 정보
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="getDetailInfo()">📋 상세 정보 조회</button>
+                </div>
+            </div>
+
+            <!-- 5. 배치 요청 -->
+            <div class="test-section">
+                <div class="section-header" onclick="toggleSection('batch')">
+                    <h3>📦 배치 요청 (batchRequest)</h3>
+                    <span class="toggle-icon" id="batch-icon">▼</span>
+                </div>
+                <div class="section-content" id="batch-content">
+                    <div class="quick-tests">
+                        <button class="btn btn-secondary" onclick="setBatchTest()">샘플 배치 요청</button>
+                        <button class="btn btn-danger" onclick="clearBatchRequests()">요청 목록 초기화</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>배치 요청 설정</label>
+                        <textarea id="batchRequests" rows="10" placeholder="JSON 형태로 여러 요청을 입력하세요...">[
+  {
+    "method": "searchKeyword",
+    "params": { "keyword": "서울", "numOfRows": 5 }
+  },
+  {
+    "method": "areaBasedList", 
+    "params": { "areaCode": 1, "numOfRows": 5 }
+  }
+]</textarea>
+                        <div class="help-text">최대 10개의 요청을 동시에 처리할 수 있습니다</div>
+                    </div>
+                    
+                    <button class="btn" onclick="executeBatchRequest()">📦 배치 요청 실행</button>
+                </div>
+            </div>
+
+            <!-- 결과 표시 영역 -->
+            <div class="status-container">
+                <div class="status" id="status">API를 테스트해보세요 ✨</div>
+                <div class="result-container">
+                    <div class="result-header">
+                        <span>📄 API 응답 결과</span>
+                        <button class="copy-btn" onclick="copyResult()">복사</button>
+                    </div>
+                    <div class="result-content" id="result">여기에 API 응답 결과가 표시됩니다.</div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="container">
-        <h2>지역 기반 조회 (areaBasedList)</h2>
-        <input type="number" id="areaCode" placeholder="지역 코드 (예: 1=서울, 4=대구)" value="4">
-        <button onclick="searchByArea()">조회 실행</button>
-    </div>
-
-    <div class="container">
-        <h2>위치 기반 조회 (locationBasedList)</h2>
-        <p>현재 위치(대구 시청)를 기준으로 2km 이내의 관광지를 조회합니다.</p>
-        <button onclick="searchByLocation()">조회 실행</button>
-    </div>
-
-    <h2>API 응답 결과</h2>
-    <div id="status">API를 테스트해보세요.</div>
-    <pre id="result">여기에 결과가 표시됩니다.</pre>
 
     <script>
-        // [수정!] API 경로에 파일 이름인 /tourism을 추가합니다.
-        // Vercel에서 api/tourism.js 파일은 /api/tourism 경로로 접근 가능합니다.
-        const BASE_URL = 'https://healingk.vercel.app/api/tourism';
+        // API 설정
+        const BASE_URL = window.location.origin + '/api/tourism';
+        
+        // 통계 변수
+        let stats = {
+            totalRequests: 0,
+            successRequests: 0,
+            errorRequests: 0,
+            responseTimes: []
+        };
 
-        // --- 아래는 수정할 필요 없습니다 ---
-        document.getElementById('apiUrlLink').href = BASE_URL;
-        document.getElementById('apiUrlLink').textContent = BASE_URL;
-
+        // DOM 요소
         const resultElement = document.getElementById('result');
         const statusElement = document.getElementById('status');
 
-        async function fetchApi(operation, params = {}) {
-            const query = new URLSearchParams({ operation, ...params }).toString();
-            const fullUrl = `${BASE_URL}?${query}`;
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('apiUrlDisplay').textContent = BASE_URL;
+            updateStats();
+        });
 
-            statusElement.textContent = `요청 중...`;
-            resultElement.textContent = '로딩 중...';
-
-            try {
-                const response = await fetch(fullUrl);
-                const data = await response.json();
-
-                resultElement.textContent = JSON.stringify(data, null, 2);
-
-                if (response.ok && data.success) {
-                    statusElement.textContent = `성공! (상태 코드: ${response.status})`;
-                    statusElement.style.color = '#28a745'; // 성공 시 초록색
-                } else {
-                    statusElement.textContent = `API 오류! (상태 코드: ${response.status}) - ${data.error ? data.error.message : '알 수 없는 오류'}`;
-                    statusElement.style.color = '#dc3545'; // 오류 시 빨간색
-                }
-            } catch (error) {
-                statusElement.textContent = `네트워크 또는 CORS 오류: ${error.message}`;
-                statusElement.style.color = '#dc3545'; // 오류 시 빨간색
-                resultElement.textContent = '서버에 연결할 수 없거나 응답을 파싱할 수 없습니다. Vercel 배포 로그를 확인해보세요. ' + error.message;
+        // 섹션 토글 함수
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + '-content');
+            const icon = document.getElementById(sectionId + '-icon');
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                icon.textContent = '▶';
+            } else {
+                content.classList.add('active');
+                icon.textContent = '▼';
             }
         }
 
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('totalRequests').textContent = stats.totalRequests;
+            document.getElementById('successRequests').textContent = stats.successRequests;
+            document.getElementById('errorRequests').textContent = stats.errorRequests;
+            
+            const avgTime = stats.responseTimes.length > 0 
+                ? Math.round(stats.responseTimes.reduce((a, b) => a + b, 0) / stats.responseTimes.length)
+                : 0;
+            document.getElementById('avgResponseTime').textContent = avgTime + 'ms';
+        }
+
+        // API 호출 함수
+        async function fetchApi(operation, params = {}, options = {}) {
+            const startTime = Date.now();
+            stats.totalRequests++;
+            
+            statusElement.className = 'status loading';
+            statusElement.innerHTML = '<div class="loading-spinner"></div>요청 처리 중...';
+            resultElement.textContent = '로딩 중...';
+
+            try {
+                let url, requestOptions;
+                
+                if (operation === 'batchRequest') {
+                    // POST 요청 (배치)
+                    url = BASE_URL;
+                    requestOptions = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            operation: 'batchRequest',
+                            requests: params.requests,
+                            options: params.options || {}
+                        })
+                    };
+                } else {
+                    // GET 요청
+                    const queryParams = new URLSearchParams({ operation, ...params });
+                    url = `${BASE_URL}?${queryParams.toString()}`;
+                    requestOptions = { method: 'GET' };
+                }
+
+                const response = await fetch(url, requestOptions);
+                const data = await response.json();
+                
+                const responseTime = Date.now() - startTime;
+                stats.responseTimes.push(responseTime);
+                
+                // 결과 표시
+                resultElement.textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.success) {
+                    stats.successRequests++;
+                    statusElement.className = 'status success';
+                    statusElement.textContent = `✅ 성공! (${responseTime}ms, 상태: ${response.status})`;
+                } else {
+                    stats.errorRequests++;
+                    statusElement.className = 'status error';
+                    statusElement.textContent = `❌ API 오류! (${responseTime}ms, 상태: ${response.status})`;
+                }
+            } catch (error) {
+                const responseTime = Date.now() - startTime;
+                stats.responseTimes.push(responseTime);
+                stats.errorRequests++;
+                
+                statusElement.className = 'status error';
+                statusElement.textContent = `🚫 네트워크 오류: ${error.message}`;
+                resultElement.textContent = `오류 발생:\n${error.message}\n\n서버 연결을 확인하고 Vercel 배포 상태를 확인해보세요.`;
+            }
+            
+            updateStats();
+        }
+
+        // 1. 키워드 검색
         function searchByKeyword() {
-            const keyword = document.getElementById('keyword').value;
+            const keyword = document.getElementById('keyword').value.trim();
             if (!keyword) {
                 alert('키워드를 입력해주세요.');
                 return;
             }
-            fetchApi('searchKeyword', { keyword: keyword, numOfRows: 5 });
+
+            const params = {
+                keyword: keyword,
+                numOfRows: document.getElementById('keywordRows').value
+            };
+
+            const contentType = document.getElementById('keywordContentType').value;
+            const areaCode = document.getElementById('keywordAreaCode').value;
+            
+            if (contentType) params.contentTypeId = contentType;
+            if (areaCode) params.areaCode = areaCode;
+
+            fetchApi('searchKeyword', params);
         }
 
+        function setKeywordTest(keyword) {
+            document.getElementById('keyword').value = keyword;
+        }
+
+        // 2. 지역 기반 조회
         function searchByArea() {
             const areaCode = document.getElementById('areaCode').value;
             if (!areaCode) {
-                alert('지역 코드를 입력해주세요.');
+                alert('지역 코드를 선택해주세요.');
                 return;
             }
-            fetchApi('areaBasedList', { areaCode: areaCode, numOfRows: 5 });
+
+            const params = {
+                areaCode: areaCode,
+                numOfRows: document.getElementById('areaRows').value
+            };
+
+            const sigunguCode = document.getElementById('sigunguCode').value;
+            const contentType = document.getElementById('areaContentType').value;
+            
+            if (sigunguCode) params.sigunguCode = sigunguCode;
+            if (contentType) params.contentTypeId = contentType;
+
+            fetchApi('areaBasedList', params);
         }
 
-        function searchByLocation() {
-            const daeguCityHall = { mapX: 128.601445, mapY: 35.871435, radius: 2000 };
-            fetchApi('locationBasedList', { ...daeguCityHall, numOfRows: 5, addDistance: 'Y' }); // addDistance 파라미터 추가
+        function setAreaTest(areaCode) {
+            document.getElementById('areaCode').value = areaCode;
         }
+
+        // 3. 위치 기반 조회
+        function searchByLocation() {
+            const mapX = parseFloat(document.getElementById('mapX').value);
+            const mapY = parseFloat(document.getElementById('mapY').value);
+            
+            if (isNaN(mapX) || isNaN(mapY)) {
+                alert('올바른 좌표를 입력해주세요.');
+                return;
+            }
+
+            const params = {
+                mapX: mapX,
+                mapY: mapY,
+                radius: document.getElementById('radius').value,
+                numOfRows: document.getElementById('locationRows').value,
+                addDistance: 'Y' // 거리 정보 추가
+            };
+
+            fetchApi('locationBasedList', params);
+        }
+
+        function setLocationTest(x, y, radius) {
+            document.getElementById('mapX').value = x;
+            document.getElementById('mapY').value = y;
+            document.getElementById('radius').value = radius;
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                statusElement.className = 'status loading';
+                statusElement.innerHTML = '<div class="loading-spinner"></div>현재 위치를 가져오는 중...';
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        document.getElementById('mapX').value = position.coords.longitude;
+                        document.getElementById('mapY').value = position.coords.latitude;
+                        statusElement.className = 'status success';
+                        statusElement.textContent = '✅ 현재 위치를 성공적으로 가져왔습니다!';
+                    },
+                    function(error) {
+                        statusElement.className = 'status error';
+                        statusElement.textContent = '❌ 위치를 가져올 수 없습니다: ' + error.message;
+                    }
+                );
+            } else {
+                alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+            }
+        }
+
+        // 4. 상세 정보 조회
+        function getDetailInfo() {
+            const contentId = document.getElementById('contentId').value;
+            if (!contentId) {
+                alert('콘텐츠 ID를 입력해주세요.');
+                return;
+            }
+
+            const params = {
+                contentId: contentId
+            };
+
+            const contentTypeId = document.getElementById('detailContentType').value;
+            if (contentTypeId) params.contentTypeId = contentTypeId;
+
+            // 체크박스 상태에 따라 파라미터 추가
+            if (document.getElementById('defaultYN').checked) params.defaultYN = 'Y';
+            if (document.getElementById('overviewYN').checked) params.overviewYN = 'Y';
+            if (document.getElementById('firstImageYN').checked) params.firstImageYN = 'Y';
+            if (document.getElementById('mapinfoYN').checked) params.mapinfoYN = 'Y';
+            if (document.getElementById('addrinfoYN').checked) params.addrinfoYN = 'Y';
+
+            fetchApi('detailCommon', params);
+        }
+
+        function setDetailTest(contentId) {
+            document.getElementById('contentId').value = contentId;
+        }
+
+        // 5. 배치 요청
+        function executeBatchRequest() {
+            const requestsText = document.getElementById('batchRequests').value.trim();
+            if (!requestsText) {
+                alert('배치 요청 데이터를 입력해주세요.');
+                return;
+            }
+
+            try {
+                const requests = JSON.parse(requestsText);
+                if (!Array.isArray(requests)) {
+                    throw new Error('요청 데이터는 배열 형태여야 합니다.');
+                }
+
+                fetchApi('batchRequest', {
+                    requests: requests,
+                    options: {
+                        concurrency: 3,
+                        failFast: false
+                    }
+                });
+            } catch (error) {
+                alert('JSON 형식이 올바르지 않습니다: ' + error.message);
+            }
+        }
+
+        function setBatchTest() {
+            const sampleBatch = [
+                {
+                    "method": "searchKeyword",
+                    "params": { "keyword": "서울", "numOfRows": 3 }
+                },
+                {
+                    "method": "areaBasedList",
+                    "params": { "areaCode": 1, "numOfRows": 3 }
+                },
+                {
+                    "method": "locationBasedList",
+                    "params": { "mapX": 126.9780, "mapY": 37.5665, "radius": 1000, "numOfRows": 3 }
+                }
+            ];
+            document.getElementById('batchRequests').value = JSON.stringify(sampleBatch, null, 2);
+        }
+
+        function clearBatchRequests() {
+            document.getElementById('batchRequests').value = '';
+        }
+
+        // 유틸리티 함수
+        function copyResult() {
+            const text = resultElement.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = document.querySelector('.copy-btn').textContent;
+                document.querySelector('.copy-btn').textContent = '복사됨!';
+                setTimeout(() => {
+                    document.querySelector('.copy-btn').textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // 초기 섹션 상태 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            // 첫 번째 섹션만 열어둠
+            document.getElementById('keyword-content').classList.add('active');
+        });
     </script>
 </body>
 </html>
