@@ -164,7 +164,9 @@
 
                 try {
                     // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
-                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=AppTest`; 
+                    // numOfRows 값을 10에서 100으로 변경하여 더 많은 데이터를 요청합니다.
+                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=100&pageNo=1&MobileOS=ETC&MobileApp=AppTest`; 
+                    console.log('Fetching from:', apiUrl); // 실제 fetch URL 콘솔 출력
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -183,6 +185,7 @@
                             images: item.firstimage ? [item.firstimage, `https://placehold.co/800x600/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=Image+${index+1}-2`] : [`https://placehold.co/800x600/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=No+Image`],
                             thumbnail: item.firstimage || `https://placehold.co/600x400/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=No+Image`
                         }));
+                        console.log(`Successfully fetched ${gemsData.length} items from backend.`);
                     } else {
                         // API 연동이 되지 않았을 경우를 대비한 대체 샘플 데이터
                         gemsData = [
@@ -495,7 +498,7 @@
             }
 
             gemsGrid.addEventListener('click', (e) => {
-                const card = e.target.closest('.card'); 
+                const card = e.target.closest('.card');
                 if (card) {
                     const gemId = parseInt(card.dataset.id);
                     const gem = gemsData.find(g => g.id === gemId);
