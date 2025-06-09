@@ -139,8 +139,8 @@
             let gemsData = []; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
             // IMPORTANT: 아래 BACKEND_API_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
             // 이 URL이 유효하지 않으면 'Failed to fetch' 오류가 발생하며, 샘플 데이터가 로드됩니다.
-            const BACKEND_API_URL = 'https://healingk.vercel.app/api/tourism'; 
-            console.log('Attempting to fetch data from:', BACKEND_API_URL); // API 호출 URL 콘솔 출력
+            const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; // 기본 백엔드 URL (슬래시 한 번으로 수정)
+            console.log('Attempting to fetch data from:', BASE_BACKEND_URL); // API 호출 URL 콘솔 출력
 
             const gemsGrid = document.getElementById('gems-grid');
             const loadingIndicator = document.getElementById('loading-indicator');
@@ -162,9 +162,9 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 예시로 'areaBasedList'를 호출한다고 가정합니다.
-                    // 실제 백엔드 API 명세에 따라 적절한 엔드포인트와 파라미터를 사용해야 합니다.
-                    const response = await fetch(`${BACKEND_API_URL}?method=areaBasedList&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=AppTest`);
+                    // 'areaBasedList' 메서드를 URL 경로에 포함하고 나머지 매개변수를 쿼리 스트링으로 전달
+                    const apiUrl = `${https://healingk.vercel.app/api/tourism}/areaBasedList?numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=AppTest`;
+                    const response = await fetch(apiUrl);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
