@@ -3,347 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한국 관광 정보 API 테스트</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter 폰트 (Tailwind 기본 사용) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700&display=swap" rel="stylesheet">
+    <title>대한민국 7대 관광지</title>
     <style>
+        /* 기본 스타일 */
+        :root {
+            --primary-color: #007BFF;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --shadow-color: rgba(0,0,0,0.1);
+        }
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8; /* Soft blue-gray background */
-            color: #333;
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: var(--text-color);
+        }
+        
+        /* 헤더 */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        /* 메인 콘텐츠 컨테이너 */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* 관광지 카드 컨테이너 (그리드 레이아웃) */
+        #attractions-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        /* 개별 관광지 카드 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px var(--shadow-color);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 20px;
         }
-        .container {
-            max-width: 900px;
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 24px var(--shadow-color);
+        }
+        .card img {
             width: 100%;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            margin-top: 20px;
-            animation: fadeIn 0.8s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        h1 {
-            color: #2c5282; /* Darker blue for heading */
-            text-align: center;
-            margin-bottom: 25px;
-            font-weight: 700;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
+            height: 220px;
+            object-fit: cover;
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #4a5568; /* Gray-blue for labels */
         }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #cbd5e0; /* Light gray border */
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
+        .card-content {
+            padding: 1.5rem;
+            flex-grow: 1;
         }
-        input[type="text"]:focus {
-            border-color: #4299e1; /* Blue on focus */
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* Blue shadow on focus */
-            outline: none;
+        .card-content h2 {
+            margin-top: 0;
+            color: var(--primary-color);
         }
-        button {
-            background-color: #4299e1; /* Blue button */
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: 600;
-            transition: background-color 0.3s, transform 0.2s;
-            width: 100%;
+        .card-content p {
+            line-height: 1.6;
         }
-        button:hover {
-            background-color: #3182ce; /* Darker blue on hover */
-            transform: translateY(-2px);
+        .card-content .address {
+            font-style: italic;
+            color: #666;
+            margin-top: 1rem;
+            font-size: 0.9em;
         }
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #4299e1;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: none; /* Hidden by default */
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #resultContainer {
-            margin-top: 30px;
-            background-color: #f7fafc; /* Lighter background for results */
-            border-radius: 10px;
-            padding: 20px;
-            border: 1px solid #e2e8f0; /* Light border */
-        }
-        .result-item {
-            background-color: #ffffff;
-            border: 1px solid #ebf8ff; /* Very light blue border */
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-        .result-item:hover {
-            transform: translateY(-3px);
-        }
-        .result-item h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #2b6cb0; /* Moderate blue for titles */
-            margin-bottom: 8px;
-        }
-        .result-item p {
-            font-size: 0.95rem;
-            color: #4a5568;
-            line-height: 1.5;
-        }
-        .error-message {
-            color: #e53e3e; /* Red for errors */
-            font-weight: 600;
+        
+        /* 로딩 및 에러 메시지 */
+        .message {
+            grid-column: 1 / -1; /* 전체 너비 차지 */
             text-align: center;
-            margin-top: 20px;
-        }
-        .message-box {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #fff;
-            padding: 25px;
+            font-size: 1.5rem;
+            padding: 3rem;
+            background: var(--card-bg);
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        .message-box p {
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-            color: #333;
-        }
-        .message-box button {
-            background-color: #4299e1;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            width: auto; /* Override full width */
-        }
-        .message-box button:hover {
-            background-color: #3182ce;
-        }
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none; /* Hidden by default */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>한국 관광 정보 키워드 검색</h1>
-        <div class="form-group">
-            <label for="apiKeyInput">API 키:</label>
-            <input type="text" id="apiKeyInput" placeholder="여기에 발급받은 API 키를 입력하세요" value="YOUR_API_KEY_HERE">
-        </div>
-        <div class="form-group">
-            <label for="keywordInput">검색 키워드 (예: 경복궁):</label>
-            <input type="text" id="keywordInput" value="부산" placeholder="검색할 키워드를 입력하세요">
-        </div>
-        <button id="searchButton">검색</button>
-        <div class="loading-spinner mt-5" id="loadingSpinner"></div>
-        <div id="resultContainer" class="mt-8">
-            <p class="text-center text-gray-500">검색 결과가 여기에 표시됩니다.</p>
-        </div>
-    </div>
 
-    <!-- Message Box -->
-    <div id="messageBox" class="message-box">
-        <p id="messageText"></p>
-        <button id="messageBoxClose">확인</button>
-    </div>
-    <div id="overlay" class="overlay"></div>
+    <header>
+        <h1>대한민국 7대 관광지 🇰🇷</h1>
+    </header>
 
-    <!-- tourism.js 파일 로드 -->
-    <script src="tourism.js"></script>
+    <main id="attractions-container">
+        <div class="message" id="loader">✨ 멋진 관광지 정보를 불러오는 중입니다...</div>
+    </main>
+
     <script>
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const keywordInput = document.getElementById('keywordInput');
-        const searchButton = document.getElementById('searchButton');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const resultContainer = document.getElementById('resultContainer');
-        const messageBox = document.getElementById('messageBox');
-        const messageText = document.getElementById('messageText');
-        const messageBoxClose = document.getElementById('messageBoxClose');
-        const overlay = document.getElementById('overlay');
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_ENDPOINT = 'https://healingk.vercel.app/';
+            
+            // 소개할 7대 관광지 키워드 목록
+            const attractions = [
+                '경복궁',
+                'N서울타워',
+                '해운대해수욕장',
+                '설악산국립공원',
+                '전주한옥마을',
+                '성산일출봉',
+                '불국사'
+            ];
 
-        let tourismClient = null; // TourismApiClient 인스턴스를 저장할 변수
+            const container = document.getElementById('attractions-container');
+            const loader = document.getElementById('loader');
 
-        // 메시지 박스 표시 함수
-        function showMessageBox(message) {
-            messageText.textContent = message;
-            messageBox.style.display = 'flex';
-            overlay.style.display = 'block';
-        }
-
-        // 메시지 박스 닫기 함수
-        messageBoxClose.addEventListener('click', () => {
-            messageBox.style.display = 'none';
-            overlay.style.display = 'none';
-        });
-
-        // API 키 로드 및 클라이언트 초기화 시도
-        // 페이지 로드 시 localStorage에서 API 키를 불러옵니다.
-        const storedApiKey = localStorage.getItem('tourism_api_key');
-        if (storedApiKey) {
-            apiKeyInput.value = storedApiKey;
-        }
-
-        // 초기 API 클라이언트 설정 또는 재설정 함수
-        function initializeTourismClient(apiKey) {
-            if (window.TourismAPI && window.TourismAPI.TourismApiClient) {
-                // API URL을 HTTPS로 강제하여 혼합 콘텐츠 오류 방지
-                const apiBaseURL = 'https://apis.data.go.kr/B551011/KorService2';
-                tourismClient = new window.TourismAPI.TourismApiClient({
-                    apiKey: apiKey,
-                    baseURL: apiBaseURL // HTTPS로 설정
-                });
-                return true;
-            } else {
-                showMessageBox('TourismAPI 객체를 로드할 수 없습니다. tourism.js 파일이 올바르게 로드되었는지 확인하세요.');
-                return false;
-            }
-        }
-
-        // 페이지 로드 시 저장된 키로 클라이언트 초기화 시도
-        if (storedApiKey) {
-            try {
-                initializeTourismClient(storedApiKey);
-            } catch (e) {
-                console.error('TourismApiClient 초기화 오류:', e);
-                showMessageBox('API 클라이언트 초기화 중 오류가 발생했습니다: ' + e.message);
-            }
-        }
-        
-        searchButton.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-            const keyword = keywordInput.value.trim();
-
-            if (!apiKey || apiKey === "YOUR_API_KEY_HERE") { // 기본값으로 남아있는 경우도 체크
-                showMessageBox('API 키를 입력하거나 올바른 키로 변경해주세요.');
-                return;
-            }
-            if (!keyword) {
-                showMessageBox('검색 키워드를 입력해주세요.');
-                return;
+            /**
+             * API를 호출하여 데이터를 가져오는 함수
+             * @param {string} operation - API 작업 (searchKeyword, detailCommon 등)
+             * @param {object} params - 요청 파라미터
+             * @returns {Promise<object>} API 응답 데이터
+             */
+            async function fetchData(operation, params) {
+                const query = new URLSearchParams({ operation, ...params }).toString();
+                const response = await fetch(`${API_ENDPOINT}?${query}`);
+                if (!response.ok) {
+                    throw new Error(`API 요청 실패: ${response.status}`);
+                }
+                return response.json();
             }
 
-            // API 키를 localStorage에 저장
-            localStorage.setItem('tourism_api_key', apiKey);
+            /**
+             * 관광지 정보를 받아 HTML 카드를 생성하는 함수
+             * @param {object} data - 상세 정보 데이터
+             * @returns {string} 생성된 HTML 카드 문자열
+             */
+            function createAttractionCard(data) {
+                const { title, firstimage, overview, addr1 } = data;
+                
+                // 이미지가 없을 경우 기본 이미지 사용
+                const imageUrl = firstimage || 'https://via.placeholder.com/400x220.png?text=No+Image';
+                
+                // overview가 길 경우 150자로 자르기
+                const shortOverview = overview.length > 150 
+                    ? overview.substring(0, 150) + '...'
+                    : overview;
 
-            // API 클라이언트 인스턴스가 없거나 API 키가 변경되었으면 새로 생성
-            if (!tourismClient || tourismClient.apiKey !== apiKey) {
+                return `
+                    <div class="card">
+                        <img src="${imageUrl}" alt="${title}">
+                        <div class="card-content">
+                            <h2>${title}</h2>
+                            <p>${shortOverview}</p>
+                            <p class="address">📍 주소: ${addr1}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            /**
+             * 메인 로직 실행 함수
+             */
+            async function loadAttractions() {
                 try {
-                    if (!initializeTourismClient(apiKey)) { // 초기화 실패 시 중단
-                        return;
-                    }
-                } catch (e) {
-                    console.error('TourismApiClient 초기화 오류:', e);
-                    showMessageBox('API 클라이언트 초기화 중 오류가 발생했습니다: ' + e.message);
-                    return;
+                    const cardPromises = attractions.map(async (keyword) => {
+                        try {
+                            // 1. 키워드 검색으로 contentId와 contentTypeId 가져오기
+                            const searchResult = await fetchData('searchKeyword', { keyword });
+                            
+                            // 검색 결과가 없거나 body 또는 items가 없는 경우 건너뛰기
+                            if (!searchResult.data?.body?.items?.item?.length) {
+                                console.warn(`'${keyword}'에 대한 검색 결과가 없습니다.`);
+                                return null;
+                            }
+                            
+                            const firstItem = searchResult.data.body.items.item[0];
+                            const { contentid, contenttypeid } = firstItem;
+
+                            // 2. contentId로 상세 정보 조회하기
+                            const detailResult = await fetchData('detailCommon', { 
+                                contentId: contentid,
+                                contentTypeId: contenttypeid,
+                                defaultYN: 'Y',
+                                firstImageYN: 'Y',
+                                addrinfoYN: 'Y',
+                                overviewYN: 'Y'
+                            });
+                            
+                            if (!detailResult.data?.body?.items?.item?.length) {
+                                console.warn(`'${keyword}'(contentId: ${contentid})에 대한 상세 정보가 없습니다.`);
+                                return null;
+                            }
+                            
+                            return createAttractionCard(detailResult.data.body.items.item[0]);
+
+                        } catch (error) {
+                            console.error(`'${keyword}' 정보를 가져오는 중 오류 발생:`, error);
+                            return null; // 오류 발생 시 해당 카드는 생성하지 않음
+                        }
+                    });
+
+                    // 모든 API 요청이 완료될 때까지 기다림
+                    const cardsHtml = await Promise.all(cardPromises);
+                    
+                    // 로딩 메시지 제거
+                    loader.style.display = 'none';
+                    
+                    // 성공적으로 생성된 카드만 화면에 추가
+                    container.innerHTML += cardsHtml.filter(card => card !== null).join('');
+
+                } catch (error) {
+                    loader.textContent = '데이터를 불러오는 데 실패했습니다. 😥';
+                    console.error('전체 로드 프로세스 오류:', error);
                 }
             }
             
-            resultContainer.innerHTML = ''; // 이전 결과 초기화
-            loadingSpinner.style.display = 'block'; // 로딩 스피너 표시
-
-            try {
-                const response = await tourismClient.searchKeyword({
-                    keyword: keyword,
-                    numOfRows: 10,
-                    pageNo: 1
-                });
-
-                loadingSpinner.style.display = 'none'; // 로딩 스피너 숨김
-
-                if (response.success && response.data && response.data.items && response.data.items.item) {
-                    const items = response.data.items.item;
-                    if (items.length === 0) {
-                        resultContainer.innerHTML = '<p class="text-center text-gray-500">검색 결과가 없습니다.</p>';
-                        return;
-                    }
-
-                    items.forEach(item => {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.className = 'result-item';
-                        itemDiv.innerHTML = `
-                            <h3>${item.title ? item.title : '제목 없음'}</h3>
-                            <p><strong>주소:</strong> ${item.addr1 ? item.addr1 : '정보 없음'}</p>
-                            <p><strong>콘텐츠 타입 ID:</strong> ${item.contenttypeid ? item.contenttypeid : '정보 없음'}</p>
-                            ${item.tel ? `<p><strong>전화번호:</strong> ${item.tel}</p>` : ''}
-                            ${item.firstimage ? `<img src="${item.firstimage}" alt="${item.title}" class="w-full h-auto rounded-md mt-2" onerror="this.onerror=null;this.src='https://placehold.co/400x200/cccccc/000000?text=No+Image';" />` : ''}
-                        `;
-                        resultContainer.appendChild(itemDiv);
-                    });
-                } else {
-                    let errorMessage = '데이터를 불러오는 데 실패했습니다.';
-                    // API 응답에서 오는 오류 메시지를 더 자세히 표시
-                    if (response.error && response.error.localizedMessage) {
-                        errorMessage += ` 오류: ${response.error.localizedMessage}`;
-                    } else if (response.error && response.error.message) {
-                        errorMessage += ` 오류: ${response.error.message}`;
-                    }
-                    resultContainer.innerHTML = `<p class="error-message">${errorMessage}</p>`;
-                }
-            } catch (error) {
-                loadingSpinner.style.display = 'none'; // 로딩 스피너 숨김
-                console.error('API 호출 중 오류 발생:', error); // 콘솔에 자세한 오류 로그
-
-                let displayErrorMessage = 'API 호출 중 예상치 못한 오류가 발생했습니다.';
-                if (error.error && error.error.localizedMessage) { // TourismApiError 같은 BaseError의 localizedMessage
-                    displayErrorMessage = `API 호출 오류: ${error.error.localizedMessage}`;
-                } else if (error.message) { // 일반 Error 객체의 메시지
-                    displayErrorMessage = `API 호출 오류: ${error.message}`;
-                } else {
-                    displayErrorMessage = `API 호출 오류: ${JSON.stringify(error)}`; // 그 외 알 수 없는 오류
-                }
-                showMessageBox(displayErrorMessage);
-                resultContainer.innerHTML = `<p class="error-message">${displayErrorMessage}</p>`;
-            }
+            // 프로그램 실행
+            loadAttractions();
         });
     </script>
+
 </body>
 </html>
