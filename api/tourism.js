@@ -2063,4 +2063,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports.BUILD_DATE = API_BUILD_DATE;
 }
 
-console.log(`🚀 All Tourism API v${API_VERSION} (Build: ${API_BUILD_DATE}) loaded. Ready for requests.
+console.log(`🚀 All Tourism API v${API_VERSION} (Build: ${API_BUILD_DATE}) loaded. Ready for requests.`);
