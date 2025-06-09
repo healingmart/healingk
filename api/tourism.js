@@ -1905,7 +1905,7 @@ class HttpClient {
 class TourismApiClient {
     constructor(options = {}) {
         this.apiKey = options.apiKey || this.getApiKeyFromEnv();
-        this.baseURL = options.baseURL || 'http://apis.data.go.kr/B551011/KorService2';
+        this.baseURL = options.baseURL || 'https://apis.data.go.kr/B551011/KorService2';
         this.httpClient = new HttpClient({
             baseURL: this.baseURL,
             timeout: options.timeout || 30000,
