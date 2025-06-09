@@ -139,7 +139,7 @@
             let gemsData = []; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
             // IMPORTANT: 아래 BACKEND_API_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
             // 이 URL이 유효하지 않으면 'Failed to fetch' 오류가 발생하며, 샘플 데이터가 로드됩니다.
-            const BACKEND_API_URL = 'https://your-deployed-vercel-backend-url.vercel.app/api/tourism'; 
+            const BACKEND_API_URL = 'https://healingk.vercel.app/api/tourism'; 
             console.log('Attempting to fetch data from:', BACKEND_API_URL); // API 호출 URL 콘솔 출력
 
             const gemsGrid = document.getElementById('gems-grid');
@@ -449,7 +449,7 @@
                 gemsGrid.innerHTML = gemsData.map(gem => `
                     <div class="animated card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer" data-id="${gem.id}">
                         <div class="relative h-48">
-                            <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover">
+                            <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CCCCCC/000000?text=Error';">
                             <div class="absolute inset-0 bg-black bg-opacity-30"></div>
                             <h3 class="absolute bottom-4 left-4 text-white text-xl font-bold">${gem.title}</h3>
                         </div>
@@ -463,6 +463,10 @@
                 img.src = currentImages[index];
                 img.alt = modalTitle.textContent;
                 img.className = 'gallery-image w-full h-full object-cover opacity-0';
+                img.onerror = function() { // onerror 속성을 JavaScript로 설정
+                    this.onerror = null; // 무한 루프 방지
+                    this.src = 'https://placehold.co/800x600/CCCCCC/000000?text=Error';
+                };
                 modalGallery.appendChild(img);
                 setTimeout(() => img.classList.add('opacity-100'), 50);
             }
