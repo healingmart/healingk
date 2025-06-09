@@ -137,9 +137,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             let gemsData = []; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
-            // IMPORTANT: 아래 BACKEND_API_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
-            // 이 URL이 유효하지 않으면 'Failed to fetch' 오류가 발생하며, 샘플 데이터가 로드됩니다.
-            const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; // 기본 백엔드 URL (슬래시 한 번으로 수정)
+            // IMPORTANT: 아래 BASE_BACKEND_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
+            // 백엔드 오류 메시지(Unsupported operation)에 따라, 'operation' 매개변수는 URL 쿼리 스트링으로 전달되어야 합니다.
+            // 예를 들어, 백엔드 엔드포인트가 'https://healingk.vercel.app/api/tourism'이라면 그대로 유지합니다.
+            const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; 
             console.log('Attempting to fetch data from:', BASE_BACKEND_URL); // API 호출 URL 콘솔 출력
 
             const gemsGrid = document.getElementById('gems-grid');
@@ -162,8 +163,8 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 'areaBasedList' 메서드를 URL 경로에 포함하고 나머지 매개변수를 쿼리 스트링으로 전달
-                    const apiUrl = `${https://healingk.vercel.app/api/tourism}/areaBasedList?numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=AppTest`;
+                    // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
+                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=10&pageNo=1&MobileOS=ETC&MobileApp=AppTest`; 
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -300,7 +301,7 @@
                                 description: '100여종의 허브와 500여종의 야생화가 가득한 향기로운 농원. 다채로운 정원을 거닐며 향기로운 허브차를 마시는 여유를 즐길 수 있는 힐링 공간입니다.',
                                 images: [
                                     'https://placehold.co/800x600/d9a0b8/FFFFFF?text=Farm+Kamille+1',
-                                    'https://placehold.co/800x600/c782a2/FFFFFF?text=Farm+Kamille+2',
+                                    'https://placehold.co/800x600/c782a2/FFFFFF??text=Farm+Kamille+2',
                                     'https://placehold.co/800x600/b5698d/FFFFFF?text=Farm+Kamille+3'
                                 ],
                                 thumbnail: 'https://placehold.co/600x400/d9a0b8/FFFFFF?text=팜카밀레'
