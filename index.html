@@ -12,7 +12,7 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
             color: #333;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -729,11 +729,11 @@
                 // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! (문자열 값으로) ---
                 // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
                 // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
-                const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
+                const CLIENT_API_KEY = 'YOUR_ACTUAL_CLIENT_API_KEY_HERE'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
                 // ----------------------------------------------------
 
                 // CLIENT_API_KEY가 기본 플레이스홀더 문자열이거나 비어있는 경우 오류를 발생시킵니다.
-                if (CLIENT_API_KEY === 'DFGHJKLMNBVCXZ-api-dkfk2jak' || CLIENT_API_KEY.trim() === '') {
+                if (CLIENT_API_KEY === 'YDFGHJKLMNBVCXZ-api-dkfk2jak' || CLIENT_API_KEY.trim() === '') {
                     throw new Error("클라이언트 API 키를 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열로 변경해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
                 }
                 
