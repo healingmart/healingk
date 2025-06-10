@@ -546,6 +546,7 @@
                                 <option value="10">10개</option>
                                 <option value="20">20개</option>
                                 <option value="50">50개</option>
+                                <option value="100">100개</option>
                             </select>
                         </div>
                     </div>
@@ -722,7 +723,18 @@
             resultElement.textContent = '로딩 중...';
 
             try {
-                let url, requestOptions;
+                let url;
+                let requestOptions;
+                
+                // --- 여기에 사용자님의 실제 API 키를 입력하세요! ---
+                // Vercel 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
+                // 예시: const API_KEY = 'YOUR_SECRET_API_KEY_12345';
+                const API_KEY = 'https://healingk.com,https://tistory100.com,https://ggeori.com,https://healing-mart.com,http://jejugil.com'; // <<< 이 부분을 실제 API 키로 변경해주세요!
+                // ----------------------------------------------------
+
+                if (API_KEY === 'https://healingk.com,https://tistory100.com,https://ggeori.com,https://healing-mart.com,http://jejugil.com' || API_KEY.trim() === '') {
+                    throw new Error("API 키를 'YOUR_ACTUAL_API_KEY_HERE' 대신 실제 키로 변경해주세요.");
+                }
                 
                 if (operation === 'batchRequest') {
                     // POST 요청 (배치)
@@ -730,7 +742,8 @@
                     requestOptions = {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-API-Key': API_KEY // API 키 헤더 추가
                         },
                         body: JSON.stringify({
                             operation: 'batchRequest',
@@ -742,7 +755,12 @@
                     // GET 요청
                     const queryParams = new URLSearchParams({ operation, ...params });
                     url = `${BASE_URL}?${queryParams.toString()}`;
-                    requestOptions = { method: 'GET' };
+                    requestOptions = { 
+                        method: 'GET',
+                        headers: {
+                            'X-API-Key': API_KEY // API 키 헤더 추가
+                        }
+                    };
                 }
 
                 const response = await fetch(url, requestOptions);
@@ -761,7 +779,7 @@
                 } else {
                     stats.errorRequests++;
                     statusElement.className = 'status error';
-                    statusElement.textContent = `❌ API 오류! (${responseTime}ms, 상태: ${response.status})`;
+                    statusElement.textContent = `❌ API 오류! (${responseTime}ms, 상태: ${response.status} - ${data.error ? data.error.message : '알 수 없는 오류'})`;
                 }
             } catch (error) {
                 const responseTime = Date.now() - startTime;
@@ -769,8 +787,8 @@
                 stats.errorRequests++;
                 
                 statusElement.className = 'status error';
-                statusElement.textContent = `🚫 네트워크 오류: ${error.message}`;
-                resultElement.textContent = `오류 발생:\n${error.message}\n\n서버 연결을 확인하고 Vercel 배포 상태를 확인해보세요.`;
+                statusElement.textContent = `🚫 요청 실패: ${error.message}`;
+                resultElement.textContent = `오류 발생:\n${error.message}\n\nAPI 키 설정을 확인하거나, 백엔드 서버의 배포 상태 및 ALLOWED_API_KEYS 환경 변수를 확인해보세요.`;
             }
             
             updateStats();
@@ -957,14 +975,35 @@
         // 유틸리티 함수
         function copyResult() {
             const text = resultElement.textContent;
+            // navigator.clipboard.writeText를 사용하여 클립보드에 복사 (보안상의 이유로 사용자 상호작용이 필요할 수 있습니다)
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = document.querySelector('.copy-btn').textContent;
                 document.querySelector('.copy-btn').textContent = '복사됨!';
                 setTimeout(() => {
                     document.querySelector('.copy-btn').textContent = originalText;
                 }, 2000);
+            }).catch(err => {
+                // navigator.clipboard가 작동하지 않을 경우 fallback (예: iframe 환경)
+                console.warn('Clipboard API writeText failed, attempting execCommand:', err);
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    const originalText = document.querySelector('.copy-btn').textContent;
+                    document.querySelector('.copy-btn').textContent = '복사됨!';
+                    setTimeout(() => {
+                        document.querySelector('.copy-btn').textContent = originalText;
+                    }, 2000);
+                } catch (err2) {
+                    console.error('Failed to copy text using execCommand:', err2);
+                    alert('클립보드 복사에 실패했습니다. 직접 텍스트를 복사해주세요.');
+                }
             });
         }
+
 
         // 초기 섹션 상태 설정
         document.addEventListener('DOMContentLoaded', function() {
