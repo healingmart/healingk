@@ -192,7 +192,7 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 클라이언트 API 키가 비어있는 경우 오류 발생 (이제 플레이스홀더 문자열 검사 안함)
+                    // 클라이언트 API 키가 비어있는 경우 오류 발생
                     if (CLIENT_API_KEY.trim() === '') {
                         throw new Error("클라이언트 API 키가 비어 있습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
                     }
@@ -214,7 +214,8 @@
                         throw new Error(errorMessage);
                     }
                     const result = await response.json();
-                    
+                    console.log('Raw API result (areaBasedList):', result); // Raw API result 출력
+
                     // 백엔드 응답 구조에 따라 데이터를 파싱
                     if (result.success && result.data && result.data.items && result.data.items.item) {
                         // API 응답의 items.item이 배열이 아닐 수 있으므로 배열인지 확인하고 처리
@@ -238,7 +239,7 @@
                     } else {
                         // 성공 응답이지만 데이터가 없거나 예상과 다른 경우
                         gemsData = [];
-                        console.warn('Backend returned success but no items found or unexpected data structure.');
+                        console.warn('Backend returned success but no items found or unexpected data structure in areaBasedList.');
                         if (result.error) {
                              throw new Error(result.error.message || '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
                         } else {
@@ -455,6 +456,7 @@
                         throw new Error(errorData.error ? errorData.error.message : `상세 정보 HTTP 오류! 상태: ${response.status}`);
                     }
                     const detailResult = await response.json();
+                    console.log('Raw API result (detailCommon):', detailResult); // detailCommon Raw API result 출력
 
                     if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item) {
                         const detailItem = Array.isArray(detailResult.data.items.item) ? detailResult.data.items.item[0] : detailResult.data.items.item;
