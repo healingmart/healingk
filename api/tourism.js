@@ -19,13 +19,13 @@ const PRODUCTION_CONFIG = {
     MAX_BATCH_SIZE: 10,
     MAX_INPUT_LENGTH: 1000,
     // 새로운 보안 설정: 요청을 허용할 도메인 목록을 정의합니다.
-    // 여기에 사용자님의 실제 블로그 도메인들을 추가하세요.
+    // 여기에 사용자님의 실제 블로그 도메인들과 테스트 환경 도메인을 추가하세요.
     // 프로토콜(http://, https://)과 포트(:8080)는 제외하고 순수 도메인 문자열만 입력합니다.
     ALLOWED_DOMAINS: [
-        'localhost',    // 로컬 개발 환경에서 테스트 시 필요
-        'localhost:3000',
-        'localhost:8080',
-        'localhost:5173',
+        'localhost',        // 기본 로컬호스트
+        'localhost:3000',   // React, Next.js 등 개발 서버 기본 포트
+        'localhost:8080',   // 기타 웹 서버 기본 포트
+        'localhost:5173',   // Vite 개발 서버 기본 포트
         'healingk.com',
         'www.healingk.com',
         'tistory100.com',
@@ -36,10 +36,9 @@ const PRODUCTION_CONFIG = {
         'www.healing-mart.com',
         'ggeori.com',
         'www.ggeori.com',
-        '*.vercel.app', // Vercel에 배포된 프론트엔드/테스터 앱을 위한 와일드카드 (예: healingk.vercel.app)
-        // Canvas 앱이 실행되는 실제 도메인도 필요할 수 있습니다.
-        // 브라우저 개발자 도구의 Network 탭에서 요청 헤더의 'Origin' 값을 확인하여 추가해주세요.
-        // 예: '*.scf.usercontent.goog'
+        '*.vercel.app',     // Vercel에 배포된 프론트엔드/테스터 앱을 위한 와일드카드 (예: healingk.vercel.app)
+        '*.scf.usercontent.goog', // Google Canvas 미리보기 환경을 위한 와일드카드 도메인
+        'preview.app.goo.gl'      // Google Canvas 미리보기 환경을 위한 또 다른 도메인
     ],
     API_KEY_HEADER: 'X-API-Key' // 클라이언트가 사용할 API 키 헤더명
 };
@@ -292,6 +291,7 @@ class ApiSecurityValidator {
                 // 와일드카드 서브도메인 지원 (예: *.example.com)
                 if (allowedDomain.startsWith('*.')) {
                     const baseDomain = allowedDomain.substring(2);
+                    // 도메인이 서브도메인.baseDomain 이거나 정확히 baseDomain인 경우 허용
                     return domain.endsWith(`.${baseDomain}`) || domain === baseDomain;
                 }
                 
@@ -1209,6 +1209,8 @@ class AdvancedCache {
     set(key, value, ttl = null) {
         const expiry = ttl ? Date.now() + ttl : Date.now() + this.defaultTTL;
 
+        // this.getEstimatedMemoryUsage()와 this.getObjectSize()를 화살표 함수로 정의하여
+        // 'this' 바인딩 문제를 해결했습니다.
         if (this.getEstimatedMemoryUsage() > this.maxMemoryUsage) {
             this.evictLeastRecentlyUsed();
         }
@@ -1290,7 +1292,16 @@ class AdvancedCache {
         };
     }
 
-    getObjectSize(obj) {
+    // getEstimatedMemoryUsage와 getObjectSize를 화살표 함수로 정의
+    getEstimatedMemoryUsage = () => {
+        let totalSize = 0;
+        for (const [key, item] of this.cache.entries()) {
+            totalSize += this.getObjectSize(key) + this.getObjectSize(item);
+        }
+        return totalSize;
+    }
+
+    getObjectSize = (obj) => {
         if (obj === null || obj === undefined) return 0;
 
         switch (typeof obj) {
@@ -1938,7 +1949,7 @@ class TourismApiHandler {
 
         this.container.register('rateLimiter', () => new RateLimiter({
             windowSize: PRODUCTION_CONFIG.RATE_LIMIT_WINDOW,
-            maxRequests: PRODUCTION_CONFIG.MAX_RATE_LIMIT
+            maxRequests: PRODUCTION_CONFIG.RATE_LIMIT_MAX
         }));
 
         this.container.register('apiClient', (container) => new TourismApiClient({
