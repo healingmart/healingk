@@ -138,10 +138,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             let gemsData = []; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
             // IMPORTANT: 아래 BASE_BACKEND_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
-            // 백엔드 오류 메시지(Unsupported operation)에 따라, 'operation' 매개변수는 URL 쿼리 스트링으로 전달되어야 합니다.
-            // 예를 들어, 백엔드 엔드포인트가 'https://healingk.vercel.app/api/tourism'이라면 그대로 유지합니다.
             const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; 
             console.log('Attempting to fetch data from:', BASE_BACKEND_URL); // API 호출 URL 콘솔 출력
+
+            // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! ---
+            // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
+            // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
+            const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
+            // ----------------------------------------------------
 
             const gemsGrid = document.getElementById('gems-grid');
             const loadingIndicator = document.getElementById('loading-indicator');
@@ -163,32 +167,58 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
+                    // 클라이언트 API 키 유효성 검사 (비어있는 경우만 에러 발생)
+                    if (CLIENT_API_KEY.trim() === '' || CLIENT_API_KEY === 'DFGHJKLMNBVCXZ-api-dkfk2jak') {
+                        throw new Error("클라이언트 API 키가 설정되지 않았습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
+                    }
+
                     // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
-                    // numOfRows 값을 10에서 100으로 변경하여 더 많은 데이터를 요청합니다.
+                    // numOfRows 값을 100으로 설정 (원하는 개수로 테스트 가능)
                     const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=100&pageNo=1&MobileOS=ETC&MobileApp=AppTest`; 
                     console.log('Fetching from:', apiUrl); // 실제 fetch URL 콘솔 출력
-                    const response = await fetch(apiUrl);
+
+                    const response = await fetch(apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-API-Key': CLIENT_API_KEY // 프론트엔드 API 키 헤더 추가
+                        }
+                    });
+
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const errorData = await response.json().catch(() => ({})); // 오류 응답 본문을 파싱 시도
+                        const errorMessage = errorData.error ? errorData.error.message : `HTTP error! status: ${response.status}`;
+                        throw new Error(errorMessage);
                     }
                     const result = await response.json();
                     
-                    // 백엔드 응답 구조에 따라 데이터를 파싱해야 합니다.
-                    // 여기서는 임시로 샘플 데이터를 다시 할당하거나, 실제 API 응답을 변환합니다.
-                    if (result.response && result.response.body && result.response.body.items && result.response.body.items.item) {
-                        // 실제 API 응답을 gemsData 형식으로 변환하는 로직 (예시)
-                        gemsData = result.response.body.items.item.map((item, index) => ({
+                    // 백엔드 응답 구조에 따라 데이터를 파싱
+                    if (result.success && result.data && result.data.items && result.data.items.item) {
+                        // API 응답의 items.item이 배열이 아닐 수 있으므로 배열인지 확인하고 처리
+                        const items = Array.isArray(result.data.items.item) ? result.data.items.item : [result.data.items.item];
+
+                        gemsData = items.map((item, index) => ({
                             id: item.contentid || index + 1,
                             title: item.title || '제목 없음',
                             address: item.addr1 || '주소 없음',
-                            description: '이곳은 한국관광공사 API를 통해 가져온 정보입니다.', // 실제 detailCommon API에서 overview를 가져와야 함
-                            images: item.firstimage ? [item.firstimage, `https://placehold.co/800x600/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=Image+${index+1}-2`] : [`https://placehold.co/800x600/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=No+Image`],
-                            thumbnail: item.firstimage || `https://placehold.co/600x400/${Math.floor(Math.random()*16777215).toString(16)}/FFFFFF?text=No+Image`
+                            description: '이곳은 한국관광공사 API를 통해 가져온 정보입니다. 상세 정보는 콘텐츠 ID를 통해 추가 조회 가능합니다.',
+                            images: item.firstimage ? [item.firstimage, item.firstimage2 || item.firstimage] : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Image+${index+1}`],
+                            thumbnail: item.firstimage || `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
                         }));
                         console.log(`Successfully fetched ${gemsData.length} items from backend.`);
                     } else {
-                        // API 연동이 되지 않았을 경우를 대비한 대체 샘플 데이터
-                        gemsData = [
+                        // 성공 응답이지만 데이터가 없는 경우
+                        gemsData = [];
+                        console.warn('Backend returned success but no items found or unexpected data structure.');
+                        if (result.error) {
+                             throw new Error(result.error.message || '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
+                        } else {
+                            throw new Error('데이터 구조가 예상과 다릅니다.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    // 오류 발생 시 샘플 데이터를 사용하도록 폴백 (이전처럼 하드코딩된 데이터로)
+                    gemsData = [
                              {
                                 id: 1,
                                 title: '안동 지례예술촌',
@@ -310,134 +340,7 @@
                                 thumbnail: 'https://placehold.co/600x400/d9a0b8/FFFFFF?text=팜카밀레'
                             }
                         ];
-                        console.error('Failed to fetch data from backend. Using static sample data.');
-                    }
-                } catch (error) {
-                    console.error('Error fetching data:', error);
-                    loadingIndicator.style.display = 'none'; // 오류 발생 시 로딩 인디케이터 숨기기
-                    // API 호출 실패 시 샘플 데이터를 사용하도록 폴백
-                    gemsData = [
-                         {
-                            id: 1,
-                            title: '안동 지례예술촌',
-                            address: '경북 안동시 임동면 지례예술촌길 427',
-                            description: '고택의 정취와 예술의 향기가 어우러진 곳. 수백 년 된 고택에서 하룻밤을 보내며, 자연의 소리를 배경으로 진정한 쉼을 경험할 수 있는 비밀스러운 공간입니다.',
-                            images: [
-                                'https://placehold.co/800x600/8d9b8a/FFFFFF?text=Jirye+Art+Village+1',
-                                'https://placehold.co/800x600/a7c4a0/FFFFFF?text=Jirye+Art+Village+2',
-                                'https://placehold.co/800x600/6b7d6a/FFFFFF?text=Jirye+Art+Village+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/8d9b8a/FFFFFF?text=지례예술촌'
-                        },
-                        {
-                            id: 2,
-                            title: '강릉 사근진 해변',
-                            address: '강원 강릉시 해안로604번길 16',
-                            description: '경포대의 화려함 뒤에 숨겨진 조용하고 평화로운 해변. 끝없이 펼쳐진 백사장과 맑은 동해 바다를 오롯이 즐길 수 있는, 아는 사람만 아는 힐링 스팟입니다.',
-                            images: [
-                                'https://placehold.co/800x600/a0c4e0/FFFFFF?text=Sageunjin+Beach+1',
-                                'https://placehold.co/800x600/82b0d9/FFFFFF?text=Sageunjin+Beach+2',
-                                'https://placehold.co/800x600/699fc7/FFFFFF?text=Sageunjin+Beach+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/a0c4e0/FFFFFF?text=사근진+해변'
-                        },
-                        {
-                            id: 3,
-                            title: '순천 낙안읍성',
-                            address: '전남 순천시 낙안면 충민길 30',
-                            description: '조선 시대의 모습이 그대로 보존된 살아있는 민속촌. 초가집 사이를 거닐며 타임머신을 탄 듯한 특별한 경험을 할 수 있는 역사적인 장소입니다.',
-                            images: [
-                                'https://placehold.co/800x600/d9c4a0/FFFFFF?text=Naganeupseong+1',
-                                'https://placehold.co/800x600/c7b282/FFFFFF?text=Naganeupseong+2',
-                                'https://placehold.co/800x600/b5a069/FFFFFF?text=Naganeupseong+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/d9c4a0/FFFFFF?text=낙안읍성'
-                        },
-                        {
-                            id: 4,
-                            title: '울릉도 행남해안산책로',
-                            address: '경북 울릉군 울릉읍 도동리',
-                            description: '화산섬의 기암절벽과 에메랄드빛 바다를 따라 걷는 환상의 트레킹 코스. 자연이 빚어낸 경이로운 풍경 속에서 자연과 하나가 되는 짜릿한 경험을 선사합니다.',
-                            images: [
-                                'https://placehold.co/800x600/69c7b5/FFFFFF?text=Haengnam+Coastal+Walk+1',
-                                'https://placehold.co/800x600/50b5a3/FFFFFF?text=Haengnam+Coastal+Walk+2',
-                                'https://placehold.co/800x600/3a9e8d/FFFFFF?text=Haengnam+Coastal+Walk+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/69c7b5/FFFFFF?text=행남해안산책로'
-                        },
-                         {
-                            id: 5,
-                            title: '고창 학원농장',
-                            address: '전북 고창군 공음면 학원농장길 158-6',
-                            description: '계절마다 다른 색의 옷을 갈아입는 광활한 구릉지. 봄에는 청보리, 여름에는 해바라기, 가을에는 메밀꽃이 만개하여 동화 같은 풍경을 자아냅니다.',
-                            images: [
-                                'https://placehold.co/800x600/c3d9a0/FFFFFF?text=Hagwon+Farm+1',
-                                'https://placehold.co/800x600/b0c782/FFFFFF?text=Hagwon+Farm+2',
-                                'https://placehold.co/800x600/9eb569/FFFFFF?text=Hagwon+Farm+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/c3d9a0/FFFFFF?text=학원농장'
-                        },
-                        {
-                            id: 6,
-                            title: '신안 퍼플섬',
-                            address: '전남 신안군 안좌면 소곡리',
-                            description: '온통 보랏빛으로 물든 신비로운 섬. 다리, 지붕, 길까지 모든 것이 보라색으로 꾸며져 있어 비현실적인 풍경 속에서 인생 사진을 남길 수 있습니다.',
-                            images: [
-                                'https://placehold.co/800x600/c4a0d9/FFFFFF?text=Purple+Island+1',
-                                'https://placehold.co/800x600/b282c7/FFFFFF?text=Purple+Island+2',
-                                'https://placehold.co/800x600/a069b5/FFFFFF?text=Purple+Island+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/c4a0d9/FFFFFF?text=퍼플섬'
-                        },
-                        {
-                            id: 7,
-                            title: '제주 사려니숲길',
-                            address: '제주 제주시 조천읍 교래리',
-                            description: '하늘을 향해 뻗은 삼나무가 빽빽하게 들어선 신비로운 숲길. 피톤치드 가득한 공기를 마시며 걷다 보면 몸과 마음이 정화되는 치유의 시간을 가질 수 있습니다.',
-                            images: [
-                                'https://placehold.co/800x600/8aa08d/FFFFFF?text=Saryeoni+Forest+1',
-                                'https://placehold.co/800x600/6a8d6d/FFFFFF?text=Saryeoni+Forest+2',
-                                'https://placehold.co/800x600/527a55/FFFFFF?text=Saryeoni+Forest+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/8aa08d/FFFFFF?text=사려니숲길'
-                        },
-                        {
-                            id: 8,
-                            title: '부산 흰여울문화마을',
-                            address: '부산 영도구 영선동4가',
-                            description: '절영해안산책로 위, 가파른 담벼락을 따라 작은 집들이 옹기종기 모여 있는 마을. 골목 사이로 보이는 푸른 바다가 그리스 산토리니를 연상시킵니다.',
-                            images: [
-                                'https://placehold.co/800x600/a0c0d9/FFFFFF?text=Huinnyeoul+Village+1',
-                                'https://placehold.co/800x600/82aec7/FFFFFF?text=Huinnyeoul+Village+2',
-                                'https://placehold.co/800x600/699bb5/FFFFFF?text=Huinnyeoul+Village+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/a0c0d9/FFFFFF?text=흰여울문화마을'
-                        },
-                         {
-                            id: 9,
-                            title: '단양 이끼터널',
-                            address: '충북 단양군 적성면 애곡리',
-                            description: '오래된 철길 터널의 벽면을 초록빛 이끼가 가득 메운 신비로운 공간. 연인들의 사랑의 언약 장소로도 유명하며, 독특한 분위기 속에서 특별한 사진을 남길 수 있습니다.',
-                            images: [
-                                'https://placehold.co/800x600/7a997e/FFFFFF?text=Moss+Tunnel+1',
-                                'https://placehold.co/800x600/638567/FFFFFF?text=Moss+Tunnel+2',
-                                'https://placehold.co/800x600/4e7052/FFFFFF?text=Moss+Tunnel+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/7a997e/FFFFFF?text=이끼터널'
-                        },
-                        {
-                            id: 10,
-                            title: '태안 팜카밀레 허브농원',
-                            address: '충남 태안군 남면 우운길 56-19',
-                            description: '100여종의 허브와 500여종의 야생화가 가득한 향기로운 농원. 다채로운 정원을 거닐며 향기로운 허브차를 마시는 여유를 즐길 수 있는 힐링 공간입니다.',
-                            images: [
-                                'https://placehold.co/800x600/d9a0b8/FFFFFF?text=Farm+Kamille+1',
-                                'https://placehold.co/800x600/c782a2/FFFFFF?text=Farm+Kamille+2',
-                                'https://placehold.co/800x600/b5698d/FFFFFF?text=Farm+Kamille+3'
-                            ],
-                            thumbnail: 'https://placehold.co/600x400/d9a0b8/FFFFFF?text=팜카밀레'
-                        }
-                    ];
+                    console.error(`Error fetching data: ${error.message}. Using static sample data. Ensure your backend is deployed, CLIENT_API_KEY is correct, and ALLOWED_DOMAINS includes this origin.`);
                 } finally {
                     loadingIndicator.style.display = 'none'; // 로딩 인디케이터 숨기기
                     renderGems(); // 데이터 로드 또는 폴백 후 관광지 렌더링
@@ -447,7 +350,7 @@
 
             function renderGems() {
                 if (gemsData.length === 0) {
-                    gemsGrid.innerHTML = '<p class="text-center text-red-500 text-xl">관광지 데이터를 불러오지 못했습니다. 백엔드 URL을 확인하거나 네트워크 연결 상태를 확인해 주세요. 콘솔에서 시도된 백엔드 URL을 확인하세요.</p>';
+                    gemsGrid.innerHTML = '<p class="text-center text-red-500 text-xl">관광지 데이터를 불러오지 못했습니다. 백엔드 URL, API 키, 또는 ALLOWED_DOMAINS 설정을 확인해 주세요.</p>';
                     return;
                 }
                 gemsGrid.innerHTML = gemsData.map(gem => `
