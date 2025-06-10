@@ -167,9 +167,9 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 클라이언트 API 키 유효성 검사 (비어있는 경우만 에러 발생, 이제 플레이스홀더 문자열 검사 안함)
+                    // 클라이언트 API 키가 비어있는 경우 오류 발생 (이제 플레이스홀더 문자열 검사 안함)
                     if (CLIENT_API_KEY.trim() === '') {
-                        throw new Error("클라이언트 API 키가 비어 있습니다. 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
+                        throw new Error("클라이언트 API 키가 비어 있습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
                     }
 
                     // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
@@ -201,8 +201,8 @@
                             title: item.title || '제목 없음',
                             address: item.addr1 || '주소 없음',
                             description: '이곳은 한국관광공사 API를 통해 가져온 정보입니다. 상세 정보는 콘텐츠 ID를 통해 추가 조회 가능합니다.',
-                            images: item.firstimage ? [item.firstimage, item.firstimage2 || item.firstimage] : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Image+${index+1}`],
-                            thumbnail: item.firstimage || `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
+                            images: item.firstimage ? [item.firstimage.replace('http://', 'https://'), item.firstimage2 ? item.firstimage2.replace('http://', 'https://') : item.firstimage.replace('http://', 'https://')] : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Image+${index+1}`],
+                            thumbnail: item.firstimage ? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
                         }));
                         console.log(`Successfully fetched ${gemsData.length} items from backend.`);
                     } else {
