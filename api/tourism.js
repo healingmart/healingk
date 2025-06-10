@@ -1,6 +1,6 @@
 // 관광 정보 API 서버리스 함수 (Ultimate Production Version - Final) // 모든 검토 사항을 반영한 완벽한 배포 준비 버전
 
-/** * 최종 통합 개선 사항: * 1. [보안 강화] HTTPS 엔드포인트 확정 + DOMPurify 완전 통합 * 2. [성능 최적화] 메모리 효율성 + 실행 속도 최적화 * 3. [안정성 보장] 완전한 에러 처리 + 환경 호환성 * 4. [코드 품질] 완벽한 문서화 + 모든 TODO 완성 * 5. [확장성] 모듈화된 구조 + 플러그인 지원 * 6. [서버리스 최적화] Vercel 최적화 + 메모리 관리 * 7. [국제화] 완전한 다국어 지원 + 모든 메시지 완성 * 8. [검증 강화] 스키마 기반 검증 + 보안 검증 */
+/** * 최종 통합 개선 사항: * 1. [보안 강화] HTTPS 엔드포인트 확정 + DOMPurify 완전 통합 + API 키 검증 + CORS 도메인 제한 * 2. [성능 최적화] 메모리 효율성 + 실행 속도 최적화 * 3. [안정성 보장] 완전한 에러 처리 + 환경 호환성 * 4. [코드 품질] 완벽한 문서화 + 모든 TODO 완성 * 5. [확장성] 모듈화된 구조 + 플러그인 지원 * 6. [서버리스 최적화] Vercel 최적화 + 메모리 관리 * 7. [국제화] 완전한 다국어 지원 + 모든 메시지 완성 * 8. [검증 강화] 스키마 기반 검증 + 보안 검증 + 클라이언트 인증 */
 
 // ===== 전역 상수 및 환경 설정 =====
 const SERVICE_START_TIME = Date.now();
@@ -17,7 +17,24 @@ const PRODUCTION_CONFIG = {
     RATE_LIMIT_MAX: 100,
     REQUEST_TIMEOUT: 30000, // 30초
     MAX_BATCH_SIZE: 10,
-    MAX_INPUT_LENGTH: 1000
+    MAX_INPUT_LENGTH: 1000,
+    // 새로운 보안 설정
+    ALLOWED_DOMAINS: [
+        'localhost:3000',
+        'localhost:8080',
+        'localhost:5173',
+        'your-blog-domain.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
+        'www.your-blog-domain.com', // 실제 블로그 도메인으로 변경
+        'your-blog.vercel.app', // Vercel 배포 도메인
+        'your-blog.netlify.app', // Netlify 배포 도메인
+        '*.vercel.app', // Vercel 와일드카드
+        '*.netlify.app', // Netlify 와일드카드
+        // 여기에 Canvas 앱이 실행되는 도메인도 추가할 수 있습니다.
+        // 예: 'https://canvas-preview-domain.com', 'https://*.scf.usercontent.goog' 등
+        // 현재 Canvas에서 테스트 중이라면 개발자 도구의 Origin 값을 확인하여 추가하는 것이 좋습니다.
+        'https://healingk.vercel.app' // 사용자님의 Vercel 앱 도메인 추가
+    ],
+    API_KEY_HEADER: 'X-API-Key' // 클라이언트가 사용할 API 키 헤더명
 };
 
 // ===== 보안 모듈: DOMPurify 통합 및 Fallback =====
@@ -91,8 +108,8 @@ class SecurityModule {
         });
 
         if (allowedTags && Array.isArray(allowedTags)) {
-            const allowedPattern = allowedTags.map(tag => `(? :${tag})`).join('|');
-            const tagRegex = new RegExp(`<(?!\\/?(? :${allowedPattern})\\b)[^>]*?>`, 'gi');
+            const allowedPattern = allowedTags.map(tag => `(?:${tag})`).join('|');
+            const tagRegex = new RegExp(`<(?!\\/?(?: ${allowedPattern})\\b)[^>]*?>`, 'gi');
             sanitized = sanitized.replace(tagRegex, '');
         } else {
             sanitized = sanitized.replace(/<[^>]*>/g, '');
@@ -172,6 +189,150 @@ class SecurityModule {
             threats,
             input: input.substring(0, 100)
         };
+    }
+}
+
+// ===== API 보안 검증 모듈 =====
+class ApiSecurityValidator {
+    static getAllowedApiKeys() {
+        if (NODE_ENV && process.env.ALLOWED_API_KEYS) {
+            try {
+                // 환경변수에서 쉼표로 구분된 API 키들을 배열로 변환
+                return process.env.ALLOWED_API_KEYS.split(',').map(key => key.trim()).filter(key => key.length > 0);
+            } catch (error) {
+                console.error('Error parsing ALLOWED_API_KEYS:', error);
+                return [];
+            }
+        }
+        return [];
+    }
+
+    static validateApiKey(request) {
+        const allowedKeys = this.getAllowedApiKeys();
+        
+        // 개발 환경에서는 API 키 검증을 건너뛸 수 있음
+        if (allowedKeys.length === 0) {
+            console.warn('No API keys configured. API key validation skipped.');
+            return { valid: true, reason: 'no_keys_configured' };
+        }
+
+        // 헤더에서 API 키 추출
+        const apiKey = request.headers[PRODUCTION_CONFIG.API_KEY_HEADER.toLowerCase()] || 
+                      request.headers['x-api-key'] || 
+                      request.query.apiKey || 
+                      request.query.api_key;
+
+        if (!apiKey) {
+            return { 
+                valid: false, 
+                reason: 'missing_api_key',
+                message: `API key is required. Please provide it in the '${PRODUCTION_CONFIG.API_KEY_HEADER}' header.`
+            };
+        }
+
+        // API 키 형식 검증
+        if (typeof apiKey !== 'string' || apiKey.length < 10) {
+            return { 
+                valid: false, 
+                reason: 'invalid_api_key_format',
+                message: 'API key format is invalid.'
+            };
+        }
+
+        // 보안 위협 검사
+        const threats = SecurityModule.detectThreats(apiKey);
+        if (!threats.safe) {
+            return { 
+                valid: false, 
+                reason: 'security_threat',
+                message: 'Security threat detected in API key.'
+            };
+        }
+
+        // API 키 검증
+        if (!allowedKeys.includes(apiKey)) {
+            return { 
+                valid: false, 
+                reason: 'unauthorized_api_key',
+                message: 'Unauthorized API key.'
+            };
+        }
+
+        return { valid: true, reason: 'authorized', apiKey };
+    }
+
+    static validateOrigin(request) {
+        const origin = request.headers.origin || request.headers.referer;
+        
+        if (!origin) {
+            // 직접 API 호출이나 서버 간 통신의 경우 origin이 없을 수 있음
+            return { 
+                valid: true, 
+                reason: 'no_origin',
+                allowedOrigin: '*'
+            };
+        }
+
+        try {
+            const url = new URL(origin);
+            const domain = url.hostname + (url.port ? `:${url.port}` : '');
+            
+            // 허용된 도메인 확인
+            const isAllowed = PRODUCTION_CONFIG.ALLOWED_DOMAINS.some(allowedDomain => {
+                // 정확한 도메인 매치
+                if (domain === allowedDomain) return true;
+                
+                // 와일드카드 서브도메인 지원 (예: *.example.com)
+                if (allowedDomain.startsWith('*.')) {
+                    const baseDomain = allowedDomain.substring(2);
+                    return domain.endsWith(`.${baseDomain}`) || domain === baseDomain;
+                }
+                
+                return false;
+            });
+
+            if (!isAllowed) {
+                return { 
+                    valid: false, 
+                    reason: 'unauthorized_origin',
+                    message: `Origin '${domain}' is not allowed.`,
+                    origin: domain
+                };
+            }
+
+            return { 
+                valid: true, 
+                reason: 'authorized_origin',
+                allowedOrigin: origin,
+                domain
+            };
+        } catch (error) {
+            return { 
+                valid: false, 
+                reason: 'invalid_origin_format',
+                message: 'Invalid origin format.',
+                origin
+            };
+        }
+    }
+
+    static generateCorsHeaders(originValidation) {
+        const baseHeaders = {
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': `Content-Type, Authorization, ${PRODUCTION_CONFIG.API_KEY_HEADER}`,
+            'Access-Control-Max-Age': '86400', // 24시간
+            'Access-Control-Allow-Credentials': 'false'
+        };
+
+        if (originValidation.valid && originValidation.allowedOrigin) {
+            baseHeaders['Access-Control-Allow-Origin'] = originValidation.allowedOrigin;
+        } else {
+            // 허용되지 않은 origin의 경우 CORS를 차단
+            // 'null'로 설정하면 실제 브라우저에서는 요청이 차단됩니다.
+            baseHeaders['Access-Control-Allow-Origin'] = 'null';
+        }
+
+        return baseHeaders;
     }
 }
 
@@ -633,7 +794,7 @@ class ResponseFormatter {
             return errorJson;
         }
 
-        const message = error.i18n && typeof error.i18n.getMessage === 'function' ? error.i18n.getMessage('UNKNOWN_ERROR') : 'An unexpected error occurred. ';
+        const message = error.i18n && typeof error.i18n.getMessage === 'function' ? error.i18n.getMessage('UNKNOWN_ERROR') : 'An unexpected error occurred.';
 
         return {
             success: false,
@@ -837,27 +998,27 @@ class InternationalizationManager {
         return {
             ko: {
                 // 기본 에러 메시지
-                API_ERROR: 'API 오류가 발생했습니다 (작업: ${operation}). ',
-                VALIDATION_ERROR: '입력값 검증 오류가 발생했습니다. ',
+                API_ERROR: 'API 오류가 발생했습니다 (작업: ${operation}).',
+                VALIDATION_ERROR: '입력값 검증 오류가 발생했습니다.',
                 VALIDATION_ERROR_FIELD: "필드 '${field}' 검증 오류: ${message}",
-                API_TIMEOUT: 'API 요청 시간 초과 (${timeout}ms, 작업: ${operation}). ',
-                RATE_LIMIT_EXCEEDED: '요청 한도 초과. 한도: ${limit}, 남은 요청: ${remaining}, 재설정: ${resetTime}. ',
-                SECURITY_ERROR: '보안 위협이 감지되었습니다. ',
-                UNKNOWN_ERROR: '알 수 없는 오류가 발생했습니다. ',
-                NETWORK_ERROR: '네트워크 오류가 발생했습니다. ',
+                API_TIMEOUT: 'API 요청 시간 초과 (${timeout}ms, 작업: ${operation}).',
+                RATE_LIMIT_EXCEEDED: '요청 한도 초과. 한도: ${limit}, 남은 요청: ${remaining}, 재설정: ${resetTime}.',
+                SECURITY_ERROR: '보안 위협이 감지되었습니다.',
+                UNKNOWN_ERROR: '알 수 없는 오류가 발생했습니다.',
+                NETWORK_ERROR: '네트워크 오류가 발생했습니다.',
 
                 // API 관련 메시지
-                MISSING_API_KEY: 'TOURISM_API_KEY 환경변수가 설정되지 않았습니다. API 키를 설정해주세요. ',
-                INVALID_API_KEY: '제공된 API 키가 유효하지 않습니다. ',
-                UNSUPPORTED_OPERATION: "지원하지 않는 작업입니다: '${operation}'. ",
-                BATCH_DISABLED: '배치 요청 기능이 비활성화되어 있습니다. ',
+                MISSING_API_KEY: 'TOURISM_API_KEY 환경변수가 설정되지 않았습니다. API 키를 설정해주세요.',
+                INVALID_API_KEY: '제공된 API 키가 유효하지 않습니다.',
+                UNSUPPORTED_OPERATION: "지원하지 않는 작업입니다: '${operation}'.",
+                BATCH_DISABLED: '배치 요청 기능이 비활성화되어 있습니다.',
                 BATCH_SIZE_EXCEEDED: '최대 ${max}개의 작업만 배치로 처리할 수 있습니다. (요청: ${actual})',
 
                 // 검증 관련 메시지
                 INVALID_RANGE: "필드 '${field}'의 값이 유효한 범위를 벗어났습니다. (허용 범위: ${min} ~ ${max})",
-                NUMERIC_ERROR: "필드 '${field}'는 숫자여야 합니다. ",
-                INVALID_FORMAT: "필드 '${field}'의 형식이 올바르지 않습니다. ",
-                INVALID_COORDINATES: "좌표값이 유효하지 않습니다 (위도: ${lat}, 경도: ${lng}). ",
+                NUMERIC_ERROR: "필드 '${field}'는 숫자여야 합니다.",
+                INVALID_FORMAT: "필드 '${field}'의 형식이 올바르지 않습니다.",
+                INVALID_COORDINATES: "좌표값이 유효하지 않습니다 (위도: ${lat}, 경도: ${lng}).",
                 MIN_LENGTH_ERROR: "최소 길이는 ${minLength}자입니다. (현재: ${actual}자)",
                 MAX_LENGTH_ERROR: "최대 길이는 ${maxLength}자입니다. (현재: ${actual}자)",
                 ENUM_ERROR: "허용된 값 중 하나여야 합니다: ${values}",
@@ -865,52 +1026,52 @@ class InternationalizationManager {
                 // API 응답 관련 메시지
                 API_RESPONSE_ERROR: "API 응답에 오류가 발생했습니다. 상태: ${status} ${statusText}",
                 API_LOGIC_ERROR: "API 내부 처리 오류가 발생했습니다. 코드: ${resultCode}",
-                APPLICATION_ERROR: "애플리케이션 오류가 발생했습니다. ",
-                DB_ERROR: "데이터베이스 오류가 발생했습니다. ",
-                NODATA_ERROR: "데이터가 없습니다. ",
-                HTTP_ERROR: "HTTP 오류가 발생했습니다. ",
-                SERVICETIMEOUT_ERROR: "서비스 연결 시간이 초과되었습니다. ",
+                APPLICATION_ERROR: "애플리케이션 오류가 발생했습니다.",
+                DB_ERROR: "데이터베이스 오류가 발생했습니다.",
+                NODATA_ERROR: "데이터가 없습니다.",
+                HTTP_ERROR: "HTTP 오류가 발생했습니다.",
+                SERVICETIMEOUT_ERROR: "서비스 연결 시간이 초과되었습니다.",
 
                 // 파라미터 관련 메시지
-                INVALID_REQUEST_PARAMETER_ERROR: "잘못된 요청 파라미터입니다. ",
-                NO_MANDATORY_REQUEST_PARAMETERS_ERROR: "필수 요청 파라미터가 누락되었습니다. ",
-                END_OF_SERVICE_ERROR: "해당 오픈 API 서비스가 없거나 폐기되었습니다. ",
-                SERVICE_ACCESS_DENIED_ERROR: "서비스 접근이 거부되었습니다. ",
-                TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: "일시적으로 사용할 수 없는 서비스 키입니다. ",
-                LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: "서비스 요청 제한 횟수를 초과했습니다. ",
-                SERVICE_KEY_IS_NOT_REGISTERED_ERROR: "등록되지 않은 서비스 키입니다. ",
-                DEADLINE_HAS_EXPIRED_ERROR: "서비스 키 사용 기간이 만료되었습니다. ",
-                UNREGISTERED_IP_ERROR: "등록되지 않은 IP입니다. ",
+                INVALID_REQUEST_PARAMETER_ERROR: "잘못된 요청 파라미터입니다.",
+                NO_MANDATORY_REQUEST_PARAMETERS_ERROR: "필수 요청 파라미터가 누락되었습니다.",
+                END_OF_SERVICE_ERROR: "해당 오픈 API 서비스가 없거나 폐기되었습니다.",
+                SERVICE_ACCESS_DENIED_ERROR: "서비스 접근이 거부되었습니다.",
+                TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: "일시적으로 사용할 수 없는 서비스 키입니다.",
+                LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: "서비스 요청 제한 횟수를 초과했습니다.",
+                SERVICE_KEY_IS_NOT_REGISTERED_ERROR: "등록되지 않은 서비스 키입니다.",
+                DEADLINE_HAS_EXPIRED_ERROR: "서비스 키 사용 기간이 만료되었습니다.",
+                UNREGISTERED_IP_ERROR: "등록되지 않은 IP입니다.",
 
                 // 성공 메시지
-                OPERATION_SUCCESS: "작업이 성공적으로 완료되었습니다. ",
-                DATA_RETRIEVED: "데이터를 성공적으로 조회했습니다. ",
-                CACHE_HIT: "캐시에서 데이터를 조회했습니다. ",
+                OPERATION_SUCCESS: "작업이 성공적으로 완료되었습니다.",
+                DATA_RETRIEVED: "데이터를 성공적으로 조회했습니다.",
+                CACHE_HIT: "캐시에서 데이터를 조회했습니다.",
                 CACHE_MISS: "새로운 데이터를 조회했습니다."
             },
             en: {
                 // Basic error messages
-                API_ERROR: 'API error occurred (operation: ${operation}). ',
-                VALIDATION_ERROR: 'Input validation error occurred. ',
+                API_ERROR: 'API error occurred (operation: ${operation}).',
+                VALIDATION_ERROR: 'Input validation error occurred.',
                 VALIDATION_ERROR_FIELD: "Validation error for field '${field}': ${message}",
-                API_TIMEOUT: 'API request timed out after ${timeout}ms for operation \'${operation}\'. ',
-                RATE_LIMIT_EXCEEDED: 'Rate limit exceeded. Limit: ${limit}, Remaining: ${remaining}, Reset: ${resetTime}. ',
-                SECURITY_ERROR: 'Security threat detected. ',
-                UNKNOWN_ERROR: 'An unexpected error occurred. ',
-                NETWORK_ERROR: 'Network error occurred. ',
+                API_TIMEOUT: 'API request timed out after ${timeout}ms for operation \'${operation}\'.',
+                RATE_LIMIT_EXCEEDED: 'Rate limit exceeded. Limit: ${limit}, Remaining: ${remaining}, Reset: ${resetTime}.',
+                SECURITY_ERROR: 'Security threat detected.',
+                UNKNOWN_ERROR: 'An unexpected error occurred.',
+                NETWORK_ERROR: 'Network error occurred.',
 
                 // API related messages
-                MISSING_API_KEY: 'TOURISM_API_KEY environment variable is not set. Please configure the API key. ',
-                INVALID_API_KEY: 'The provided API key is invalid. ',
-                UNSUPPORTED_OPERATION: "Unsupported operation: '${operation}'. ",
-                BATCH_DISABLED: 'Batch request functionality is disabled. ',
+                MISSING_API_KEY: 'TOURISM_API_KEY environment variable is not set. Please configure the API key.',
+                INVALID_API_KEY: 'The provided API key is invalid.',
+                UNSUPPORTED_OPERATION: "Unsupported operation: '${operation}'.",
+                BATCH_DISABLED: 'Batch request functionality is disabled.',
                 BATCH_SIZE_EXCEEDED: 'Maximum batch size of ${max} exceeded. (Requested: ${actual})',
 
                 // Validation related messages
                 INVALID_RANGE: "Field '${field}' is out of valid range. (Allowed: ${min} - ${max})",
-                NUMERIC_ERROR: "Field '${field}' must be a number. ",
-                INVALID_FORMAT: "Field '${field}' has an invalid format. ",
-                INVALID_COORDINATES: "Invalid coordinates (Latitude: ${lat}, Longitude: ${lng}). ",
+                NUMERIC_ERROR: "Field '${field}' must be a number.",
+                INVALID_FORMAT: "Field '${field}' has an invalid format.",
+                INVALID_COORDINATES: "Invalid coordinates (Latitude: ${lat}, Longitude: ${lng}).",
                 MIN_LENGTH_ERROR: "Minimum length is ${minLength}. (Actual: ${actual})",
                 MAX_LENGTH_ERROR: "Maximum length is ${maxLength}. (Actual: ${actual})",
                 ENUM_ERROR: "Must be one of the allowed values: ${values}",
@@ -918,27 +1079,27 @@ class InternationalizationManager {
                 // API response related messages
                 API_RESPONSE_ERROR: "API response error occurred. Status: ${status} ${statusText}",
                 API_LOGIC_ERROR: "API internal processing error occurred. Code: ${resultCode}",
-                APPLICATION_ERROR: "Application error occurred. ",
-                DB_ERROR: "Database error occurred. ",
-                NODATA_ERROR: "No data available. ",
-                HTTP_ERROR: "HTTP error occurred. ",
-                SERVICETIMEOUT_ERROR: "Service connection timeout. ",
+                APPLICATION_ERROR: "Application error occurred.",
+                DB_ERROR: "Database error occurred.",
+                NODATA_ERROR: "No data available.",
+                HTTP_ERROR: "HTTP error occurred.",
+                SERVICETIMEOUT_ERROR: "Service connection timeout.",
 
                 // Parameter related messages
-                INVALID_REQUEST_PARAMETER_ERROR: "Invalid request parameter. ",
-                NO_MANDATORY_REQUEST_PARAMETERS_ERROR: "Required request parameters are missing. ",
-                END_OF_SERVICE_ERROR: "The requested Open API service is not available or has been discontinued. ",
-                SERVICE_ACCESS_DENIED_ERROR: "Service access denied. ",
-                TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: "Service key is temporarily disabled. ",
-                LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: "Service request limit exceeded. ",
-                SERVICE_KEY_IS_NOT_REGISTERED_ERROR: "Unregistered service key. ",
-                DEADLINE_HAS_EXPIRED_ERROR: "Service key usage period has expired. ",
-                UNREGISTERED_IP_ERROR: "Unregistered IP address. ",
+                INVALID_REQUEST_PARAMETER_ERROR: "Invalid request parameter.",
+                NO_MANDATORY_REQUEST_PARAMETERS_ERROR: "Required request parameters are missing.",
+                END_OF_SERVICE_ERROR: "The requested Open API service is not available or has been discontinued.",
+                SERVICE_ACCESS_DENIED_ERROR: "Service access denied.",
+                TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR: "Service key is temporarily disabled.",
+                LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR: "Service request limit exceeded.",
+                SERVICE_KEY_IS_NOT_REGISTERED_ERROR: "Unregistered service key.",
+                DEADLINE_HAS_EXPIRED_ERROR: "Service key usage period has expired.",
+                UNREGISTERED_IP_ERROR: "Unregistered IP address.",
 
                 // Success messages
-                OPERATION_SUCCESS: "Operation completed successfully. ",
-                DATA_RETRIEVED: "Data retrieved successfully. ",
-                CACHE_HIT: "Data retrieved from cache. ",
+                OPERATION_SUCCESS: "Operation completed successfully.",
+                DATA_RETRIEVED: "Data retrieved successfully.",
+                CACHE_HIT: "Data retrieved from cache.",
                 CACHE_MISS: "New data retrieved."
             }
         };
@@ -1608,7 +1769,7 @@ class TourismApiClient {
         }
 
         // 공식 문서에 따라 '/areaBasedList1'을 '/areaBasedList2'로 수정
-        return this.makeRequest('/areaBasedList2', validation.data, { // <--- 수정된 부분
+        return this.makeRequest('/areaBasedList2', validation.data, {
             operation: 'areaBasedList',
             useCache: true,
             cacheTTL: 300000
@@ -1634,7 +1795,7 @@ class TourismApiClient {
         }
 
         // 공식 문서에 따라 '/detailCommon1'을 '/detailCommon2'로 수정
-        return this.makeRequest('/detailCommon2', validation.data, { // <--- 수정된 부분
+        return this.makeRequest('/detailCommon2', validation.data, {
             operation: 'detailCommon',
             useCache: true,
             cacheTTL: 600000
@@ -1662,7 +1823,7 @@ class TourismApiClient {
         }
 
         // 공식 문서에 따라 '/searchKeyword1'을 '/searchKeyword2'로 수정
-        return this.makeRequest('/searchKeyword2', validation.data, { // <--- 수정된 부분
+        return this.makeRequest('/searchKeyword2', validation.data, {
             operation: 'searchKeyword',
             useCache: true,
             cacheTTL: 180000
@@ -1696,7 +1857,7 @@ class TourismApiClient {
         }
 
         // 공식 문서에 따라 '/locationBasedList1'을 '/locationBasedList2'로 수정
-        return this.makeRequest('/locationBasedList2', validation.data, { // <--- 수정된 부분
+        return this.makeRequest('/locationBasedList2', validation.data, {
             operation: 'locationBasedList',
             useCache: true,
             cacheTTL: 300000
@@ -1879,9 +2040,13 @@ class TourismApiHandler {
         });
     }
 
+    // -- 수정된 routeRequest 함수 시작 --
     async routeRequest(request, context) {
         const apiClient = this.container.get('apiClient');
-        const operation = request.query.operation || request.path.substring(1) || 'areaBasedList';
+        
+        // 'operation' 매개변수를 request.query에서 명시적으로 가져옵니다.
+        // 이는 프론트엔드가 URL 쿼리 스트링으로 operation을 보내는 방식과 일치해야 합니다.
+        const operation = request.query.operation; 
 
         const supportedOperations = [
             'areaBasedList',
@@ -1889,18 +2054,21 @@ class TourismApiHandler {
             'searchKeyword',
             'locationBasedList',
             'batchRequest'
-            // 여기에 다른 API 오퍼레이션도 추가할 수 있습니다 (예: 'searchFestival', 'searchStay' 등)
+            // 여기에 다른 API 오퍼레이션도 추가할 수 있습니다.
         ];
 
-        if (!supportedOperations.includes(operation)) {
+        // operation이 없거나 지원되지 않는 값인 경우 ValidationError를 발생시킵니다.
+        // 이는 백엔드가 'api/tourism'과 같은 경로 자체를 operation으로 해석하는 것을 방지합니다.
+        if (!operation || !supportedOperations.includes(operation)) {
             throw new ValidationError(
-                `Unsupported operation: ${operation}. Supported: ${supportedOperations.join(', ')}`,
+                `Unsupported operation: ${operation || '[missing operation parameter]'}. Supported: ${supportedOperations.join(', ')}`,
                 'operation',
                 operation,
                 this.container.get('i18n')
             );
         }
 
+        // operation이 batchRequest인 경우
         if (operation === 'batchRequest') {
             if (!request.body || !Array.isArray(request.body.requests)) {
                 throw new ValidationError('Batch request requires requests array in body', 'body', request.body);
@@ -1908,8 +2076,9 @@ class TourismApiHandler {
             return apiClient.batchRequest(request.body.requests, request.body.options);
         }
 
+        // operation을 제외한 나머지 쿼리 파라미터를 API 클라이언트에 전달
         const params = { ...request.query };
-        delete params.operation;
+        delete params.operation; // params 객체에서 operation 속성 제거 (중복 방지)
 
         if (operation === 'locationBasedList' && params.mapX && params.mapY) {
             const result = await apiClient[operation](params, { identifier: request.ip });
@@ -1929,17 +2098,20 @@ class TourismApiHandler {
             return result;
         }
 
+        // 나머지 모든 지원되는 operation에 대해 해당 apiClient 메서드 호출
         return apiClient[operation](params, { identifier: request.ip });
     }
+    // -- 수정된 routeRequest 함수 끝 --
 
     formatResponse(statusCode, data, metadata = {}) {
         const response = {
             statusCode,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*', // CORS 허용
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                // CORS 헤더는 vercelHandler에서 이미 설정됩니다. 중복을 피하기 위해 여기서는 제거합니다.
+                // 'Access-Control-Allow-Origin': '*', 
+                // 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                // 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
                 'X-Request-ID': metadata.requestId,
                 'X-Response-Time': `${metadata.responseTime}ms`
             },
@@ -1976,44 +2148,88 @@ class TourismApiHandler {
 let globalHandler = null;
 
 /**
- * Vercel 서버리스 함수 핸들러 (최종 최적화 버전)
+ * Vercel 서버리스 함수 핸들러 (보안 강화 버전)
  */
-// vercelHandler 함수 (사용자님의 Vercel 백엔드 코드)
 async function vercelHandler(req, res) {
     try {
-        // CORS 헤더 설정
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-        // OPTIONS 요청 처리 (Preflight Request)
-        if (req.method === 'OPTIONS') {
-            return res.status(200).end();
-        }
-
         // 전역 핸들러 인스턴스 재사용
         if (!globalHandler) {
             globalHandler = new TourismApiHandler();
         }
 
-        // Vercel req/res를 AWS Lambda event/context 형식으로 변환
-        // req.url에서 쿼리 파라미터를 직접 파싱하여 operation을 정확히 추출합니다.
+        // 요청 객체 생성 (URL 파싱 포함)
         const url = new URL(req.url, `http://${req.headers.host}`); // 호스트는 URL 객체 생성을 위한 기본 URL로 사용
         const queryParams = Object.fromEntries(url.searchParams.entries()); // 쿼리 파라미터를 객체로 변환
 
-        // 'operation' 매개변수를 직접 추출 (프론트엔드가 'operation'으로 보내므로 이 부분만 확인)
-        const operationParam = queryParams.operation;
+        const request = {
+            method: req.method,
+            headers: req.headers || {},
+            query: queryParams, // 파싱된 쿼리 파라미터 사용
+            body: req.body,
+            url: req.url || '/'
+        };
 
+        // 1. Origin/Referer 검증 및 CORS 헤더 설정
+        const originValidation = ApiSecurityValidator.validateOrigin(request);
+        const corsHeaders = ApiSecurityValidator.generateCorsHeaders(originValidation);
+        
+        // CORS 헤더 즉시 설정
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+            res.setHeader(key, value);
+        });
+
+        // OPTIONS 요청 처리 (preflight)
+        if (req.method === 'OPTIONS') {
+            if (!originValidation.valid) {
+                // 허용되지 않은 Origin에 대한 Preflight 요청 차단
+                return res.status(403).json({
+                    success: false,
+                    error: {
+                        code: 'FORBIDDEN_ORIGIN',
+                        message: originValidation.message || 'Origin not allowed',
+                        timestamp: new Date().toISOString()
+                    }
+                });
+            }
+            return res.status(200).end();
+        }
+
+        // 2. API 키 검증 (GET/POST 요청만)
+        const apiKeyValidation = ApiSecurityValidator.validateApiKey(request);
+        if (!apiKeyValidation.valid) {
+            return res.status(401).json({
+                success: false,
+                error: {
+                    code: 'UNAUTHORIZED',
+                    message: apiKeyValidation.message,
+                    reason: apiKeyValidation.reason,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
+        // 3. Origin 검증 (API 키가 유효한 경우에만) - OPTIONS 요청 후 실제 요청에 대해
+        // Preflight에서 이미 처리되었으므로 여기서는 명시적인 차단은 하지 않고 정보만 확인
+        if (!originValidation.valid && originValidation.reason !== 'no_origin') {
+            // 이 경우, CORS 헤더가 이미 'null'로 설정되어 브라우저에서 차단될 것이므로,
+            // 추가적인 응답 차단 로직은 필요 없을 수 있습니다.
+            // 하지만 명시적인 오류 응답을 원한다면 여기에 추가할 수 있습니다.
+            // 예: throw new SecurityError(originValidation.message, 'FORBIDDEN_ORIGIN', { origin: originValidation.origin });
+        }
+
+
+        // Vercel req/res를 AWS Lambda event/context 형식으로 변환
         const event = {
             httpMethod: req.method,
-            // 'operation' 매개변수를 queryStringParameters에 명시적으로 설정
-            queryStringParameters: { ...queryParams, operation: operationParam },
-            body: req.body, // Vercel이 이미 파싱한 객체를 직접 사용
+            queryStringParameters: request.query, // 파싱된 쿼리 파라미터 사용
+            body: req.body,
             headers: req.headers || {},
             path: url.pathname || '/', // 경로만 사용 (쿼리 스트링 제외)
             requestContext: {
                 requestId: req.headers['x-vercel-id'] || SafeUtils.generateRequestId('vercel'),
-                identity: { sourceIp: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown' }
+                identity: {
+                    sourceIp: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown'
+                }
             }
         };
 
@@ -2022,22 +2238,30 @@ async function vercelHandler(req, res) {
             functionName: 'tourism-api',
             functionVersion: '1.0.0',
             memoryLimitInMB: '1024',
-            getRemainingTimeInMillis: () => 30000 // Vercel 기본 타임아웃 30초
+            getRemainingTimeInMillis: () => 30000
         };
 
-        const result = await globalHandler.handle(event, context); // 변경된 event 객체 전달
+        const result = await globalHandler.handle(event, context);
 
-        // 응답 처리
+        // 응답 헤더 설정
         const statusCode = result.statusCode || 200;
-        const headers = result.headers || {};
+        const responseHeaders = result.headers || {};
 
-        Object.entries(headers).forEach(([key, value]) => {
-            res.setHeader(key, value);
+        Object.entries(responseHeaders).forEach(([key, value]) => {
+            // CORS 헤더는 vercelHandler 시작 부분에서 이미 설정되었으므로 덮어쓰지 않습니다.
+            if (!res.getHeader(key) || !key.startsWith('Access-Control-')) {
+                 res.setHeader(key, value);
+            }
         });
 
         if (!res.getHeader('Content-Type')) {
             res.setHeader('Content-Type', 'application/json');
         }
+
+        // 보안 헤더 추가
+        res.setHeader('X-Request-ID', context.requestId);
+        res.setHeader('X-API-Version', '1.0.0');
+        res.setHeader('X-Rate-Limit', PRODUCTION_CONFIG.RATE_LIMIT_MAX);
 
         if (result.body) {
             return res.status(statusCode).send(result.body);
@@ -2047,9 +2271,23 @@ async function vercelHandler(req, res) {
 
     } catch (error) {
         console.error('Critical handler error:', error);
+        
+        // 오류 발생 시에도 CORS 헤더가 올바르게 설정되도록 보장
+        // (함수 시작 부분에서 이미 설정되었으므로 여기서는 추가 설정 대신,
+        // 오류 응답 본문에 필요한 정보만 제공)
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*'); // 오류 발생 시에도 CORS 헤더 유지
-        return res.status(500).json({ success: false, error: { code: 'CRITICAL_ERROR', message: 'A critical error occurred', timestamp: new Date().toISOString() } });
+        
+        // 이전에 설정된 Access-Control-Allow-Origin이 유효하지 않으면 브라우저는 이 응답을 받지 못할 수 있습니다.
+        // 하지만 서버 측 로그에는 오류가 기록됩니다.
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: error.code || 'CRITICAL_ERROR',
+                message: error.message || 'A critical error occurred',
+                timestamp: new Date().toISOString(),
+                requestId: error.requestId || SafeUtils.generateRequestId('err')
+            }
+        });
     }
 }
 
@@ -2071,6 +2309,7 @@ if (NODE_ENV && typeof module !== 'undefined' && module.exports) {
     module.exports.SafeUtils = SafeUtils;
     module.exports.GeoUtils = GeoUtils;
     module.exports.SecurityModule = SecurityModule;
+    module.exports.ApiSecurityValidator = ApiSecurityValidator;
     module.exports.AdvancedCache = AdvancedCache;
     module.exports.RateLimiter = RateLimiter;
     module.exports.ServiceContainer = ServiceContainer;
@@ -2089,6 +2328,7 @@ if (BROWSER_ENV) {
         SafeUtils,
         GeoUtils,
         SecurityModule,
+        ApiSecurityValidator,
         AdvancedCache,
         RateLimiter,
         ServiceContainer,
@@ -2102,10 +2342,11 @@ if (BROWSER_ENV) {
 export default vercelHandler;
 
 // 초기화 로그
-console.log('Tourism API Ultimate Production Version loaded successfully');
+console.log('Tourism API Ultimate Production Version with Security loaded successfully');
 console.log('Security status:', securityLibraryStatus);
 console.log('Environment:', NODE_ENV ? 'Node.js' : 'Browser');
 console.log('API Base URL:', PRODUCTION_CONFIG.API_BASE_URL);
+console.log('Allowed domains:', PRODUCTION_CONFIG.ALLOWED_DOMAINS.join(', '));
 console.log('Service start time:', new Date(SERVICE_START_TIME).toISOString());
 
-/** * 배포 전 최종 체크리스트: * ✅ HTTPS 엔드포인트 확정 (PRODUCTION_CONFIG.API_BASE_URL) * ✅ 완전한 국제화 메시지 구현 * ✅ 스키마 기반 입력값 검증 구현 * ✅ Vercel req.body 직접 처리 * ✅ 보안 모듈 완전 구현 * ✅ 에러 처리 시스템 완성 * ✅ 캐시 및 Rate Limiter 최적화 * ✅ 서비스 컨테이너 완성 * ✅ CORS 헤더 완전 구현 * * 필수 환경 설정: * 1. package.json에 "isomorphic-dompurify" 추가 * 2. Vercel 환경변수에 TOURISM_API_KEY 설정 * 3. Node.js 18+ 런타임 사용 */
+/** * 배포 전 최종 체크리스트: * ✅ HTTPS 엔드포인트 확정 (PRODUCTION_CONFIG.API_BASE_URL) * ✅ 완전한 국제화 메시지 구현 * ✅ 스키마 기반 입력값 검증 구현 * ✅ Vercel req.body 직접 처리 * ✅ 보안 모듈 완전 구현 * ✅ API 키 검증 시스템 구현 * ✅ CORS 도메인 제한 구현 * ✅ 에러 처리 시스템 완성 * ✅ 캐시 및 Rate Limiter 최적화 * ✅ 서비스 컨테이너 완성 * ✅ 동적 CORS 헤더 완전 구현 * * 필수 환경 설정: * 1. package.json에 "isomorphic-dompurify" 추가 * 2. Vercel 환경변수에 TOURISM_API_KEY 설정 * 3. Vercel 환경변수에 ALLOWED_API_KEYS 설정 (예: key1,key2,key3) * 4. PRODUCTION_CONFIG.ALLOWED_DOMAINS에 실제 도메인 추가 * 5. Node.js 18+ 런타임 사용 * * 클라이언트 사용법: * 1. 요청 헤더에 X-API-Key 포함 * 2. 허용된 도메인에서만 요청 * 3. API 키는 환경변수 ALLOWED_API_KEYS에 등록된 것만 사용 */
