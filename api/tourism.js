@@ -18,29 +18,28 @@ const PRODUCTION_CONFIG = {
     REQUEST_TIMEOUT: 30000, // 30초
     MAX_BATCH_SIZE: 10,
     MAX_INPUT_LENGTH: 1000,
-    // 새로운 보안 설정
+    // 새로운 보안 설정: 요청을 허용할 도메인 목록을 정의합니다.
+    // 여기에 사용자님의 실제 블로그 도메인들을 추가하세요.
+    // 프로토콜(http://, https://)과 포트(:8080)는 제외하고 순수 도메인 문자열만 입력합니다.
     ALLOWED_DOMAINS: [
+        'localhost',    // 로컬 개발 환경에서 테스트 시 필요
         'localhost:3000',
         'localhost:8080',
         'localhost:5173',
-        'healingk.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
-        'www.healingk.com', // 실제 블로그 도메인으로 변경
-        'tistory100.com', // Vercel 배포 도메인
-        'www.tistory100.com', // Netlify 배포 도메인
-        'jejugil.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
-        'www.jejugil.com', // 실제 블로그 도메인으로 변경
-        'healing-mart.com', // Vercel 배포 도메인
-        'www.healing-mart.com', // Netlify 배포 도메인
-   'ggeori.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
-        'www.ggeori.com', // 실제 블로그 도메인으로 변경
-    
-
-
-        
-        // 여기에 Canvas 앱이 실행되는 도메인도 추가할 수 있습니다.
-        // 예: 'https://canvas-preview-domain.com', 'https://*.scf.usercontent.goog' 등
-        // 현재 Canvas에서 테스트 중이라면 개발자 도구의 Origin 값을 확인하여 추가하는 것이 좋습니다.
-        'https://healingk.vercel.app' // 사용자님의 Vercel 앱 도메인 추가
+        'healingk.com',
+        'www.healingk.com',
+        'tistory100.com',
+        'www.tistory100.com',
+        'jejugil.com',
+        'www.jejugil.com',
+        'healing-mart.com',
+        'www.healing-mart.com',
+        'ggeori.com',
+        'www.ggeori.com',
+        '*.vercel.app', // Vercel에 배포된 프론트엔드/테스터 앱을 위한 와일드카드 (예: healingk.vercel.app)
+        // Canvas 앱이 실행되는 실제 도메인도 필요할 수 있습니다.
+        // 브라우저 개발자 도구의 Network 탭에서 요청 헤더의 'Origin' 값을 확인하여 추가해주세요.
+        // 예: '*.scf.usercontent.goog'
     ],
     API_KEY_HEADER: 'X-API-Key' // 클라이언트가 사용할 API 키 헤더명
 };
@@ -277,7 +276,7 @@ class ApiSecurityValidator {
             return { 
                 valid: true, 
                 reason: 'no_origin',
-                allowedOrigin: '*'
+                allowedOrigin: '*' // 모든 도메인 허용
             };
         }
 
@@ -1291,14 +1290,6 @@ class AdvancedCache {
         };
     }
 
-    getEstimatedMemoryUsage() {
-        let totalSize = 0;
-        for (const [key, item] of this.cache.entries()) {
-            totalSize += this.getObjectSize(key) + this.getObjectSize(item);
-        }
-        return totalSize;
-    }
-
     getObjectSize(obj) {
         if (obj === null || obj === undefined) return 0;
 
@@ -1947,7 +1938,7 @@ class TourismApiHandler {
 
         this.container.register('rateLimiter', () => new RateLimiter({
             windowSize: PRODUCTION_CONFIG.RATE_LIMIT_WINDOW,
-            maxRequests: PRODUCTION_CONFIG.RATE_LIMIT_MAX
+            maxRequests: PRODUCTION_CONFIG.MAX_RATE_LIMIT
         }));
 
         this.container.register('apiClient', (container) => new TourismApiClient({
@@ -2048,7 +2039,6 @@ class TourismApiHandler {
         });
     }
 
-    // -- 수정된 routeRequest 함수 시작 --
     async routeRequest(request, context) {
         const apiClient = this.container.get('apiClient');
         
@@ -2109,7 +2099,6 @@ class TourismApiHandler {
         // 나머지 모든 지원되는 operation에 대해 해당 apiClient 메서드 호출
         return apiClient[operation](params, { identifier: request.ip });
     }
-    // -- 수정된 routeRequest 함수 끝 --
 
     formatResponse(statusCode, data, metadata = {}) {
         const response = {
@@ -2256,8 +2245,11 @@ async function vercelHandler(req, res) {
         const responseHeaders = result.headers || {};
 
         Object.entries(responseHeaders).forEach(([key, value]) => {
-            // CORS 헤더는 vercelHandler 시작 부분에서 이미 설정되었으므로 덮어쓰지 않습니다.
-            if (!res.getHeader(key) || !key.startsWith('Access-Control-')) {
+            // CORS 헤더는 vercelHandler 시작 부분에서 이미 설정됩니다. 중복을 피하기 위해 여기서는 제거합니다.
+            // 'Access-Control-Allow-Origin': '*', 
+            // 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            // 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            if (!res.getHeader(key) || !key.startsWith('Access-Control-')) { // CORS 헤더는 여기서 덮어쓰지 않도록 조건 추가
                  res.setHeader(key, value);
             }
         });
