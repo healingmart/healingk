@@ -23,12 +23,20 @@ const PRODUCTION_CONFIG = {
         'localhost:3000',
         'localhost:8080',
         'localhost:5173',
-        'your-blog-domain.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
-        'www.your-blog-domain.com', // 실제 블로그 도메인으로 변경
-        'your-blog.vercel.app', // Vercel 배포 도메인
-        'your-blog.netlify.app', // Netlify 배포 도메인
-        '*.vercel.app', // Vercel 와일드카드
-        '*.netlify.app', // Netlify 와일드카드
+        'healingk.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
+        'www.healingk.com', // 실제 블로그 도메인으로 변경
+        'tistory100.com', // Vercel 배포 도메인
+        'www.tistory100.com', // Netlify 배포 도메인
+        'jejugil.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
+        'www.jejugil.com', // 실제 블로그 도메인으로 변경
+        'healing-mart.com', // Vercel 배포 도메인
+        'www.healing-mart.com', // Netlify 배포 도메인
+   'ggeori.com', // 실제 블로그 도메인으로 변경 (프론트엔드 배포 도메인)
+        'www.ggeori.com', // 실제 블로그 도메인으로 변경
+    
+
+
+        
         // 여기에 Canvas 앱이 실행되는 도메인도 추가할 수 있습니다.
         // 예: 'https://canvas-preview-domain.com', 'https://*.scf.usercontent.goog' 등
         // 현재 Canvas에서 테스트 중이라면 개발자 도구의 Origin 값을 확인하여 추가하는 것이 좋습니다.
