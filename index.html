@@ -726,14 +726,16 @@
                 let url;
                 let requestOptions;
                 
-                // --- 여기에 사용자님의 실제 API 키를 입력하세요! ---
-                // Vercel 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
-                // 예시: const API_KEY = 'YOUR_SECRET_API_KEY_12345'; 
-                const API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키로 변경해주세요!
+                // --- 여기에 사용자님의 실제 API 키를 입력하세요! (문자열 값으로) ---
+                // Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
+                // 예시: const API_KEY = 'YOUR_SECRET_API_KEY_12345ABCDEF'; // 실제 API 키 예시
+                const API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
                 // ----------------------------------------------------
 
-                if (API_KEY === 'DFGHJKLMNBVCXZ-api-dkfk2jak' || API_KEY.trim() === '') {
-                    throw new Error("API 키를 'YOUR_ACTUAL_API_KEY_HERE' 대신 실제 키로 변경해주세요.");
+                // API_KEY가 기본 플레이스홀더 문자열이거나 비어있는 경우 오류를 발생시킵니다.
+                // 이제는 'YOUR_ACTUAL_API_KEY_HERE'라는 특정 문자열 대신, 그냥 비어있는지를 확인합니다.
+                if (API_KEY.trim() === '') {
+                    throw new Error("API 키가 비어 있습니다. 실제 API 키 문자열을 입력해주세요.");
                 }
                 
                 if (operation === 'batchRequest') {
@@ -993,9 +995,9 @@
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
                     const originalText = document.querySelector('.copy-btn').textContent;
-                    document.querySelector('.copy-btn').textContent = '복사됨!';
+                    document.querySelector('.copy-btn').textContent = originalText;
                     setTimeout(() => {
-                        document.querySelector('.copy-btn').textContent = originalText;
+                        document.querySelector('.copy-btn').textContent = '복사됨!'; // 다시 복사됨! 표시
                     }, 2000);
                 } catch (err2) {
                     console.error('Failed to copy text using execCommand:', err2);
