@@ -217,8 +217,8 @@
                     console.log('Raw API result (areaBasedList):', result); // Raw API result 출력
 
                     // 백엔드 응답 구조에 따라 데이터를 파싱
-                    if (result.success && result.data && result.data.items && result.data.items.item) {
-                        // API 응답의 items.item이 배열이 아닐 수 있으므로 배열인지 확인하고 처리
+                    // items.item이 유효한 배열 또는 단일 객체인 경우 처리
+                    if (result.success && result.data && result.data.items && result.data.items.item !== undefined && result.data.items.item !== null) {
                         const items = Array.isArray(result.data.items.item) ? result.data.items.item : [result.data.items.item];
 
                         gemsData = items.map((item, index) => ({
@@ -236,8 +236,8 @@
                         gemsData.sort((a, b) => a.title.localeCompare(b.title));
 
                         console.log(`Successfully fetched and sorted ${gemsData.length} items from backend.`);
-                    } else if (result.success && result.data && result.data.items && result.data.items.item === undefined && result.data.totalCount === 0) {
-                        // 백엔드에서 성공을 반환했지만, totalCount가 0이고 item 필드가 없는 경우 (정상적인 결과 없음)
+                    } else if (result.success && result.data && result.data.totalCount === 0) {
+                        // 백엔드에서 성공을 반환했지만, totalCount가 0인 경우 (정상적인 결과 없음)
                         gemsData = [];
                         console.log('Backend returned success with 0 items. Displaying empty grid.');
                     }
@@ -493,7 +493,11 @@
                             modalHomepage.classList.add('hidden');
                         }
 
-                    } else {
+                    } else if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item === undefined && detailResult.data.totalCount === 0) {
+                         modalDescription.textContent = '상세 정보가 없습니다.';
+                         modalHomepage.classList.add('hidden');
+                    }
+                    else {
                         modalDescription.textContent = '상세 정보를 불러오지 못했습니다. 데이터가 없거나 형식이 다릅니다.';
                         modalHomepage.classList.add('hidden');
                     }
