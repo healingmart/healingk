@@ -69,6 +69,21 @@
         .gallery-image {
             transition: opacity 0.5s ease-in-out;
         }
+        /* 추가: 상세 정보 로딩 스피너 스타일 */
+        .detail-loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4B423D;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="overflow-x-hidden">
@@ -128,8 +143,15 @@
                     <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
                     <button id="close-modal" class="text-gray-500 hover:text-gray-800 transition">&times;</button>
                 </div>
-                <p id="modal-address" class="text-sm text-gray-500 mb-4"></p>
-                <p id="modal-description" class="text-gray-700 leading-relaxed"></p>
+                <p id="modal-address" class="text-sm text-gray-500 mb-2"></p>
+                <div id="modal-detail-loading" class="text-gray-500 text-center py-4 flex items-center justify-center hidden">
+                    <div class="detail-loading-spinner"></div> 상세 정보 로딩 중...
+                </div>
+                <p id="modal-description" class="text-gray-700 leading-relaxed mb-4"></p>
+                <a id="modal-homepage" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium hidden">
+                    <svg class="inline-block w-4 h-4 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    공식 홈페이지 방문하기
+                </a>
             </div>
         </div>
     </div>
@@ -144,7 +166,7 @@
             // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! ---
             // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
             // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
-            const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
+            const CLIENT_API_KEY = 'YOUR_ACTUAL_CLIENT_API_KEY_HERE'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
             // ----------------------------------------------------
 
             const gemsGrid = document.getElementById('gems-grid');
@@ -157,6 +179,9 @@
             const modalGallery = document.getElementById('modal-gallery');
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
+            const modalDetailLoading = document.getElementById('modal-detail-loading');
+            const modalHomepage = document.getElementById('modal-homepage');
+
 
             let currentImages = [];
             let currentImageIndex = 0;
@@ -167,14 +192,13 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 클라이언트 API 키가 비어있는 경우 오류 발생 (이제 플레이스홀더 문자열 검사 안함)
-                    if (CLIENT_API_KEY.trim() === '') {
+                    // 클라이언트 API 키가 비어있는 경우 오류 발생
+                    if (CLIENT_API_KEY.trim() === '' || CLIENT_API_KEY === 'YOUR_ACTUAL_CLIENT_API_KEY_HERE') {
                         throw new Error("클라이언트 API 키가 비어 있습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
                     }
 
                     // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
-                    // numOfRows 값을 100으로 설정 (원하는 개수로 테스트 가능)
-                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=100&pageNo=1&MobileOS=ETC&MobileApp=AppTest`; 
+                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=100&pageNo=1&MobileOS=ETC&MobileApp=AppTest&listYN=Y&arrange=A`; // arrange=A 추가하여 가나다순 정렬 요청
                     console.log('Fetching from:', apiUrl); // 실제 fetch URL 콘솔 출력
 
                     const response = await fetch(apiUrl, {
@@ -200,11 +224,17 @@
                             id: item.contentid || index + 1,
                             title: item.title || '제목 없음',
                             address: item.addr1 || '주소 없음',
-                            description: '이곳은 한국관광공사 API를 통해 가져온 정보입니다. 상세 정보는 콘텐츠 ID를 통해 추가 조회 가능합니다.',
-                            images: item.firstimage ? [item.firstimage.replace('http://', 'https://'), item.firstimage2 ? item.firstimage2.replace('http://', 'https://') : item.firstimage.replace('http://', 'https://')] : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Image+${index+1}`],
+                            contentTypeId: item.contenttypeid, // 상세 정보 조회를 위해 contenttypeid 추가
+                            // description은 detailCommon에서 가져오므로 초기에는 빈 값
+                            description: '',
+                            images: [], // detailCommon에서 가져올 예정
                             thumbnail: item.firstimage ? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
                         }));
-                        console.log(`Successfully fetched ${gemsData.length} items from backend.`);
+                        
+                        // 가져온 데이터를 title 기준으로 가나다순 정렬
+                        gemsData.sort((a, b) => a.title.localeCompare(b.title));
+
+                        console.log(`Successfully fetched and sorted ${gemsData.length} items from backend.`);
                     } else {
                         // 성공 응답이지만 데이터가 없거나 예상과 다른 경우
                         gemsData = [];
@@ -354,7 +384,7 @@
                     return;
                 }
                 gemsGrid.innerHTML = gemsData.map(gem => `
-                    <div class="animated card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer" data-id="${gem.id}">
+                    <div class="animated card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer" data-id="${gem.id}" data-contenttypeid="${gem.contentTypeId}">
                         <div class="relative h-48">
                             <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CCCCCC/000000?text=Image+Load+Error';">
                             <div class="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -378,18 +408,79 @@
                 setTimeout(() => img.classList.add('opacity-100'), 50);
             }
 
-            function openModal(gem) {
+            // openModal 함수 수정
+            async function openModal(gem) {
                 modalTitle.textContent = gem.title;
                 modalAddress.textContent = gem.address;
-                modalDescription.textContent = gem.description;
-                currentImages = gem.images;
-                currentImageIndex = 0;
-                showImage(currentImageIndex);
-                
+                modalDescription.textContent = '상세 정보 로딩 중...'; // 로딩 메시지 표시
+                modalHomepage.classList.add('hidden'); // 홈페이지 링크 숨김
+                modalDetailLoading.classList.remove('hidden'); // 로딩 스피너 표시
                 modal.classList.remove('opacity-0', 'pointer-events-none');
                 modal.querySelector('.modal-content').classList.remove('scale-95');
                 document.body.style.overflow = 'hidden';
+
+                currentImages = gem.images || []; // 기본 이미지로 초기화
+                showImage(currentImageIndex);
+
+                try {
+                    // detailCommon API 호출
+                    const detailApiUrl = `${BASE_BACKEND_URL}?operation=detailCommon&contentId=${gem.id}&contentTypeId=${gem.contentTypeId}&defaultYN=Y&firstImageYN=Y&areacodeYN=Y&catcodeYN=Y&addrinfoYN=Y&mapinfoYN=Y&overviewYN=Y`;
+                    
+                    const response = await fetch(detailApiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-API-Key': CLIENT_API_KEY
+                        }
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error ? errorData.error.message : `상세 정보 HTTP 오류! 상태: ${response.status}`);
+                    }
+                    const detailResult = await response.json();
+
+                    if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item) {
+                        const detailItem = Array.isArray(detailResult.data.items.item) ? detailResult.data.items.item[0] : detailResult.data.items.item;
+                        
+                        modalDescription.innerHTML = detailItem.overview || '상세 정보가 없습니다.';
+                        modalAddress.textContent = detailItem.addr1 || gem.address || '주소 정보 없음'; // 주소 업데이트
+
+                        // 이미지 갤러리 업데이트
+                        const newImages = [];
+                        if (detailItem.firstimage) newImages.push(detailItem.firstimage.replace('http://', 'https://'));
+                        if (detailItem.firstimage2) newImages.push(detailItem.firstimage2.replace('http://', 'https://'));
+                        // 추가 이미지(imginfo)가 있다면 여기에 추가 로직 필요
+                        currentImages = newImages.length > 0 ? newImages : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Detail+Image`];
+                        currentImageIndex = 0;
+                        showImage(currentImageIndex);
+
+                        // 홈페이지 링크 업데이트
+                        if (detailItem.homepage) {
+                            // DOMPurify 등을 사용하여 HTML 새니타이징 필요 (백엔드에서 처리)
+                            const homepageUrl = detailItem.homepage.replace(/<[^>]*>/g, ''); // HTML 태그 제거
+                            modalHomepage.href = homepageUrl;
+                            modalHomepage.classList.remove('hidden');
+                        } else {
+                            modalHomepage.classList.add('hidden');
+                        }
+
+                    } else {
+                        modalDescription.textContent = '상세 정보를 불러오지 못했습니다. 데이터가 없거나 형식이 다릅니다.';
+                        modalHomepage.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error fetching detail data:', error);
+                    modalDescription.textContent = `상세 정보 로드 실패: ${error.message}`;
+                    modalHomepage.classList.add('hidden');
+                    // 이미지도 대체 이미지로 설정
+                    currentImages = [`https://placehold.co/800x600/CCCCCC/000000?text=Error+Loading+Detail`];
+                    currentImageIndex = 0;
+                    showImage(currentImageIndex);
+                } finally {
+                    modalDetailLoading.classList.add('hidden'); // 로딩 스피너 숨김
+                }
             }
+
 
             function closeModal() {
                 modal.classList.add('opacity-0');
@@ -404,9 +495,13 @@
                 const card = e.target.closest('.card');
                 if (card) {
                     const gemId = parseInt(card.dataset.id);
+                    const contentTypeId = parseInt(card.dataset.contenttypeid); // contenttypeid 가져오기
                     const gem = gemsData.find(g => g.id === gemId);
                     if (gem) {
-                        openModal(gem);
+                        openModal({ // openModal에 contenttypeid도 전달
+                            ...gem,
+                            contentTypeId: contentTypeId // contenttypeid 추가
+                        });
                     }
                 }
             });
