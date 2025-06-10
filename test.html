@@ -236,14 +236,19 @@
                         gemsData.sort((a, b) => a.title.localeCompare(b.title));
 
                         console.log(`Successfully fetched and sorted ${gemsData.length} items from backend.`);
-                    } else {
-                        // 성공 응답이지만 데이터가 없거나 예상과 다른 경우
+                    } else if (result.success && result.data && result.data.items && result.data.items.item === undefined && result.data.totalCount === 0) {
+                        // 백엔드에서 성공을 반환했지만, totalCount가 0이고 item 필드가 없는 경우 (정상적인 결과 없음)
                         gemsData = [];
-                        console.warn('Backend returned success but no items found or unexpected data structure in areaBasedList.');
+                        console.log('Backend returned success with 0 items. Displaying empty grid.');
+                    }
+                    else {
+                        // 성공 응답이지만 데이터가 없거나 예상과 다른 경우
+                        gemsData = []; // 데이터 초기화
+                        console.warn('Backend returned success but no valid items found or unexpected data structure in areaBasedList.');
                         if (result.error) {
                              throw new Error(result.error.message || '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
                         } else {
-                            throw new Error('데이터 구조가 예상과 다릅니다.');
+                            throw new Error('데이터 구조가 예상과 다릅니다. (result.success=true 이지만 items.item 없음)');
                         }
                     }
                 } catch (error) {
