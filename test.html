@@ -143,8 +143,8 @@
 
             // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! ---
             // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
- 
-            const CLIENT_API_KEY = ''; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
+            // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
+            const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
             // ----------------------------------------------------
 
             const gemsGrid = document.getElementById('gems-grid');
@@ -167,9 +167,9 @@
                 gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
 
                 try {
-                    // 클라이언트 API 키 유효성 검사 (비어있거나 기본 플레이스홀더인 경우 오류 발생)
-                    if (CLIENT_API_KEY.trim() === '' || CLIENT_API_KEY === 'DFGHJKLMNBVCXZ-api-dkfk2jak') {
-                        throw new Error("클라이언트 API 키가 설정되지 않았습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
+                    // 클라이언트 API 키 유효성 검사 (비어있는 경우만 에러 발생, 이제 플레이스홀더 문자열 검사 안함)
+                    if (CLIENT_API_KEY.trim() === '') {
+                        throw new Error("클라이언트 API 키가 비어 있습니다. 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
                     }
 
                     // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
