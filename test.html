@@ -8,40 +8,36 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Serene Earth Tones -->
-    <!-- Application Structure Plan: 이 SPA는 사용자가 '발견의 여정'을 떠나는 듯한 서사적 흐름으로 설계되었습니다. 1) 매력적인 '히어로' 섹션에서 사용자의 호기심을 자극하고, 2) '소개' 섹션에서 콘텐츠의 신뢰성("한국관광공사 공식 선정")을 강조하며, 3) 핵심인 '보석 탐험' 섹션에서 인터랙티브한 카드 그리드를 통해 10개의 명소를 시각적으로 제시합니다. 사용자가 카드를 클릭하면, 페이지 이동 없이 즉시 '상세 정보 모달'이 나타나 몰입감을 유지하며 깊이 있는 정보를 제공합니다. 이 구조는 정적인 목록을 넘어 동적이고 몰입도 높은 "극강의 체험"을 제공하기 위해 선택되었으며, 사용자의 탐험 욕구를 자연스럽게 유도합니다. -->
-    <!-- Visualization & Content Choices: 보고서의 핵심은 '숨겨진 보석'이라는 개념을 시각적이고 상호작용적으로 전달하는 것입니다. 1) 정보 전달(Inform): 각 명소의 기본 정보는 카드와 모달 내 텍스트 블록으로 제공됩니다. 2) 비교/탐색(Compare/Explore): 10개의 명소는 HTML/Tailwind로 구현된 반응형 그리드 레이아웃의 '카드' 형태로 제시되어 사용자가 한눈에 비교하고 선택할 수 있습니다. 3) 깊이 있는 탐구(Deep Dive): 각 카드를 클릭하면 JS로 제어되는 상세 정보 모달이 활성화됩니다. 이 모달은 '인터랙티브 이미지 갤러리'(JS 캐러셀)와 상세 설명을 포함하여 "극강의 체험" 요구사항을 충족합니다. 모든 시각 요소와 애니메이션은 CSS 전환 및 Intersection Observer API를 활용한 JS로 구현하여 SVG/Mermaid 없이도 풍부한 시각적 경험을 제공합니다. 이는 성능과 상호작용성에 최적화된 선택입니다. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background-color: #F8F5F2;
             color: #4B423D;
         }
-        .hero-bg {
+       .hero-bg {
             background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://placehold.co/1920x1080/a7c4a0/4B423D?text=Explore+Korea');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
         }
-        .modal {
+       .modal {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
-        .modal-content {
+       .modal-content {
             transition: transform 0.3s ease-in-out;
         }
-        .card {
+       .card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .card:hover {
+       .card:hover {
             transform: translateY(-10px);
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
-        .fade-in {
+       .fade-in {
             animation: fadeIn 1s ease-in-out forwards;
             opacity: 0;
         }
-        .slide-in-up {
+       .slide-in-up {
             animation: slideInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
             opacity: 0;
         }
@@ -59,18 +55,18 @@
                 transform: translateY(0);
             }
         }
-        .animated {
+       .animated {
             opacity: 0;
         }
-        .is-visible {
+       .is-visible {
             opacity: 1;
             transform: translateY(0);
         }
-        .gallery-image {
+       .gallery-image {
             transition: opacity 0.5s ease-in-out;
         }
         /* 추가: 상세 정보 로딩 스피너 스타일 */
-        .detail-loading-spinner {
+       .detail-loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
@@ -158,7 +154,7 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            let gemsData = []; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
+            let gemsData =; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
             // IMPORTANT: 아래 BASE_BACKEND_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
             const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; 
             console.log('Attempting to fetch data from:', BASE_BACKEND_URL); // API 호출 URL 콘솔 출력
@@ -183,7 +179,7 @@
             const modalHomepage = document.getElementById('modal-homepage');
 
 
-            let currentImages = [];
+            let currentImages =;
             let currentImageIndex = 0;
 
             // 백엔드에서 관광지 데이터를 가져오는 함수
@@ -210,7 +206,7 @@
 
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({})); // 오류 응답 본문을 파싱 시도
-                        const errorMessage = errorData.error ? errorData.error.message : `HTTP error! status: ${response.status}`;
+                        const errorMessage = errorData.error? errorData.error.message : `HTTP error! status: ${response.status}`;
                         throw new Error(errorMessage);
                     }
                     const result = await response.json();
@@ -219,21 +215,25 @@
                     // 백엔드 응답 구조에 따라 데이터를 파싱
                     // result.data.items.item이 배열 또는 단일 객체, 또는 null/undefined일 수 있음을 처리
                     if (result.success && result.data && result.data.items) {
-                        let rawItems = [];
+                        let rawItems =;
                         // item이 존재하고 null이 아닌 경우에만 처리
-                        if (result.data.items.item !== undefined && result.data.items.item !== null) {
-                            rawItems = Array.isArray(result.data.items.item) ? result.data.items.item : [result.data.items.item];
+                        if (result.data.items.item!== undefined && result.data.items.item!== null) {
+                            rawItems = Array.isArray(result.data.items.item)? result.data.items.item : [result.data.items.item];
                         }
                         
                         if (rawItems.length > 0) {
                             gemsData = rawItems.map((item, index) => ({
-                                id: item.contentid || index + 1,
-                                title: item.title || '제목 없음',
-                                address: item.addr1 || '주소 없음',
-                                contentTypeId: parseInt(item.contenttypeid) || undefined, // contenttypeid를 파싱하고 NaN이면 undefined로 설정
+                                id: item.contentid |
+| index + 1,
+                                title: item.title |
+| '제목 없음',
+                                address: item.addr1 |
+| '주소 없음',
+                                contentTypeId: parseInt(item.contenttypeid) |
+| undefined, // contenttypeid를 파싱하고 NaN이면 undefined로 설정
                                 description: '', // detailCommon에서 가져오므로 초기에는 빈 값
-                                images: [], // detailCommon에서 가져올 예정
-                                thumbnail: item.firstimage ? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
+                                images:, // detailCommon에서 가져올 예정
+                                thumbnail: item.firstimage? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
                             }));
                             
                             // 가져온 데이터를 title 기준으로 가나다순 정렬
@@ -242,26 +242,27 @@
                             console.log(`Successfully processed and sorted ${gemsData.length} items from backend.`);
                         } else if (result.data.totalCount === 0) {
                             // totalCount가 0이고 실제 item이 없는 경우 (정상)
-                            gemsData = [];
+                            gemsData =;
                             console.log('Backend returned success with 0 items. Displaying empty grid.');
                         } else {
                             // totalCount > 0 이지만 item이 없거나 유효하지 않은 경우 (API 응답 불일치)
-                            gemsData = []; // 데이터 초기화
+                            gemsData =; // 데이터 초기화
                             console.warn('Backend returned success with totalCount > 0 but no valid items.item found. Displaying empty grid.');
                             // 이 경우는 오류를 throw하지 않고 경고만 남기고 진행.
                         }
 
                     } else if (result.success && result.data && result.data.totalCount === 0) {
                         // totalCount만 있고 items 객체가 없는 경우 (정상)
-                        gemsData = [];
+                        gemsData =;
                         console.log('Backend returned success with 0 items (no "items" object). Displaying empty grid.');
                     }
                     else {
                         // 예상치 못한 최상위 데이터 구조 (result.success가 false이거나 data/items가 없는 경우)
-                        gemsData = []; // 데이터 초기화
+                        gemsData =; // 데이터 초기화
                         console.warn('Backend returned an unexpected top-level data structure in areaBasedList.');
                         if (result.error) {
-                             throw new Error(result.error.message || '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
+                             throw new Error(result.error.message |
+| '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
                         } else {
                             throw new Error('API 응답 구조가 예상과 다릅니다.');
                         }
@@ -287,11 +288,7 @@
                                 title: '강릉 사근진 해변',
                                 address: '강원 강릉시 해안로604번길 16',
                                 description: '경포대의 화려함 뒤에 숨겨진 조용하고 평화로운 해변. 끝없이 펼쳐진 백사장과 맑은 동해 바다를 오롯이 즐길 수 있는, 아는 사람만 아는 힐링 스팟입니다.',
-                                images: [
-                                    'https://placehold.co/800x600/a0c4e0/FFFFFF?text=Sageunjin+Beach+1',
-                                    'https://placehold.co/800x600/82b0d9/FFFFFF?text=Sageunjin+Beach+2',
-                                    'https://placehold.co/800x600/699fc7/FFFFFF?text=Sageunjin+Beach+3'
-                                ],
+                                images:,
                                 thumbnail: 'https://placehold.co/600x400/a0c4e0/FFFFFF?text=사근진+해변'
                             },
                             {
@@ -347,11 +344,7 @@
                                 title: '제주 사려니숲길',
                                 address: '제주 제주시 조천읍 교래리',
                                 description: '하늘을 향해 뻗은 삼나무가 빽빽하게 들어선 신비로운 숲길. 피톤치드 가득한 공기를 마시며 걷다 보면 몸과 마음이 정화되는 치유의 시간을 가질 수 있습니다.',
-                                images: [
-                                    'https://placehold.co/800x600/8aa08d/FFFFFF?text=Saryeoni+Forest+1',
-                                    'https://placehold.co/800x600/6a8d6d/FFFFFF?text=Saryeoni+Forest+2',
-                                    'https://placehold.co/800x600/527a55/FFFFFF?text=Saryeoni+Forest+3'
-                                ],
+                                images:,
                                 thumbnail: 'https://placehold.co/600x400/8aa08d/FFFFFF?text=사려니숲길'
                             },
                             {
@@ -371,11 +364,7 @@
                                 title: '단양 이끼터널',
                                 address: '충북 단양군 적성면 애곡리',
                                 description: '오래된 철길 터널의 벽면을 초록빛 이끼가 가득 메운 신비로운 공간. 연인들의 사랑의 언약 장소로도 유명하며, 독특한 분위기 속에서 특별한 사진을 남길 수 있습니다.',
-                                images: [
-                                    'https://placehold.co/800x600/7a997e/FFFFFF?text=Moss+Tunnel+1',
-                                    'https://placehold.co/800x600/638567/FFFFFF?text=Moss+Tunnel+2',
-                                    'https://placehold.co/800x600/4e7052/FFFFFF?text=Moss+Tunnel+3'
-                                ],
+                                images:,
                                 thumbnail: 'https://placehold.co/600x400/7a997e/FFFFFF?text=이끼터널'
                             },
                             {
@@ -440,7 +429,7 @@
                 modal.querySelector('.modal-content').classList.remove('scale-95');
                 document.body.style.overflow = 'hidden';
 
-                currentImages = gem.images || []; // 기본 이미지로 초기화 (현재 gem.images는 비어 있음)
+                currentImages = gem.images ||; // 기본 이미지로 초기화 (현재 gem.images는 비어 있음)
                 showImage(currentImageIndex);
 
                 try {
@@ -457,7 +446,7 @@
                         overviewYN: 'Y'
                     };
                     // contentTypeId가 유효한 경우에만 파라미터에 추가
-                    if (gem.contentTypeId !== undefined && !isNaN(gem.contentTypeId)) {
+                    if (gem.contentTypeId!== undefined &&!isNaN(gem.contentTypeId)) {
                         detailParams.contentTypeId = gem.contentTypeId;
                     }
                     
@@ -473,24 +462,26 @@
 
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error ? errorData.error.message : `상세 정보 HTTP 오류! 상태: ${response.status}`);
+                        throw new Error(errorData.error? errorData.error.message : `상세 정보 HTTP 오류! 상태: ${response.status}`);
                     }
                     const detailResult = await response.json();
                     console.log('Raw API result (detailCommon):', detailResult); // detailCommon Raw API result 출력
 
                     if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item) {
-                        const detailItem = Array.isArray(detailResult.data.items.item) ? detailResult.data.items.item[0] : detailResult.data.items.item;
+                        const detailItem = Array.isArray(detailResult.data.items.item)? detailResult.data.items.item : detailResult.data.items.item;
                         
                         // HTML 태그 제거 및 상세 설명 표시
-                        modalDescription.innerHTML = detailItem.overview ? detailItem.overview.replace(/<[^>]*>/g, '') : '상세 정보가 없습니다.';
-                        modalAddress.textContent = detailItem.addr1 || gem.address || '주소 정보 없음'; // 주소 업데이트
+                        modalDescription.innerHTML = detailItem.overview? detailItem.overview.replace(/<[^>]*>/g, '') : '상세 정보가 없습니다.';
+                        modalAddress.textContent = detailItem.addr1 |
+| gem.address |
+| '주소 정보 없음'; // 주소 업데이트
 
                         // 이미지 갤러리 업데이트
-                        const newImages = [];
+                        const newImages =;
                         if (detailItem.firstimage) newImages.push(detailItem.firstimage.replace('http://', 'https://'));
                         if (detailItem.firstimage2) newImages.push(detailItem.firstimage2.replace('http://', 'https://'));
                         // imginfo (여러 이미지)가 있다면 추가 로직 필요
-                        currentImages = newImages.length > 0 ? newImages : [`https://placehold.co/800x600/CCCCCC/000000?text=No+Detail+Image`];
+                        currentImages = newImages.length > 0? newImages :;
                         currentImageIndex = 0;
                         showImage(currentImageIndex);
 
@@ -521,7 +512,7 @@
                     modalDescription.textContent = `상세 정보 로드 실패: ${error.message}. 백엔드 로그를 확인해주세요.`;
                     modalHomepage.classList.add('hidden');
                     // 이미지도 대체 이미지로 설정
-                    currentImages = [`https://placehold.co/800x600/CCCCCC/000000?text=Error+Loading+Detail`];
+                    currentImages =;
                     currentImageIndex = 0;
                     showImage(currentImageIndex);
                 } finally {
@@ -574,7 +565,7 @@
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             entry.target.classList.add(
-                                entry.target.matches('.card, #intro p, #intro h2, #gems-section h2') ? 'slide-in-up' : 'fade-in'
+                                entry.target.matches('.card, #intro p, #intro h2, #gems-section h2')? 'slide-in-up' : 'fade-in'
                             );
                             entry.target.classList.add('is-visible');
                             observer.unobserve(entry.target);
