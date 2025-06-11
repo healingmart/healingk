@@ -242,27 +242,46 @@
             font-size: 0.8em;
             font-weight: bold;
             text-transform: uppercase;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
         .status-ongoing {
-            background: #4caf50;
+            background: rgba(76, 175, 80, 0.9);
             color: white;
             animation: pulse 2s infinite;
         }
 
         .status-upcoming {
-            background: #ff9800;
+            background: rgba(255, 152, 0, 0.9);
             color: white;
         }
 
         .status-ended {
-            background: #757575;
+            background: rgba(117, 117, 117, 0.9);
+            color: white;
+        }
+
+        .status-unknown {
+            background: rgba(158, 158, 158, 0.9);
             color: white;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        .festival-date-info {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            backdrop-filter: blur(10px);
         }
 
         .festival-content {
@@ -382,6 +401,16 @@
             transform: rotate(90deg);
         }
 
+        .search-tips {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -427,14 +456,23 @@
         <div class="api-key-setup">
             <h3>🔑 API 키 설정</h3>
             <div class="api-key-input">
-                <input type="password" id="apiKeyInput" placeholder="API 키를 입력하세요">
+                <input type="password" id="apiKeyInput" placeholder="공공데이터포털 API 키를 입력하세요" 
+                       title="https://www.data.go.kr 에서 발급받은 API 키를 입력해주세요">
                 <button onclick="festivalTracker.setApiKey()">설정</button>
                 <button onclick="festivalTracker.useDemoMode()">데모 모드</button>
             </div>
             <div class="demo-mode">
                 <strong>💡 현재 상태:</strong> <span id="apiStatus">API 키 대기중</span>
-                <br><small>✅ arrange 파라미터 문제 완전 해결! (A-E만 사용)</small>
+                <br><small>✅ 스마트 정렬: 진행중 → 예정 → 종료 순으로 표시</small>
             </div>
+        </div>
+
+        <!-- 검색 도움말 -->
+        <div class="search-tips">
+            <strong>🔍 검색 팁:</strong> 
+            축제명, 지역명, 키워드로 검색 가능 | 
+            실시간 필터링 지원 | 
+            상태별 정렬 자동 적용
         </div>
 
         <div class="controls">
@@ -464,7 +502,8 @@
             
             <div class="control-group">
                 <label>🔍 축제 검색</label>
-                <input type="text" id="searchInput" placeholder="축제명 또는 키워드 입력">
+                <input type="text" id="searchInput" placeholder="축제명, 지역, 키워드 입력" 
+                       title="실시간 검색됩니다">
             </div>
             
             <div class="control-group">
@@ -480,6 +519,7 @@
             <div class="control-group">
                 <label>📊 정렬 방식</label>
                 <select id="arrangeSelect">
+                    <option value="smart">스마트 정렬</option>
                     <option value="A">제목순</option>
                     <option value="B">조회순</option>
                     <option value="C">수정일순</option>
@@ -551,6 +591,17 @@
             async init() {
                 this.setupEventListeners();
                 this.updateApiStatus('API 키를 입력해주세요');
+                
+                // 로컬 스토리지에서 API 키 복원 시도
+                const savedApiKey = localStorage.getItem('festivalApiKey');
+                if (savedApiKey) {
+                    document.getElementById('apiKeyInput').value = savedApiKey;
+                    this.apiKey = savedApiKey;
+                    this.updateApiStatus('저장된 API 키 발견 - 자동 로드 중...');
+                    setTimeout(() => {
+                        this.loadFestivals();
+                    }, 1000);
+                }
             }
 
             // arrange 값 검증 및 안전한 값 반환
@@ -575,6 +626,10 @@
                 
                 this.apiKey = apiKey;
                 this.demoMode = false;
+                
+                // API 키 저장
+                localStorage.setItem('festivalApiKey', apiKey);
+                
                 this.updateApiStatus('API 키 설정됨 - 테스트 중...');
                 await this.loadFestivals();
             }
@@ -587,15 +642,22 @@
             }
 
             loadDemoData() {
-                // 데모용 샘플 데이터
+                // 데모용 샘플 데이터 (현재 날짜 기준으로 상태 다양화)
+                const today = new Date();
+                const getRandomDate = (daysOffset) => {
+                    const date = new Date(today);
+                    date.setDate(date.getDate() + daysOffset);
+                    return date.toISOString().slice(0, 10).replace(/-/g, '');
+                };
+
                 this.festivals = [
                     {
                         contentid: '1',
                         title: '🌸 2024 여의도 봄꽃축제',
                         addr1: '서울특별시 영등포구 여의도동',
                         tel: '02-761-4330',
-                        eventstartdate: '20240410',
-                        eventenddate: '20240420',
+                        eventstartdate: getRandomDate(-5),
+                        eventenddate: getRandomDate(5),
                         firstimage: 'https://via.placeholder.com/400x200/ff9a9e/ffffff?text=Spring+Festival',
                         overview: '한강변 여의도공원에서 열리는 대표적인 봄꽃축제입니다. 벚꽃길 산책, 음악공연, 푸드트럭 등 다양한 즐길거리가 준비되어 있습니다.',
                         mapx: '126.9312',
@@ -606,8 +668,8 @@
                         title: '🎪 부산 국제영화제 2024',
                         addr1: '부산광역시 해운대구 해운대해변로',
                         tel: '051-747-3010',
-                        eventstartdate: '20241001',
-                        eventenddate: '20241010',
+                        eventstartdate: getRandomDate(10),
+                        eventenddate: getRandomDate(20),
                         firstimage: 'https://via.placeholder.com/400x200/667eea/ffffff?text=Film+Festival',
                         overview: '아시아 최대 규모의 국제영화제로, 세계 각국의 우수한 영화작품을 만날 수 있는 문화축제입니다.',
                         mapx: '129.1601',
@@ -618,8 +680,8 @@
                         title: '🍂 경주 가을단풍축제',
                         addr1: '경상북도 경주시 불국로',
                         tel: '054-779-8563',
-                        eventstartdate: '20241020',
-                        eventenddate: '20241105',
+                        eventstartdate: getRandomDate(-20),
+                        eventenddate: getRandomDate(-10),
                         firstimage: 'https://via.placeholder.com/400x200/ff8c42/ffffff?text=Autumn+Festival',
                         overview: '천년고도 경주의 아름다운 가을 단풍과 함께하는 역사문화축제입니다.',
                         mapx: '129.3317',
@@ -630,8 +692,8 @@
                         title: '❄️ 평창 겨울축제 2024',
                         addr1: '강원특별자치도 평창군 대관령면',
                         tel: '033-330-2771',
-                        eventstartdate: '20241215',
-                        eventenddate: '20250228',
+                        eventstartdate: getRandomDate(15),
+                        eventenddate: getRandomDate(45),
                         firstimage: 'https://via.placeholder.com/400x200/64b5f6/ffffff?text=Winter+Festival',
                         overview: '눈과 얼음을 주제로 한 겨울축제로, 스키, 눈썰매, 얼음조각 전시 등을 즐길 수 있습니다.',
                         mapx: '128.7184',
@@ -642,8 +704,8 @@
                         title: '🌺 제주 유채꽃축제',
                         addr1: '제주특별자치도 서귀포시 표선면',
                         tel: '064-760-4988',
-                        eventstartdate: '20240320',
-                        eventenddate: '20240405',
+                        eventstartdate: getRandomDate(3),
+                        eventenddate: getRandomDate(8),
                         firstimage: 'https://via.placeholder.com/400x200/ffeb3b/ffffff?text=Canola+Festival',
                         overview: '제주도의 노란 유채꽃 바다를 배경으로 펼쳐지는 봄꽃축제입니다.',
                         mapx: '126.8374',
@@ -654,8 +716,8 @@
                         title: '🎵 대구 치킨맥주축제',
                         addr1: '대구광역시 중구 두류공원로',
                         tel: '053-803-5671',
-                        eventstartdate: '20240701',
-                        eventenddate: '20240707',
+                        eventstartdate: getRandomDate(0),
+                        eventenddate: getRandomDate(7),
                         firstimage: 'https://via.placeholder.com/400x200/ffc107/ffffff?text=Chicken+Beer',
                         overview: '대구의 대표 먹거리인 치킨과 맥주를 주제로 한 여름축제입니다.',
                         mapx: '128.5667',
@@ -666,8 +728,8 @@
                         title: '🎨 안동 국제탈춤페스티벌',
                         addr1: '경상북도 안동시 축제장길',
                         tel: '054-841-6397',
-                        eventstartdate: '20240925',
-                        eventenddate: '20241005',
+                        eventstartdate: getRandomDate(-3),
+                        eventenddate: getRandomDate(3),
                         firstimage: 'https://via.placeholder.com/400x200/9c27b0/ffffff?text=Mask+Dance',
                         overview: '세계 각국의 전통 가면춤을 한자리에서 볼 수 있는 국제적인 문화축제입니다.',
                         mapx: '128.7294',
@@ -678,8 +740,8 @@
                         title: '🌊 포항 국제불빛축제',
                         addr1: '경상북도 포항시 북구 해안로',
                         tel: '054-270-2114',
-                        eventstartdate: '20240615',
-                        eventenddate: '20240625',
+                        eventstartdate: getRandomDate(7),
+                        eventenddate: getRandomDate(14),
                         firstimage: 'https://via.placeholder.com/400x200/00bcd4/ffffff?text=Light+Festival',
                         overview: '포항의 아름다운 바다를 배경으로 펼쳐지는 빛과 음악의 향연입니다.',
                         mapx: '129.3656',
@@ -693,13 +755,22 @@
             }
 
             setupEventListeners() {
-                // 검색 입력 실시간 필터링
+                // 검색 입력 실시간 필터링 (디바운싱 적용)
+                let searchTimeout;
                 document.getElementById('searchInput').addEventListener('input', () => {
-                    this.filterFestivals();
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.filterFestivals();
+                    }, 300);
                 });
 
                 // 상태 필터 변경
                 document.getElementById('statusFilter').addEventListener('change', () => {
+                    this.filterFestivals();
+                });
+
+                // 정렬 방식 변경
+                document.getElementById('arrangeSelect').addEventListener('change', () => {
                     this.filterFestivals();
                 });
 
@@ -742,7 +813,7 @@
                 try {
                     // 안전한 arrange 값 사용
                     const requestedArrange = document.getElementById('arrangeSelect').value || 'A';
-                    const safeArrange = this.getSafeArrangeValue(requestedArrange);
+                    const safeArrange = requestedArrange === 'smart' ? 'A' : this.getSafeArrangeValue(requestedArrange);
                     
                     const url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=${safeArrange}`;
                     
@@ -760,6 +831,7 @@
 
                     if (!response.ok) {
                         if (response.status === 401) {
+                            localStorage.removeItem('festivalApiKey'); // 잘못된 키 삭제
                             throw new Error('API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.');
                         } else if (response.status === 400) {
                             console.error('❌ 400 에러 상세:', data);
@@ -809,25 +881,43 @@
                 const areaCode = document.getElementById('areaSelect').value;
                 const keyword = document.getElementById('searchInput').value.trim();
                 const requestedArrange = document.getElementById('arrangeSelect').value || 'A';
-                const safeArrange = this.getSafeArrangeValue(requestedArrange);
+                const safeArrange = requestedArrange === 'smart' ? 'A' : this.getSafeArrangeValue(requestedArrange);
                 
                 this.showLoading(true);
                 
                 try {
-                    let url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=${safeArrange}`;
-                    
-                    if (areaCode) {
-                        url += `&areaCode=${areaCode}`;
-                    }
+                    let url;
+                    let searchParams = new URLSearchParams({
+                        contentTypeId: '15',
+                        numOfRows: '100',
+                        arrange: safeArrange
+                    });
 
+                    // 키워드 검색이 있으면 searchKeyword 사용, 없으면 areaBasedList 사용
                     if (keyword) {
-                        url = `${this.apiUrl}?operation=searchKeyword&keyword=${encodeURIComponent(keyword)}&contentTypeId=15&numOfRows=100&arrange=${safeArrange}`;
-                        if (areaCode) {
-                            url += `&areaCode=${areaCode}`;
-                        }
+                        url = `${this.apiUrl}?operation=searchKeyword`;
+                        searchParams.append('keyword', keyword);
+                    } else {
+                        url = `${this.apiUrl}?operation=areaBasedList`;
                     }
 
-                    console.log('🔍 검색 요청:', { url, params: { areaCode, keyword, arrange: safeArrange } });
+                    // 지역 코드 추가
+                    if (areaCode) {
+                        searchParams.append('areaCode', areaCode);
+                    }
+
+                    // 최종 URL 구성
+                    url += '&' + searchParams.toString();
+
+                    console.log('🔍 검색 요청:', { 
+                        url, 
+                        params: { 
+                            operation: keyword ? 'searchKeyword' : 'areaBasedList',
+                            keyword, 
+                            areaCode, 
+                            arrange: safeArrange 
+                        } 
+                    });
 
                     const response = await fetch(url, {
                         headers: {
@@ -841,6 +931,9 @@
                         if (response.status === 400) {
                             console.error('❌ 검색 400 에러:', data);
                             throw new Error(`검색 요청 오류: ${data.error?.message || '검색 조건을 확인해주세요'}`);
+                        } else if (response.status === 401) {
+                            localStorage.removeItem('festivalApiKey');
+                            throw new Error('API 키가 만료되었거나 유효하지 않습니다.');
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -871,7 +964,6 @@
                 }
             }
 
-            // 나머지 메서드들은 이전과 동일...
             processFilterDates() {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -988,6 +1080,32 @@
                 }
             }
 
+            // 스마트 정렬 함수
+            smartSort(festivals) {
+                const statusPriority = {
+                    'ongoing': 1,
+                    'upcoming': 2,
+                    'ended': 3,
+                    'unknown': 4
+                };
+
+                return festivals.sort((a, b) => {
+                    // 1. 상태별 우선순위
+                    const statusDiff = statusPriority[a.status] - statusPriority[b.status];
+                    if (statusDiff !== 0) return statusDiff;
+
+                    // 2. 같은 상태 내에서는 날짜순
+                    if (a.status === 'ongoing' || a.status === 'upcoming') {
+                        if (a.parsedDates.startDate && b.parsedDates.startDate) {
+                            return a.parsedDates.startDate - b.parsedDates.startDate;
+                        }
+                    }
+
+                    // 3. 날짜 정보가 없으면 제목순
+                    return a.title.localeCompare(b.title, 'ko');
+                });
+            }
+
             filterFestivals() {
                 const searchTerm = document.getElementById('searchInput').value.toLowerCase();
                 const statusFilter = document.getElementById('statusFilter').value;
@@ -995,12 +1113,19 @@
                 this.filteredFestivals = this.festivals.filter(festival => {
                     const matchesSearch = !searchTerm || 
                         festival.title.toLowerCase().includes(searchTerm) ||
-                        (festival.addr1 && festival.addr1.toLowerCase().includes(searchTerm));
+                        (festival.addr1 && festival.addr1.toLowerCase().includes(searchTerm)) ||
+                        (festival.overview && festival.overview.toLowerCase().includes(searchTerm));
 
                     const matchesStatus = !statusFilter || festival.status === statusFilter;
 
                     return matchesSearch && matchesStatus;
                 });
+
+                // 정렬 적용
+                const arrangeValue = document.getElementById('arrangeSelect').value;
+                if (arrangeValue === 'smart') {
+                    this.filteredFestivals = this.smartSort([...this.filteredFestivals]);
+                }
 
                 this.displayFestivals();
             }
@@ -1013,6 +1138,7 @@
                         <div class="no-results">
                             <h3>🎭 축제를 찾을 수 없습니다</h3>
                             <p>다른 조건으로 검색해보세요!</p>
+                            ${this.festivals.length > 0 ? '<p><small>필터 조건을 변경하거나 전체 검색을 시도해보세요.</small></p>' : ''}
                         </div>
                     `;
                     return;
@@ -1022,15 +1148,17 @@
                     const statusClass = `status-${festival.status}`;
                     const statusText = this.getStatusText(festival.status);
                     const dateText = this.getDateText(festival.parsedDates);
+                    const daysInfo = this.getDaysInfo(festival.parsedDates);
                     
                     return `
                         <div class="festival-card" onclick="festivalTracker.showFestivalDetail('${festival.contentid}')">
                             <div class="festival-image">
                                 ${festival.firstimage ? 
-                                    `<img src="${festival.firstimage}" alt="${festival.title}" onerror="this.style.display='none'">` : 
+                                    `<img src="${festival.firstimage}" alt="${festival.title}" onerror="this.style.display='none'; this.parentNode.innerHTML='🎪';">` : 
                                     '🎪'
                                 }
                                 <div class="festival-status ${statusClass}">${statusText}</div>
+                                <div class="festival-date-info">${dateText}</div>
                             </div>
                             <div class="festival-content">
                                 <h3 class="festival-title">${festival.title}</h3>
@@ -1039,10 +1167,12 @@
                                         <span class="info-icon">📍</span>
                                         <span>${festival.addr1 || '주소 정보 없음'}</span>
                                     </div>
-                                    <div class="info-item">
-                                        <span class="info-icon">📅</span>
-                                        <span>${dateText}</span>
-                                    </div>
+                                    ${daysInfo ? `
+                                        <div class="info-item">
+                                            <span class="info-icon">⏰</span>
+                                            <span>${daysInfo}</span>
+                                        </div>
+                                    ` : ''}
                                     ${festival.tel ? `
                                         <div class="info-item">
                                             <span class="info-icon">📞</span>
@@ -1090,6 +1220,30 @@
                 return '날짜 정보 없음';
             }
 
+            getDaysInfo(parsedDates) {
+                if (!parsedDates.hasValidDates) return null;
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (parsedDates.startDate) {
+                    const daysDiff = Math.ceil((parsedDates.startDate - today) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysDiff > 0) {
+                        return `${daysDiff}일 후 시작`;
+                    } else if (daysDiff === 0) {
+                        return `오늘 시작!`;
+                    } else if (parsedDates.endDate) {
+                        const endDiff = Math.ceil((parsedDates.endDate - today) / (1000 * 60 * 60 * 24));
+                        if (endDiff >= 0) {
+                            return `${Math.abs(daysDiff)}일째 진행`;
+                        }
+                    }
+                }
+                
+                return null;
+            }
+
             updateStats() {
                 const total = this.festivals.length;
                 const ongoing = this.festivals.filter(f => f.status === 'ongoing').length;
@@ -1131,6 +1285,8 @@
 
                 const parsedDates = festival.parsedDates || this.parseFestivalDates(festival);
                 const dateText = this.getDateText(parsedDates);
+                const statusText = this.getStatusText(festival.status);
+                const daysInfo = this.getDaysInfo(parsedDates);
 
                 body.innerHTML = `
                     ${festival.firstimage ? `
@@ -1139,12 +1295,15 @@
                                  style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                         </div>
                     ` : ''}
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="color: #333; margin-bottom: 10px;">📅 일정</h4>
-                        <p style="color: #666; line-height: 1.6;">${dateText}</p>
-                    </div>
 
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px;">
+                            <span style="background: ${festival.status === 'ongoing' ? '#4caf50' : festival.status === 'upcoming' ? '#ff9800' : '#757575'}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; font-weight: bold;">${statusText}</span>
+                            ${daysInfo ? `<span style="color: #666; font-size: 0.9em;">${daysInfo}</span>` : ''}
+                        </div>
+                        <div style="color: #333; font-weight: bold;">📅 ${dateText}</div>
+                    </div>
+                    
                     ${festival.addr1 ? `
                         <div style="margin-bottom: 20px;">
                             <h4 style="color: #333; margin-bottom: 10px;">📍 위치</h4>
@@ -1167,13 +1326,20 @@
                     ` : ''}
 
                     ${festival.mapx && festival.mapy ? `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #333; margin-bottom: 10px;">🗺️ 지도</h4>
-                            <a href="https://map.kakao.com/link/map/${encodeURIComponent(festival.title)},${festival.mapy},${festival.mapx}" 
-                               target="_blank" 
-                               style="display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 25px; transition: all 0.3s ease;">
-                                카카오맵에서 보기
-                            </a>
+                        <div style="margin-bottom: 20px; text-align: center;">
+                            <h4 style="color: #333; margin-bottom: 10px;">🗺️ 위치 보기</h4>
+                            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                <a href="https://map.kakao.com/link/map/${encodeURIComponent(festival.title)},${festival.mapy},${festival.mapx}" 
+                                   target="_blank" 
+                                   style="display: inline-block; padding: 10px 20px; background: #FEE500; color: #000; text-decoration: none; border-radius: 25px; transition: all 0.3s ease; font-weight: bold;">
+                                    카카오맵
+                                </a>
+                                <a href="https://map.naver.com/v5/search/${encodeURIComponent(festival.title)}" 
+                                   target="_blank" 
+                                   style="display: inline-block; padding: 10px 20px; background: #03C75A; color: white; text-decoration: none; border-radius: 25px; transition: all 0.3s ease; font-weight: bold;">
+                                    네이버지도
+                                </a>
+                            </div>
                         </div>
                     ` : ''}
                 `;
