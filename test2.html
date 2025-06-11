@@ -677,6 +677,63 @@
         .data-source a:hover {
             text-decoration: underline;
         }
+
+        /* 알림 스타일 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: -300px;
+            background-color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            transition: right 0.5s;
+            max-width: 300px;
+        }
+        
+        .notification.info {
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .notification.error {
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .notification.info i {
+            color: var(--primary-color);
+        }
+        
+        .notification.error i {
+            color: var(--accent-color);
+        }
+
+        /* 디버깅 패널 */
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            max-width: 300px;
+            max-height: 200px;
+            overflow: auto;
+            z-index: 9999;
+            display: none;
+        }
+
+        .show-debug {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -837,8 +894,11 @@
         <i class="fas fa-arrow-up"></i>
     </div>
     
-    <!-- 카카오맵 API -->
-    <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_MAP_API_KEY&libraries=services"></script>
+    <!-- 디버깅 패널 -->
+    <div id="debug-panel" class="debug-panel"></div>
+    
+    <!-- 카카오맵 API - 실제 키로 교체하세요 -->
+    <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=KAKAO_MAP_API_KEY_HERE&libraries=services"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -855,12 +915,19 @@
             let galleryImages = [];
             let currentImageIndex = 0;
             
-            // API 엔드포인트 설정
-            const API_ENDPOINT = 'https://healingk.vercel.app/api/tourism';
+            // 디버깅 모드 설정
+            const DEBUG_MODE = true;
             
-            // 요청 헤더 설정 (X-API-Key는 서버에서 자동으로 처리)
+            // API 엔드포인트 설정 - 상대 경로로 수정
+            const API_ENDPOINT = '/api/tourism';
+            
+            // API 키 설정 - 실제 API 키로 교체하세요
+            const API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak';
+            
+            // 요청 헤더 설정
             const headers = {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
             };
 
             // 초기 데이터 로드
@@ -872,23 +939,76 @@
             // 이벤트 리스너 설정
             setupEventListeners();
 
-            // CORS 설정된 백엔드에 연결하는 함수
+            // 디버깅 로그 함수
+            function logDebug(message, data = null) {
+                if (!DEBUG_MODE) return;
+                
+                const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+                let logMessage = `[${timestamp}] ${message}`;
+                
+                if (data) {
+                    if (typeof data === 'object') {
+                        try {
+                            logMessage += `: ${JSON.stringify(data)}`;
+                        } catch (error) {
+                            logMessage += `: [객체를 직렬화할 수 없음]`;
+                        }
+                    } else {
+                        logMessage += `: ${data}`;
+                    }
+                }
+                
+                console.log(logMessage);
+                
+                // 디버깅 패널에 추가
+                const debugPanel = document.getElementById('debug-panel');
+                if (debugPanel) {
+                    const logEntry = document.createElement('div');
+                    logEntry.textContent = logMessage;
+                    debugPanel.appendChild(logEntry);
+                    
+                    // 스크롤을 최하단으로 이동
+                    debugPanel.scrollTop = debugPanel.scrollHeight;
+                    
+                    // 패널 표시
+                    debugPanel.classList.add('show-debug');
+                }
+            }
+
+            // 개선된 API 요청 함수
             async function fetchAPI(operation, params = {}) {
                 try {
+                    logDebug(`API 요청: ${operation}`, params);
+                    
                     const response = await fetch(`${API_ENDPOINT}?operation=${operation}`, {
                         method: 'POST',
                         headers: headers,
-                        body: JSON.stringify(params)
+                        body: JSON.stringify(params),
+                        credentials: 'same-origin'
                     });
                     
+                    // HTTP 상태 코드 확인
                     if (!response.ok) {
-                        throw new Error('API 요청에 실패했습니다.');
+                        const errorText = await response.text();
+                        logDebug(`API 요청 실패: ${response.status} ${response.statusText}`, errorText);
+                        
+                        // 401 에러인 경우 인증 문제 알림
+                        if (response.status === 401) {
+                            showNotification('API 인증에 실패했습니다. API 키를 확인하세요.', 'error');
+                        } else {
+                            showNotification(`API 요청 실패: ${response.status} ${response.statusText}`, 'error');
+                        }
+                        
+                        return null;
                     }
                     
                     const data = await response.json();
+                    logDebug(`API 응답: ${operation}`, { status: response.status, success: data.success });
+                    
                     return data;
                 } catch (error) {
-                    console.error('API 요청 오류:', error);
+                    logDebug(`API 요청 오류: ${error.message}`);
+                    showNotification(`API 요청 오류: ${error.message}`, 'error');
                     return null;
                 }
             }
@@ -935,12 +1055,17 @@
                         option.textContent = region.name;
                         regionSelect.appendChild(option);
                     });
+                    
+                    logDebug('지역 코드 로드 완료', { regionCount: regions.length });
+                } else {
+                    logDebug('지역 코드 로드 실패');
+                    showNotification('지역 정보를 불러오는데 실패했습니다.', 'error');
                 }
             }
             
             // 시군구 코드 로드
             async function loadSigunguCodes(areaCode) {
-                if (regionData[areaCode].sigungu.length > 0) {
+                if (regionData[areaCode] && regionData[areaCode].sigungu.length > 0) {
                     populateSigunguSelect(areaCode);
                     return;
                 }
@@ -955,6 +1080,11 @@
                     const sigunguList = result.data.items.item;
                     regionData[areaCode].sigungu = sigunguList;
                     populateSigunguSelect(areaCode);
+                    
+                    logDebug('시군구 코드 로드 완료', { areaCode, sigunguCount: sigunguList.length });
+                } else {
+                    logDebug('시군구 코드 로드 실패', { areaCode });
+                    showNotification('시군구 정보를 불러오는데 실패했습니다.', 'error');
                 }
             }
             
@@ -976,6 +1106,8 @@
             // 축제 데이터 로드
             async function loadFestivalData(startDate, endDate = '', areaCode = '', sigunguCode = '', keyword = '') {
                 showLoading();
+                
+                logDebug('축제 데이터 로드 시작', { startDate, endDate, areaCode, sigunguCode, keyword });
                 
                 const params = {
                     numOfRows: 100,
@@ -1013,9 +1145,12 @@
                             keywordItems = [keywordItems];
                         }
                         
+                        logDebug('키워드 검색 결과', { count: keywordItems.length });
+                        
                         const contentIds = keywordItems.map(item => item.contentid);
                         await loadFestivalDetails(contentIds);
                     } else {
+                        logDebug('키워드 검색 결과 없음', { keyword });
                         allFestivals = [];
                         updateFestivalDisplay();
                     }
@@ -1033,9 +1168,12 @@
                         items = [items];
                     }
                     
+                    logDebug('축제 검색 결과', { count: items.length });
+                    
                     const contentIds = items.map(item => item.contentid);
                     await loadFestivalDetails(contentIds);
                 } else {
+                    logDebug('축제 검색 결과 없음');
                     allFestivals = [];
                     updateFestivalDisplay();
                 }
@@ -1048,6 +1186,8 @@
                     updateFestivalDisplay();
                     return;
                 }
+                
+                logDebug('축제 상세 정보 로드 시작', { contentIdCount: contentIds.length });
                 
                 const batchRequests = contentIds.map(contentId => {
                     return {
@@ -1076,27 +1216,45 @@
                     };
                 });
                 
-                // 배치 요청 수행
-                const detailResults = await fetchAPI('batchRequest', {
-                    requests: batchRequests
-                });
+                // 배치 요청을 더 작은 크기로 나누어 수행
+                const batchSize = 10;
+                const detailResults = [];
+                const introResults = [];
                 
-                const introResults = await fetchAPI('batchRequest', {
-                    requests: introRequests
-                });
+                for (let i = 0; i < batchRequests.length; i += batchSize) {
+                    const detailBatch = batchRequests.slice(i, i + batchSize);
+                    const introBatch = introRequests.slice(i, i + batchSize);
+                    
+                    const [detailBatchResult, introBatchResult] = await Promise.all([
+                        fetchAPI('batchRequest', { requests: detailBatch }),
+                        fetchAPI('batchRequest', { requests: introBatch })
+                    ]);
+                    
+                    if (detailBatchResult && Array.isArray(detailBatchResult)) {
+                        detailResults.push(...detailBatchResult);
+                    }
+                    
+                    if (introBatchResult && Array.isArray(introBatchResult)) {
+                        introResults.push(...introBatchResult);
+                    }
+                }
                 
-                if (detailResults && introResults) {
+                if (detailResults.length > 0 && introResults.length > 0) {
                     const festivals = [];
                     
                     detailResults.forEach((detailResult, index) => {
-                        if (detailResult.success && detailResult.data.items && detailResult.data.items.item) {
+                        if (detailResult && detailResult.success && detailResult.data && 
+                            detailResult.data.items && detailResult.data.items.item) {
+                            
                             const detailItem = Array.isArray(detailResult.data.items.item) 
                                 ? detailResult.data.items.item[0] 
                                 : detailResult.data.items.item;
                             
                             let introItem = null;
                             if (introResults[index] && introResults[index].success && 
-                                introResults[index].data.items && introResults[index].data.items.item) {
+                                introResults[index].data && introResults[index].data.items && 
+                                introResults[index].data.items.item) {
+                                
                                 introItem = Array.isArray(introResults[index].data.items.item) 
                                     ? introResults[index].data.items.item[0] 
                                     : introResults[index].data.items.item;
@@ -1115,6 +1273,12 @@
                     });
                     
                     allFestivals = festivals;
+                    logDebug('축제 상세 정보 로드 완료', { festivalCount: festivals.length });
+                    
+                    updateFestivalDisplay();
+                } else {
+                    logDebug('축제 상세 정보 로드 실패');
+                    allFestivals = [];
                     updateFestivalDisplay();
                 }
             }
@@ -1170,6 +1334,14 @@
                 }
                 
                 hideLoading();
+                
+                logDebug('축제 목록 업데이트', { 
+                    total: allFestivals.length,
+                    filtered: filteredFestivals.length,
+                    currentStatus,
+                    currentPage,
+                    totalPages
+                });
             }
             
             // 상태별 축제 필터링
@@ -1343,143 +1515,165 @@
             async function openFestivalDetail(contentId) {
                 showLoading();
                 
-                // 공통 정보, 소개 정보, 이미지 정보 요청
-                const [detailResult, imageResult] = await Promise.all([
-                    fetchAPI('detailCommon', {
+                logDebug('축제 상세 정보 모달 열기', { contentId });
+                
+                try {
+                    // 공통 정보, 소개 정보, 이미지 정보 요청
+                    const [detailResult, imageResult] = await Promise.all([
+                        fetchAPI('detailCommon', {
+                            contentId: contentId,
+                            contentTypeId: 15,
+                            defaultYN: 'Y',
+                            firstImageYN: 'Y',
+                            areacodeYN: 'Y',
+                            catcodeYN: 'Y',
+                            addrinfoYN: 'Y',
+                            mapinfoYN: 'Y',
+                            overviewYN: 'Y'
+                        }),
+                        fetchAPI('detailImage2', {
+                            contentId: contentId,
+                            imageYN: 'Y'
+                        })
+                    ]);
+                    
+                    const introResult = await fetchAPI('detailIntro2', {
                         contentId: contentId,
-                        contentTypeId: 15,
-                        defaultYN: 'Y',
-                        firstImageYN: 'Y',
-                        areacodeYN: 'Y',
-                        catcodeYN: 'Y',
-                        addrinfoYN: 'Y',
-                        mapinfoYN: 'Y',
-                        overviewYN: 'Y'
-                    }),
-                    fetchAPI('detailImage2', {
+                        contentTypeId: 15
+                    });
+                    
+                    const infoResult = await fetchAPI('detailInfo2', {
                         contentId: contentId,
-                        imageYN: 'Y'
-                    })
-                ]);
-                
-                const introResult = await fetchAPI('detailIntro2', {
-                    contentId: contentId,
-                    contentTypeId: 15
-                });
-                
-                const infoResult = await fetchAPI('detailInfo2', {
-                    contentId: contentId,
-                    contentTypeId: 15
-                });
-                
-                hideLoading();
-                
-                if (detailResult && detailResult.success) {
-                    const festival = detailResult.data.items.item[0] || detailResult.data.items.item;
-                    const intro = introResult?.data?.items?.item?.[0] || introResult?.data?.items?.item;
-                    const images = imageResult?.data?.items?.item || [];
-                    const additionalInfo = infoResult?.data?.items?.item || [];
+                        contentTypeId: 15
+                    });
                     
-                    // 배열로 변환
-                    galleryImages = Array.isArray(images) ? images : [images];
-                    const infoItems = Array.isArray(additionalInfo) ? additionalInfo : [additionalInfo];
+                    hideLoading();
                     
-                    // 모달 요소 가져오기
-                    const modal = document.getElementById('festival-modal');
-                    const modalHeaderImg = document.getElementById('modal-header-img');
-                    const modalTitle = document.getElementById('modal-title');
-                    const modalDateRange = document.getElementById('modal-date-range');
-                    const modalLocation = document.getElementById('modal-location');
-                    const modalOrganizer = document.getElementById('modal-organizer');
-                    const modalTel = document.getElementById('modal-tel');
-                    const modalFee = document.getElementById('modal-fee');
-                    const modalOverview = document.getElementById('modal-overview');
-                    const modalProgram = document.getElementById('modal-program');
-                    const modalGallery = document.getElementById('modal-gallery');
-                    
-                    // 정보 채우기
-                    modalHeaderImg.src = festival.firstimage || 'https://via.placeholder.com/1000x500?text=이미지+준비중';
-                    modalTitle.textContent = festival.title;
-                    
-                    const startDate = intro?.eventstartdate ? formatKoreanDate(intro.eventstartdate) : '정보 없음';
-                    const endDate = intro?.eventenddate ? formatKoreanDate(intro.eventenddate) : '정보 없음';
-                    modalDateRange.textContent = `${startDate} ~ ${endDate}`;
-                    
-                    modalLocation.innerHTML = `
-                        <div>${festival.addr1 || ''} ${festival.addr2 || ''}</div>
-                        <div style="margin-top:5px; font-size:0.9em; color:#666;">${intro?.eventplace || '정보 없음'}</div>
-                    `;
-                    
-                    modalOrganizer.innerHTML = `
-                        <div>주최: ${intro?.sponsor1 || '정보 없음'}</div>
-                        <div>주관: ${intro?.sponsor2 || '정보 없음'}</div>
-                    `;
-                    
-                    modalTel.textContent = intro?.sponsor1tel || festival.tel || '정보 없음';
-                    modalFee.textContent = intro?.usetimefestival || '정보 없음';
-                    
-                    // 상세 설명 HTML 태그 처리
-                    if (festival.overview) {
-                        modalOverview.innerHTML = festival.overview
-                            .replace(/(\n|\r\n)/g, '<br>')
-                            .replace(/&lt;/g, '<')
-                            .replace(/&gt;/g, '>')
-                            .replace(/&amp;/g, '&');
-                    } else {
-                        modalOverview.textContent = '상세 설명이 없습니다.';
-                    }
-                    
-                    // 프로그램 정보
-                    if (intro?.program) {
-                        modalProgram.innerHTML = intro.program
-                            .replace(/(\n|\r\n)/g, '<br>')
-                            .replace(/&lt;/g, '<')
-                            .replace(/&gt;/g, '>')
-                            .replace(/&amp;/g, '&');
-                    } else {
-                        const programInfo = infoItems.find(item => item.infoname && item.infoname.includes('프로그램'));
-                        if (programInfo) {
-                            modalProgram.innerHTML = programInfo.infotext
+                    if (detailResult && detailResult.success) {
+                        const festival = detailResult.data.items.item[0] || detailResult.data.items.item;
+                        const intro = introResult?.data?.items?.item?.[0] || introResult?.data?.items?.item;
+                        const images = imageResult?.data?.items?.item || [];
+                        const additionalInfo = infoResult?.data?.items?.item || [];
+                        
+                        // 배열로 변환
+                        galleryImages = Array.isArray(images) ? images : [images];
+                        const infoItems = Array.isArray(additionalInfo) ? additionalInfo : [additionalInfo];
+                        
+                        logDebug('축제 상세 정보 로드 완료', { 
+                            title: festival.title,
+                            imageCount: galleryImages.length,
+                            infoItemCount: infoItems.length
+                        });
+                        
+                        // 모달 요소 가져오기
+                        const modal = document.getElementById('festival-modal');
+                        const modalHeaderImg = document.getElementById('modal-header-img');
+                        const modalTitle = document.getElementById('modal-title');
+                        const modalDateRange = document.getElementById('modal-date-range');
+                        const modalLocation = document.getElementById('modal-location');
+                        const modalOrganizer = document.getElementById('modal-organizer');
+                        const modalTel = document.getElementById('modal-tel');
+                        const modalFee = document.getElementById('modal-fee');
+                        const modalOverview = document.getElementById('modal-overview');
+                        const modalProgram = document.getElementById('modal-program');
+                        const modalGallery = document.getElementById('modal-gallery');
+                        
+                        // 정보 채우기
+                        modalHeaderImg.src = festival.firstimage || 'https://via.placeholder.com/1000x500?text=이미지+준비중';
+                        modalTitle.textContent = festival.title;
+                        
+                        const startDate = intro?.eventstartdate ? formatKoreanDate(intro.eventstartdate) : '정보 없음';
+                        const endDate = intro?.eventenddate ? formatKoreanDate(intro.eventenddate) : '정보 없음';
+                        modalDateRange.textContent = `${startDate} ~ ${endDate}`;
+                        
+                        modalLocation.innerHTML = `
+                            <div>${festival.addr1 || ''} ${festival.addr2 || ''}</div>
+                            <div style="margin-top:5px; font-size:0.9em; color:#666;">${intro?.eventplace || '정보 없음'}</div>
+                        `;
+                        
+                        modalOrganizer.innerHTML = `
+                            <div>주최: ${intro?.sponsor1 || '정보 없음'}</div>
+                            <div>주관: ${intro?.sponsor2 || '정보 없음'}</div>
+                        `;
+                        
+                        modalTel.textContent = intro?.sponsor1tel || festival.tel || '정보 없음';
+                        modalFee.textContent = intro?.usetimefestival || '정보 없음';
+                        
+                        // 상세 설명 HTML 태그 처리
+                        if (festival.overview) {
+                            modalOverview.innerHTML = festival.overview
                                 .replace(/(\n|\r\n)/g, '<br>')
                                 .replace(/&lt;/g, '<')
                                 .replace(/&gt;/g, '>')
                                 .replace(/&amp;/g, '&');
                         } else {
-                            modalProgram.textContent = '프로그램 정보가 없습니다.';
+                            modalOverview.textContent = '상세 설명이 없습니다.';
                         }
-                    }
-                    
-                    // 갤러리 이미지 표시
-                    modalGallery.innerHTML = '';
-                    
-                    if (galleryImages.length > 0) {
-                        galleryImages.forEach((image, index) => {
-                            const galleryItem = document.createElement('div');
-                            galleryItem.className = 'gallery-item';
-                            
-                            const img = document.createElement('img');
-                            img.src = image.originimgurl || image.smallimageurl;
-                            img.alt = image.imgname || `축제 이미지 ${index + 1}`;
-                            
-                            img.addEventListener('click', function() {
-                                openFullscreenViewer(index);
+                        
+                        // 프로그램 정보
+                        if (intro?.program) {
+                            modalProgram.innerHTML = intro.program
+                                .replace(/(\n|\r\n)/g, '<br>')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&amp;/g, '&');
+                        } else {
+                            const programInfo = infoItems.find(item => item.infoname && item.infoname.includes('프로그램'));
+                            if (programInfo) {
+                                modalProgram.innerHTML = programInfo.infotext
+                                    .replace(/(\n|\r\n)/g, '<br>')
+                                    .replace(/&lt;/g, '<')
+                                    .replace(/&gt;/g, '>')
+                                    .replace(/&amp;/g, '&');
+                            } else {
+                                modalProgram.textContent = '프로그램 정보가 없습니다.';
+                            }
+                        }
+                        
+                        // 갤러리 이미지 표시
+                        modalGallery.innerHTML = '';
+                        
+                        if (galleryImages.length > 0) {
+                            galleryImages.forEach((image, index) => {
+                                const galleryItem = document.createElement('div');
+                                galleryItem.className = 'gallery-item';
+                                
+                                const img = document.createElement('img');
+                                img.src = image.originimgurl || image.smallimageurl;
+                                img.alt = image.imgname || `축제 이미지 ${index + 1}`;
+                                
+                                img.addEventListener('click', function() {
+                                    openFullscreenViewer(index);
+                                });
+                                
+                                galleryItem.appendChild(img);
+                                modalGallery.appendChild(galleryItem);
                             });
-                            
-                            galleryItem.appendChild(img);
-                            modalGallery.appendChild(galleryItem);
-                        });
+                        } else {
+                            modalGallery.innerHTML = '<p>이미지가 없습니다.</p>';
+                        }
+                        
+                        // 지도 표시
+                        if (festival.mapx && festival.mapy) {
+                            try {
+                                initializeMap(parseFloat(festival.mapy), parseFloat(festival.mapx), festival.title);
+                            } catch (error) {
+                                logDebug('지도 초기화 오류', error.message);
+                                document.getElementById('map-container').innerHTML = '<p>지도를 불러올 수 없습니다. 카카오맵 API 키를 확인하세요.</p>';
+                            }
+                        }
+                        
+                        // 모달 표시
+                        modal.style.display = 'block';
+                        document.body.style.overflow = 'hidden';  // 스크롤 방지
                     } else {
-                        modalGallery.innerHTML = '<p>이미지가 없습니다.</p>';
+                        logDebug('축제 상세 정보 로드 실패', { contentId });
+                        showNotification('축제 상세 정보를 불러오는데 실패했습니다.', 'error');
                     }
-                    
-                    // 지도 표시
-                    if (festival.mapx && festival.mapy) {
-                        initializeMap(parseFloat(festival.mapy), parseFloat(festival.mapx), festival.title);
-                    }
-                    
-                    // 모달 표시
-                    modal.style.display = 'block';
-                    document.body.style.overflow = 'hidden';  // 스크롤 방지
+                } catch (error) {
+                    hideLoading();
+                    logDebug('축제 상세 정보 로드 오류', error.message);
+                    showNotification('축제 상세 정보를 불러오는데 실패했습니다.', 'error');
                 }
             }
             
@@ -1512,36 +1706,47 @@
             
             // 카카오맵 초기화
             function initializeMap(lat, lng, title) {
-                const mapContainer = document.getElementById('map-container');
-                
-                const options = {
-                    center: new kakao.maps.LatLng(lat, lng),
-                    level: 3
-                };
-                
-                map = new kakao.maps.Map(mapContainer, options);
-                
-                // 마커 생성
-                const markerPosition = new kakao.maps.LatLng(lat, lng);
-                marker = new kakao.maps.Marker({
-                    position: markerPosition
-                });
-                
-                marker.setMap(map);
-                
-                // 인포윈도우 생성
-                const iwContent = `<div style="padding:5px; font-size:12px;">${title}</div>`;
-                const infowindow = new kakao.maps.InfoWindow({
-                    content: iwContent
-                });
-                
-                infowindow.open(map, marker);
-                
-                // 지도 크기 변경에 따른 리사이즈 처리
-                setTimeout(() => {
-                    map.relayout();
-                    map.setCenter(markerPosition);
-                }, 300);
+                try {
+                    const mapContainer = document.getElementById('map-container');
+                    
+                    const options = {
+                        center: new kakao.maps.LatLng(lat, lng),
+                        level: 3
+                    };
+                    
+                    map = new kakao.maps.Map(mapContainer, options);
+                    
+                    // 마커 생성
+                    const markerPosition = new kakao.maps.LatLng(lat, lng);
+                    marker = new kakao.maps.Marker({
+                        position: markerPosition
+                    });
+                    
+                    marker.setMap(map);
+                    
+                    // 인포윈도우 생성
+                    const iwContent = `<div style="padding:5px; font-size:12px;">${title}</div>`;
+                    const infowindow = new kakao.maps.InfoWindow({
+                        content: iwContent
+                    });
+                    
+                    infowindow.open(map, marker);
+                    
+                    // 지도 크기 변경에 따른 리사이즈 처리
+                    setTimeout(() => {
+                        map.relayout();
+                        map.setCenter(markerPosition);
+                    }, 300);
+                } catch (error) {
+                    logDebug('카카오맵 초기화 오류', error.message);
+                    document.getElementById('map-container').innerHTML = `
+                        <div style="padding: 20px; text-align: center; background-color: #f8f9fa; border-radius: 8px;">
+                            <p><i class="fas fa-exclamation-triangle" style="color: #e74c3c; font-size: 24px; margin-bottom: 10px;"></i></p>
+                            <p>지도를 불러올 수 없습니다.</p>
+                            <p style="font-size: 0.9em; color: #777;">카카오맵 API 키를 확인하세요.</p>
+                        </div>
+                    `;
+                }
             }
             
             // 사용자 위치 가져오기
@@ -1554,6 +1759,8 @@
                                 longitude: position.coords.longitude
                             };
                             
+                            logDebug('사용자 위치 정보 가져옴', userLocation);
+                            
                             // 위치 기반으로 축제 정렬
                             sortFestivalsByDistance();
                             
@@ -1561,11 +1768,12 @@
                             showNotification('위치 정보를 가져왔습니다. 가까운 순서로 정렬됩니다.');
                         },
                         error => {
-                            console.error('위치 정보를 가져올 수 없습니다:', error);
+                            logDebug('위치 정보 가져오기 실패', error.message);
                             showNotification('위치 정보를 가져올 수 없습니다. 브라우저 권한을 확인해주세요.', 'error');
                         }
                     );
                 } else {
+                    logDebug('Geolocation API 지원하지 않음');
                     showNotification('이 브라우저에서는 위치 기능을 지원하지 않습니다.', 'error');
                 }
             }
@@ -1611,6 +1819,8 @@
                 
                 const totalPages = Math.ceil(filteredFestivals.length / itemsPerPage);
                 displayPagination(totalPages);
+                
+                logDebug('거리 기반 축제 정렬 완료');
             }
             
             // 날짜 형식 변환 (YYYY-MM-DD)
@@ -1644,6 +1854,11 @@
                 
                 startDateInput.value = formatDate(today);
                 endDateInput.value = formatDate(threeMonthsLater);
+                
+                logDebug('날짜 필드 초기화 완료', {
+                    startDate: startDateInput.value,
+                    endDate: endDateInput.value
+                });
             }
             
             // 이벤트 리스너 설정
@@ -1675,6 +1890,8 @@
                         return;
                     }
                     
+                    logDebug('검색 요청', { startDate, endDate, areaCode, sigunguCode, keyword });
+                    
                     loadFestivalData(startDate, endDate, areaCode, sigunguCode, keyword);
                 });
                 
@@ -1687,6 +1904,9 @@
                         
                         currentStatus = this.dataset.status;
                         currentPage = 1;
+                        
+                        logDebug('탭 변경', { currentStatus });
+                        
                         updateFestivalDisplay();
                     });
                 });
@@ -1761,6 +1981,17 @@
                         document.getElementById('search-btn').click();
                     }
                 });
+                
+                // 디버그 패널 토글 (Ctrl+Shift+D)
+                document.addEventListener('keydown', function(event) {
+                    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+                        const debugPanel = document.getElementById('debug-panel');
+                        debugPanel.classList.toggle('show-debug');
+                        event.preventDefault();
+                    }
+                });
+                
+                logDebug('이벤트 리스너 설정 완료');
             }
             
             // 풀스크린 뷰어 닫기
@@ -1782,6 +2013,8 @@
             
             // 알림 표시
             function showNotification(message, type = 'info') {
+                logDebug(`알림: ${message}`, { type });
+                
                 // 기존 알림 삭제
                 const existingNotifications = document.querySelectorAll('.notification');
                 existingNotifications.forEach(notification => {
@@ -1813,47 +2046,6 @@
                     }, 500);
                 }, 3000);
             }
-            
-            // 알림 스타일
-            const style = document.createElement('style');
-            style.textContent = `
-                .notification {
-                    position: fixed;
-                    top: 20px;
-                    right: -300px;
-                    background-color: white;
-                    padding: 15px 20px;
-                    border-radius: 5px;
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                    z-index: 9999;
-                    transition: right 0.5s;
-                    max-width: 300px;
-                }
-                
-                .notification.info {
-                    border-left: 4px solid var(--primary-color);
-                }
-                
-                .notification.error {
-                    border-left: 4px solid var(--accent-color);
-                }
-                
-                .notification-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                
-                .notification.info i {
-                    color: var(--primary-color);
-                }
-                
-                .notification.error i {
-                    color: var(--accent-color);
-                }
-            `;
-            
-            document.head.appendChild(style);
         });
     </script>
 </body>
