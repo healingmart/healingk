@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎊 전국 실시간 축제 & 이벤트 정보</title>
     <style>
+        /* 이전 CSS 동일 */
         * {
             margin: 0;
             padding: 0;
@@ -38,6 +39,56 @@
         .header p {
             font-size: 1.2em;
             opacity: 0.9;
+        }
+
+        .api-key-setup {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .api-key-setup h3 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .api-key-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .api-key-input input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .api-key-input button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .demo-mode {
+            background: rgba(255,193,7,0.2);
+            border: 1px solid rgba(255,193,7,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
         }
 
         .controls {
@@ -350,6 +401,14 @@
             .header h1 {
                 font-size: 2em;
             }
+
+            .api-key-input {
+                flex-direction: column;
+            }
+
+            .api-key-input input {
+                min-width: auto;
+            }
         }
     </style>
 </head>
@@ -358,6 +417,20 @@
         <div class="header">
             <h1>🎊 전국 실시간 축제 & 이벤트</h1>
             <p>지금 진행중인 축제와 곧 열릴 이벤트를 한눈에!</p>
+        </div>
+
+        <!-- API 키 설정 섹션 -->
+        <div class="api-key-setup">
+            <h3>🔑 API 키 설정</h3>
+            <div class="api-key-input">
+                <input type="password" id="apiKeyInput" placeholder="API 키를 입력하세요 (선택사항)">
+                <button onclick="festivalTracker.setApiKey()">설정</button>
+                <button onclick="festivalTracker.useDemoMode()">데모 모드</button>
+            </div>
+            <div class="demo-mode">
+                <strong>💡 팁:</strong> API 키가 없으시면 "데모 모드"를 클릭하여 샘플 데이터로 테스트해보세요!
+                <br><small>실제 API 키는 healingk.vercel.app 관리자에게 문의하거나, 환경변수 ALLOWED_API_KEYS에 등록된 키를 사용하세요.</small>
+            </div>
         </div>
 
         <div class="controls">
@@ -449,7 +522,8 @@
         class FestivalTracker {
             constructor() {
                 this.apiUrl = 'https://healingk.vercel.app/api/tourism';
-                this.apiKey = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // 실제 사용시 여기에 API 키 설정
+                this.apiKey = null;
+                this.demoMode = false;
                 this.festivals = [];
                 this.filteredFestivals = [];
                 
@@ -457,9 +531,112 @@
             }
 
             async init() {
-                // 페이지 로드시 자동으로 축제 정보 불러오기
-                await this.loadFestivals();
                 this.setupEventListeners();
+                // 초기 로드는 사용자가 API 키를 설정하거나 데모 모드를 선택한 후에 진행
+            }
+
+            setApiKey() {
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                const apiKey = apiKeyInput.value.trim();
+                
+                if (!apiKey) {
+                    alert('API 키를 입력해주세요.');
+                    return;
+                }
+                
+                this.apiKey = apiKey;
+                this.demoMode = false;
+                alert('API 키가 설정되었습니다. 이제 실제 데이터를 불러올 수 있습니다.');
+                this.loadFestivals();
+            }
+
+            useDemoMode() {
+                this.demoMode = true;
+                this.apiKey = null;
+                alert('데모 모드로 설정되었습니다. 샘플 데이터를 표시합니다.');
+                this.loadDemoData();
+            }
+
+            loadDemoData() {
+                // 데모용 샘플 데이터
+                this.festivals = [
+                    {
+                        contentid: '1',
+                        title: '🌸 2024 여의도 봄꽃축제',
+                        addr1: '서울특별시 영등포구 여의도동',
+                        tel: '02-761-4330',
+                        eventstartdate: '20240410',
+                        eventenddate: '20240420',
+                        firstimage: 'https://via.placeholder.com/400x200/ff9a9e/ffffff?text=Spring+Festival',
+                        overview: '한강변 여의도공원에서 열리는 대표적인 봄꽃축제입니다. 벚꽃길 산책, 음악공연, 푸드트럭 등 다양한 즐길거리가 준비되어 있습니다.',
+                        mapx: '126.9312',
+                        mapy: '37.5276'
+                    },
+                    {
+                        contentid: '2',
+                        title: '🎪 부산 국제영화제 2024',
+                        addr1: '부산광역시 해운대구 해운대해변로',
+                        tel: '051-747-3010',
+                        eventstartdate: '20241001',
+                        eventenddate: '20241010',
+                        firstimage: 'https://via.placeholder.com/400x200/667eea/ffffff?text=Film+Festival',
+                        overview: '아시아 최대 규모의 국제영화제로, 세계 각국의 우수한 영화작품을 만날 수 있는 문화축제입니다.',
+                        mapx: '129.1601',
+                        mapy: '35.1587'
+                    },
+                    {
+                        contentid: '3',
+                        title: '🍂 경주 가을단풍축제',
+                        addr1: '경상북도 경주시 불국로',
+                        tel: '054-779-8563',
+                        eventstartdate: '20241020',
+                        eventenddate: '20241105',
+                        firstimage: 'https://via.placeholder.com/400x200/ff8c42/ffffff?text=Autumn+Festival',
+                        overview: '천년고도 경주의 아름다운 가을 단풍과 함께하는 역사문화축제입니다.',
+                        mapx: '129.3317',
+                        mapy: '35.7898'
+                    },
+                    {
+                        contentid: '4',
+                        title: '❄️ 평창 겨울축제 2024',
+                        addr1: '강원특별자치도 평창군 대관령면',
+                        tel: '033-330-2771',
+                        eventstartdate: '20241215',
+                        eventenddate: '20250228',
+                        firstimage: 'https://via.placeholder.com/400x200/64b5f6/ffffff?text=Winter+Festival',
+                        overview: '눈과 얼음을 주제로 한 겨울축제로, 스키, 눈썰매, 얼음조각 전시 등을 즐길 수 있습니다.',
+                        mapx: '128.7184',
+                        mapy: '37.6563'
+                    },
+                    {
+                        contentid: '5',
+                        title: '🌺 제주 유채꽃축제',
+                        addr1: '제주특별자치도 서귀포시 표선면',
+                        tel: '064-760-4988',
+                        eventstartdate: '20240320',
+                        eventenddate: '20240405',
+                        firstimage: 'https://via.placeholder.com/400x200/ffeb3b/ffffff?text=Canola+Festival',
+                        overview: '제주도의 노란 유채꽃 바다를 배경으로 펼쳐지는 봄꽃축제입니다.',
+                        mapx: '126.8374',
+                        mapy: '33.3191'
+                    },
+                    {
+                        contentid: '6',
+                        title: '🎵 대구 치킨맥주축제',
+                        addr1: '대구광역시 중구 두류공원로',
+                        tel: '053-803-5671',
+                        eventstartdate: '20240701',
+                        eventenddate: '20240707',
+                        firstimage: 'https://via.placeholder.com/400x200/ffc107/ffffff?text=Chicken+Beer',
+                        overview: '대구의 대표 먹거리인 치킨과 맥주를 주제로 한 여름축제입니다.',
+                        mapx: '128.5667',
+                        mapy: '35.8714'
+                    }
+                ];
+
+                this.processFilterDates();
+                this.filterFestivals();
+                this.updateStats();
             }
 
             setupEventListeners() {
@@ -488,6 +665,11 @@
             }
 
             async loadFestivals() {
+                if (!this.apiKey) {
+                    alert('먼저 API 키를 설정하거나 데모 모드를 선택해주세요.');
+                    return;
+                }
+
                 this.showLoading(true);
                 
                 try {
@@ -498,6 +680,9 @@
                     });
 
                     if (!response.ok) {
+                        if (response.status === 401) {
+                            throw new Error('API 키가 유효하지 않습니다. 관리자에게 문의하거나 올바른 API 키를 입력해주세요.');
+                        }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
@@ -505,7 +690,6 @@
                     console.log('API Response:', data);
 
                     if (data.success && data.data && data.data.items) {
-                        // items가 배열인지 객체인지 확인
                         const items = Array.isArray(data.data.items.item) 
                             ? data.data.items.item 
                             : (data.data.items.item ? [data.data.items.item] : []);
@@ -519,13 +703,28 @@
                     }
                 } catch (error) {
                     console.error('축제 정보 로드 실패:', error);
-                    this.showError('축제 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    if (error.message.includes('API 키')) {
+                        this.showError(error.message + '<br><br>데모 모드를 사용하시겠습니까?', true);
+                    } else {
+                        this.showError('축제 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    }
                 } finally {
                     this.showLoading(false);
                 }
             }
 
             async searchFestivals() {
+                if (this.demoMode) {
+                    // 데모 모드에서는 로컬 필터링만 수행
+                    this.filterFestivals();
+                    return;
+                }
+
+                if (!this.apiKey) {
+                    alert('먼저 API 키를 설정하거나 데모 모드를 선택해주세요.');
+                    return;
+                }
+
                 const areaCode = document.getElementById('areaSelect').value;
                 const keyword = document.getElementById('searchInput').value.trim();
                 
@@ -538,7 +737,6 @@
                         url += `&areaCode=${areaCode}`;
                     }
 
-                    // 키워드가 있으면 searchKeyword API 사용
                     if (keyword) {
                         url = `${this.apiUrl}?operation=searchKeyword&keyword=${encodeURIComponent(keyword)}&contentTypeId=15&numOfRows=100&arrange=R`;
                         if (areaCode) {
@@ -553,6 +751,9 @@
                     });
 
                     if (!response.ok) {
+                        if (response.status === 401) {
+                            throw new Error('API 키가 유효하지 않습니다.');
+                        }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
@@ -575,18 +776,18 @@
                     }
                 } catch (error) {
                     console.error('축제 검색 실패:', error);
-                    this.showError('축제 검색에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    this.showError('축제 검색에 실패했습니다. API 키를 확인하거나 데모 모드를 사용해보세요.');
                 } finally {
                     this.showLoading(false);
                 }
             }
 
+            // 나머지 메서드들은 이전과 동일...
             processFilterDates() {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
                 this.festivals.forEach(festival => {
-                    // 축제 기간 정보 파싱
                     festival.parsedDates = this.parseFestivalDates(festival);
                     festival.status = this.getFestivalStatus(festival.parsedDates, today);
                 });
@@ -599,7 +800,6 @@
                     hasValidDates: false
                 };
 
-                // API 데이터에서 날짜 정보 추출 시도
                 if (festival.eventstartdate && festival.eventenddate) {
                     try {
                         result.startDate = this.parseApiDate(festival.eventstartdate);
@@ -610,7 +810,6 @@
                     }
                 }
 
-                // 제목에서 날짜 정보 추출 시도 (fallback)
                 if (!result.hasValidDates) {
                     const titleDates = this.extractDatesFromTitle(festival.title);
                     if (titleDates.startDate) {
@@ -626,11 +825,10 @@
             parseApiDate(dateString) {
                 if (!dateString) return null;
                 
-                // YYYYMMDD 형식 파싱
                 const dateStr = String(dateString);
                 if (dateStr.length === 8) {
                     const year = parseInt(dateStr.substring(0, 4));
-                    const month = parseInt(dateStr.substring(4, 6)) - 1; // month는 0-based
+                    const month = parseInt(dateStr.substring(4, 6)) - 1;
                     const day = parseInt(dateStr.substring(6, 8));
                     return new Date(year, month, day);
                 }
@@ -639,7 +837,6 @@
             }
 
             extractDatesFromTitle(title) {
-                // 제목에서 날짜 패턴 추출
                 const datePatterns = [
                     /(\d{4})[-\.\/](\d{1,2})[-\.\/](\d{1,2})/g,
                     /(\d{1,2})월\s*(\d{1,2})일/g,
@@ -654,19 +851,19 @@
                     if (matches.length > 0) {
                         const match = matches[0];
                         try {
-                            if (pattern === datePatterns[0]) { // YYYY-MM-DD 형식
+                            if (pattern === datePatterns[0]) {
                                 result.startDate = new Date(
                                     parseInt(match[1]),
                                     parseInt(match[2]) - 1,
                                     parseInt(match[3])
                                 );
-                            } else if (pattern === datePatterns[1]) { // MM월 DD일 형식
+                            } else if (pattern === datePatterns[1]) {
                                 result.startDate = new Date(
                                     currentYear,
                                     parseInt(match[1]) - 1,
                                     parseInt(match[2])
                                 );
-                            } else if (pattern === datePatterns[2]) { // YYYY년 MM월 형식
+                            } else if (pattern === datePatterns[2]) {
                                 result.startDate = new Date(
                                     parseInt(match[1]),
                                     parseInt(match[2]) - 1,
@@ -707,12 +904,10 @@
                 const statusFilter = document.getElementById('statusFilter').value;
 
                 this.filteredFestivals = this.festivals.filter(festival => {
-                    // 검색어 필터
                     const matchesSearch = !searchTerm || 
                         festival.title.toLowerCase().includes(searchTerm) ||
                         (festival.addr1 && festival.addr1.toLowerCase().includes(searchTerm));
 
-                    // 상태 필터
                     const matchesStatus = !statusFilter || festival.status === statusFilter;
 
                     return matchesSearch && matchesStatus;
@@ -811,7 +1006,6 @@
                 const ongoing = this.festivals.filter(f => f.status === 'ongoing').length;
                 const upcoming = this.festivals.filter(f => f.status === 'upcoming').length;
                 
-                // 오늘 시작하는 축제
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const todayStart = this.festivals.filter(f => {
@@ -824,7 +1018,6 @@
                 document.getElementById('upcomingCount').textContent = upcoming;
                 document.getElementById('todayCount').textContent = todayStart;
 
-                // 통계가 있을 때만 표시
                 const statsElement = document.getElementById('stats');
                 if (total > 0) {
                     statsElement.style.display = 'grid';
@@ -833,36 +1026,10 @@
                 }
             }
 
-            async showFestivalDetail(contentId) {
-                try {
-                    // 상세 정보 API 호출
-                    const response = await fetch(
-                        `${this.apiUrl}?operation=detailCommon&contentId=${contentId}&defaultYN=Y&firstImageYN=Y&areacodeYN=Y&catcodeYN=Y&addrinfoYN=Y&mapinfoYN=Y&overviewYN=Y`,
-                        {
-                            headers: {
-                                'X-API-Key': this.apiKey
-                            }
-                        }
-                    );
-
-                    if (!response.ok) {
-                        throw new Error('상세 정보를 불러올 수 없습니다.');
-                    }
-
-                    const data = await response.json();
-                    
-                    if (data.success && data.data && data.data.items) {
-                        const detail = Array.isArray(data.data.items.item) 
-                            ? data.data.items.item[0] 
-                            : data.data.items.item;
-                            
-                        this.displayFestivalModal(detail);
-                    } else {
-                        throw new Error('상세 정보가 없습니다.');
-                    }
-                } catch (error) {
-                    console.error('상세 정보 로드 실패:', error);
-                    alert('상세 정보를 불러오는데 실패했습니다.');
+            showFestivalDetail(contentId) {
+                const festival = this.festivals.find(f => f.contentid === contentId);
+                if (festival) {
+                    this.displayFestivalModal(festival);
                 }
             }
 
@@ -873,7 +1040,7 @@
 
                 title.textContent = festival.title;
 
-                const parsedDates = this.parseFestivalDates(festival);
+                const parsedDates = festival.parsedDates || this.parseFestivalDates(festival);
                 const dateText = this.getDateText(parsedDates);
 
                 body.innerHTML = `
@@ -893,7 +1060,6 @@
                         <div style="margin-bottom: 20px;">
                             <h4 style="color: #333; margin-bottom: 10px;">📍 위치</h4>
                             <p style="color: #666; line-height: 1.6;">${festival.addr1}</p>
-                            ${festival.addr2 ? `<p style="color: #666; line-height: 1.6;">${festival.addr2}</p>` : ''}
                         </div>
                     ` : ''}
 
@@ -908,13 +1074,6 @@
                         <div style="margin-bottom: 20px;">
                             <h4 style="color: #333; margin-bottom: 10px;">📝 상세 정보</h4>
                             <p style="color: #666; line-height: 1.8;">${festival.overview}</p>
-                        </div>
-                    ` : ''}
-
-                    ${festival.homepage ? `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #333; margin-bottom: 10px;">🌐 홈페이지</h4>
-                            <div style="color: #666; line-height: 1.6;">${festival.homepage}</div>
                         </div>
                     ` : ''}
 
@@ -946,15 +1105,22 @@
                 }
             }
 
-            showError(message) {
+            showError(message, showDemoButton = false) {
                 const container = document.getElementById('festivalsContainer');
                 container.innerHTML = `
                     <div class="no-results">
                         <h3>😔 오류 발생</h3>
                         <p>${message}</p>
-                        <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 20px; cursor: pointer;">
-                            새로고침
-                        </button>
+                        <div style="margin-top: 15px;">
+                            <button onclick="location.reload()" style="margin-right: 10px; padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 20px; cursor: pointer;">
+                                새로고침
+                            </button>
+                            ${showDemoButton ? `
+                                <button onclick="festivalTracker.useDemoMode()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 20px; cursor: pointer;">
+                                    데모 모드 사용
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             }
