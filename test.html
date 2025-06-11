@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎊 전국 실시간 축제 & 이벤트 정보</title>
     <style>
-        /* 이전 CSS 동일 */
+        /* 이전 CSS와 동일 */
         * {
             margin: 0;
             padding: 0;
@@ -378,6 +378,16 @@
             transform: rotate(90deg);
         }
 
+        .debug-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -423,14 +433,20 @@
         <div class="api-key-setup">
             <h3>🔑 API 키 설정</h3>
             <div class="api-key-input">
-                <input type="password" id="apiKeyInput" placeholder="API 키를 입력하세요 (선택사항)">
+                <input type="password" id="apiKeyInput" placeholder="API 키를 입력하세요" value="DFGHJKLMNBVCXZ-api-dkfk2jak">
                 <button onclick="festivalTracker.setApiKey()">설정</button>
                 <button onclick="festivalTracker.useDemoMode()">데모 모드</button>
             </div>
             <div class="demo-mode">
-                <strong>💡 팁:</strong> API 키가 없으시면 "데모 모드"를 클릭하여 샘플 데이터로 테스트해보세요!
-                <br><small>실제 API 키는 healingk.vercel.app 관리자에게 문의하거나, 환경변수 ALLOWED_API_KEYS에 등록된 키를 사용하세요.</small>
+                <strong>💡 현재 상태:</strong> <span id="apiStatus">API 키 대기중</span>
+                <br><small>400 에러 해결: arrange 파라미터 문제를 수정했습니다.</small>
             </div>
+        </div>
+
+        <!-- 디버그 정보 -->
+        <div class="debug-info" id="debugInfo" style="display: none;">
+            <strong>🐛 디버그 정보:</strong>
+            <div id="debugContent"></div>
         </div>
 
         <div class="controls">
@@ -470,6 +486,17 @@
                     <option value="ongoing">진행중</option>
                     <option value="upcoming">예정</option>
                     <option value="ended">종료</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>📊 정렬 방식</label>
+                <select id="arrangeSelect">
+                    <option value="A">제목순 (A)</option>
+                    <option value="B">조회순 (B)</option>
+                    <option value="C">수정일순 (C)</option>
+                    <option value="D">생성일순 (D)</option>
+                    <option value="E">거리순 (E)</option>
                 </select>
             </div>
             
@@ -526,16 +553,43 @@
                 this.demoMode = false;
                 this.festivals = [];
                 this.filteredFestivals = [];
+                this.debugMode = false; // 디버그 모드
                 
                 this.init();
             }
 
             async init() {
                 this.setupEventListeners();
-                // 초기 로드는 사용자가 API 키를 설정하거나 데모 모드를 선택한 후에 진행
+                this.updateApiStatus('API 키 대기중');
+                // 기본 API 키 자동 설정
+                const defaultKey = document.getElementById('apiKeyInput').value;
+                if (defaultKey) {
+                    this.apiKey = defaultKey;
+                    this.updateApiStatus('API 키 설정됨');
+                    await this.loadFestivals();
+                }
             }
 
-            setApiKey() {
+            updateApiStatus(status) {
+                document.getElementById('apiStatus').textContent = status;
+            }
+
+            showDebugInfo(info) {
+                if (this.debugMode) {
+                    const debugDiv = document.getElementById('debugInfo');
+                    const debugContent = document.getElementById('debugContent');
+                    debugContent.innerHTML = JSON.stringify(info, null, 2);
+                    debugDiv.style.display = 'block';
+                }
+            }
+
+            toggleDebugMode() {
+                this.debugMode = !this.debugMode;
+                const debugDiv = document.getElementById('debugInfo');
+                debugDiv.style.display = this.debugMode ? 'block' : 'none';
+            }
+
+            async setApiKey() {
                 const apiKeyInput = document.getElementById('apiKeyInput');
                 const apiKey = apiKeyInput.value.trim();
                 
@@ -546,19 +600,19 @@
                 
                 this.apiKey = apiKey;
                 this.demoMode = false;
-                alert('API 키가 설정되었습니다. 이제 실제 데이터를 불러올 수 있습니다.');
-                this.loadFestivals();
+                this.updateApiStatus('API 키 설정됨');
+                await this.loadFestivals();
             }
 
             useDemoMode() {
                 this.demoMode = true;
                 this.apiKey = null;
-                alert('데모 모드로 설정되었습니다. 샘플 데이터를 표시합니다.');
+                this.updateApiStatus('데모 모드 활성화');
                 this.loadDemoData();
             }
 
             loadDemoData() {
-                // 데모용 샘플 데이터
+                // 데모용 샘플 데이터 (이전과 동일)
                 this.festivals = [
                     {
                         contentid: '1',
@@ -662,32 +716,61 @@
                         modal.style.display = 'none';
                     }
                 });
+
+                // 디버그 모드 토글 (Ctrl + D)
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'd') {
+                        e.preventDefault();
+                        this.toggleDebugMode();
+                    }
+                });
             }
 
             async loadFestivals() {
                 if (!this.apiKey) {
-                    alert('먼저 API 키를 설정하거나 데모 모드를 선택해주세요.');
+                    this.updateApiStatus('API 키가 필요합니다');
                     return;
                 }
 
                 this.showLoading(true);
                 
                 try {
-                    const response = await fetch(`${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=R`, {
+                    // 백엔드 스키마에 맞는 arrange 값 사용 (A-E만 허용)
+                    const arrangeValue = document.getElementById('arrangeSelect').value || 'A';
+                    
+                    const url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=${arrangeValue}`;
+                    
+                    this.showDebugInfo({
+                        request: {
+                            url: url,
+                            headers: { 'X-API-Key': this.apiKey.substring(0, 10) + '...' }
+                        }
+                    });
+
+                    const response = await fetch(url, {
                         headers: {
                             'X-API-Key': this.apiKey
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    this.showDebugInfo({
+                        response: {
+                            status: response.status,
+                            ok: response.ok,
+                            data: data
                         }
                     });
 
                     if (!response.ok) {
                         if (response.status === 401) {
                             throw new Error('API 키가 유효하지 않습니다. 관리자에게 문의하거나 올바른 API 키를 입력해주세요.');
+                        } else if (response.status === 400) {
+                            throw new Error(`잘못된 요청입니다: ${data.error?.message || '파라미터를 확인해주세요'}`);
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-
-                    const data = await response.json();
-                    console.log('API Response:', data);
 
                     if (data.success && data.data && data.data.items) {
                         const items = Array.isArray(data.data.items.item) 
@@ -698,15 +781,18 @@
                         this.processFilterDates();
                         this.filterFestivals();
                         this.updateStats();
+                        this.updateApiStatus(`축제 ${items.length}개 로드 완료`);
                     } else {
                         throw new Error('Invalid API response structure');
                     }
                 } catch (error) {
                     console.error('축제 정보 로드 실패:', error);
+                    this.updateApiStatus('로드 실패');
+                    
                     if (error.message.includes('API 키')) {
                         this.showError(error.message + '<br><br>데모 모드를 사용하시겠습니까?', true);
                     } else {
-                        this.showError('축제 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
+                        this.showError(`축제 정보 로드 실패: ${error.message}`);
                     }
                 } finally {
                     this.showLoading(false);
@@ -715,7 +801,6 @@
 
             async searchFestivals() {
                 if (this.demoMode) {
-                    // 데모 모드에서는 로컬 필터링만 수행
                     this.filterFestivals();
                     return;
                 }
@@ -727,22 +812,30 @@
 
                 const areaCode = document.getElementById('areaSelect').value;
                 const keyword = document.getElementById('searchInput').value.trim();
+                const arrangeValue = document.getElementById('arrangeSelect').value || 'A';
                 
                 this.showLoading(true);
                 
                 try {
-                    let url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=R`;
+                    let url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=${arrangeValue}`;
                     
                     if (areaCode) {
                         url += `&areaCode=${areaCode}`;
                     }
 
                     if (keyword) {
-                        url = `${this.apiUrl}?operation=searchKeyword&keyword=${encodeURIComponent(keyword)}&contentTypeId=15&numOfRows=100&arrange=R`;
+                        url = `${this.apiUrl}?operation=searchKeyword&keyword=${encodeURIComponent(keyword)}&contentTypeId=15&numOfRows=100&arrange=${arrangeValue}`;
                         if (areaCode) {
                             url += `&areaCode=${areaCode}`;
                         }
                     }
+
+                    this.showDebugInfo({
+                        searchRequest: {
+                            url: url,
+                            params: { areaCode, keyword, arrange: arrangeValue }
+                        }
+                    });
 
                     const response = await fetch(url, {
                         headers: {
@@ -750,14 +843,14 @@
                         }
                     });
 
+                    const data = await response.json();
+
                     if (!response.ok) {
-                        if (response.status === 401) {
-                            throw new Error('API 키가 유효하지 않습니다.');
+                        if (response.status === 400) {
+                            throw new Error(`검색 요청 오류: ${data.error?.message || '파라미터를 확인해주세요'}`);
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-
-                    const data = await response.json();
                     
                     if (data.success && data.data && data.data.items) {
                         const items = Array.isArray(data.data.items.item) 
@@ -768,15 +861,18 @@
                         this.processFilterDates();
                         this.filterFestivals();
                         this.updateStats();
+                        this.updateApiStatus(`검색 결과 ${items.length}개`);
                     } else {
                         this.festivals = [];
                         this.filteredFestivals = [];
                         this.displayFestivals();
                         this.updateStats();
+                        this.updateApiStatus('검색 결과 없음');
                     }
                 } catch (error) {
                     console.error('축제 검색 실패:', error);
-                    this.showError('축제 검색에 실패했습니다. API 키를 확인하거나 데모 모드를 사용해보세요.');
+                    this.updateApiStatus('검색 실패');
+                    this.showError(`축제 검색 실패: ${error.message}`);
                 } finally {
                     this.showLoading(false);
                 }
@@ -923,7 +1019,7 @@
                     container.innerHTML = `
                         <div class="no-results">
                             <h3>🎭 축제를 찾을 수 없습니다</h3>
-                            <p>다른 지역이나 키워드로 검색해보세요!</p>
+                            <p>다른 조건으로 검색해보세요!</p>
                         </div>
                     `;
                     return;
