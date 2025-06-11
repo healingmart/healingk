@@ -252,8 +252,8 @@
             39: '음식점'
         };
 
-        // TODO: 아래 YOUR_ACTUAL_API_KEY_HERE를 Vercel 환경변수에 설정한 API 키 중 하나로 바꿔주세요.
-        // 예: const CLIENT_API_KEY = 'your_api_key_from_vercel';
+        // 중요: 아래 YOUR_ACTUAL_API_KEY_HERE를 Vercel 환경변수에 설정한 API 키 중 하나로 바꿔주세요.
+        // 예: const CLIENT_API_KEY = 'YOUR_ACTUAL_API_KEY_HERE';
         const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; 
 
 
@@ -492,8 +492,15 @@
 
                     // 필터링 적용 (클라이언트 측에서 진행 상태 필터링)
                     const filteredItems = items.filter(item => {
-                        if (currentStatusFilter === 'all') return true;
-                        const status = getFestivalStatus(item.eventstartdate, item.eventenddate).text; // locationBasedList는 eventstartdate/enddate를 직접 주지 않으므로 가정
+                        // locationBasedList는 eventstartdate/enddate를 직접 주지 않으므로,
+                        // 임시로 오늘 날짜를 기준으로 '진행중'으로 간주하거나,
+                        // detailCommon2 또는 detailIntro2를 통해 날짜 정보를 가져와야 합니다.
+                        // 여기서는 간단화를 위해, locationBasedList에서 날짜 정보가 없으면 모든 항목을 포함합니다.
+                        // 실제 환경에서는 상세 API 호출을 통해 날짜를 가져오는 로직이 필요합니다.
+                        if (!item.eventstartdate || !item.eventenddate) {
+                            return currentStatusFilter === 'all'; // 날짜 정보 없으면 필터링 안함
+                        }
+                        const status = getFestivalStatus(item.eventstartdate, item.eventenddate).text; 
                         if (currentStatusFilter === 'ongoing' && status === '진행중') return true;
                         if (currentStatusFilter === 'upcoming' && status === '예정') return true;
                         if (currentStatusFilter === 'finished' && status === '종료') return true;
@@ -547,7 +554,12 @@
             hideNoResults();
 
             festivals.forEach(festival => {
-                const status = getFestivalStatus(festival.eventstartdate, festival.eventenddate);
+                // locationBasedList는 eventstartdate/enddate를 바로 주지 않을 수 있으므로,
+                // 여기서는 안전하게 기본값을 사용합니다. (searchFestival2는 항상 제공)
+                const startDate = festival.eventstartdate || '20000101'; // 기본 시작일
+                const endDate = festival.eventenddate || '21001231'; // 기본 종료일
+                const status = getFestivalStatus(startDate, endDate);
+
                 const card = document.createElement('div');
                 card.className = 'festival-card cursor-pointer';
                 card.innerHTML = `
@@ -561,15 +573,15 @@
                     <div class="p-5 flex-grow flex flex-col">
                         <h3 class="text-xl font-semibold text-gray-900 mb-2">${festival.title || '제목 없음'}</h3>
                         <p class="text-sm text-gray-600 mb-1">
-                            <strong>기간:</strong> ${formatDate(festival.eventstartdate)} ~ ${formatDate(festival.eventenddate)}
+                            <strong>기간:</strong> ${formatDate(startDate)} ~ ${formatDate(endDate)}
                         </p>
                         <p class="text-sm text-gray-600 mb-3">
                             <strong>장소:</strong> ${festival.addr1 || '장소 미정'}
                         </p>
-                        ${festival.distance ? `<p class="text-sm text-gray-700 font-medium mt-auto"><strong>거리:</strong> 약 ${festival.distance}m</p>` : ''}
+                        ${festival.distance ? `<p class="text-sm text-gray-700 font-medium mt-auto"><strong>거리:</strong> 약 ${Math.round(festival.distance)}m</p>` : ''}
                     </div>
                 `;
-                card.onclick = () => openDetailModal(festival.contentid, festival.contentTypeId);
+                card.onclick = () => openDetailModal(festival.contentid, festival.contenttypeid || 15); // 기본 contenttypeid 15 (축제)
                 festivalListDiv.appendChild(card);
             });
         }
@@ -585,7 +597,8 @@
                 const commonData = await fetchAPI('detailCommon2', {
                     contentId: contentId,
                     MobileOS: 'WEB',
-                    MobileApp: 'HealingKApp'
+                    MobileApp: 'HealingKApp',
+                    overviewYN: 'Y' // 개요 정보 포함 요청
                 });
                 const commonItem = commonData.items.item[0];
 
@@ -611,6 +624,15 @@
                 if (homepageLink && !homepageLink.startsWith('http')) {
                     homepageLink = `http://${homepageLink}`; // 링크가 http:// 또는 https://로 시작하지 않는 경우 보정
                 }
+                
+                // HTML 엔티티를 일반 텍스트로 디코딩
+                const decodedOverview = commonItem.overview ? commonItem.overview
+                    .replace(/<br\s*\/?>/gi, '\n') // <br> 태그를 줄바꿈으로
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'") : '상세 개요 정보가 없습니다.';
 
                 modalContentDiv.innerHTML = `
                     <h2 class="text-3xl font-bold text-gray-900 mb-4">${commonItem.title || '제목 없음'}</h2>
@@ -654,7 +676,7 @@
 
                             <h3 class="text-xl font-semibold text-gray-800 mt-6 mb-2">개요</h3>
                             <div class="text-base text-gray-700 leading-relaxed overflow-y-auto max-h-60 rounded-md p-3 bg-gray-50 border border-gray-200">
-                                ${commonItem.overview ? commonItem.overview.replace(/<br\s*\/?>/gi, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'") : '상세 개요 정보가 없습니다.'}
+                                <pre class="whitespace-pre-wrap font-sans">${decodedOverview}</pre>
                             </div>
                         </div>
                     </div>
@@ -687,10 +709,7 @@
         });
         statusFilterSelect.addEventListener('change', () => {
             currentStatusFilter = statusFilterSelect.value;
-            // Re-fetch with current filters, but re-render from page 1
-            // A more efficient way would be to re-filter the already loaded items if the filter is client-side.
-            // For simplicity and given the API structure, we'll re-fetch.
-            fetchFestivals(true);
+            fetchFestivals(true); // Filter applied, re-fetch from page 1
         });
 
         // 모달 외부 클릭 시 닫기
