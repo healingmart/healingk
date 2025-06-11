@@ -166,7 +166,7 @@
             // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! ---
             // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
             // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
-            const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
+            const CLIENT_API_KEY = 'YOUR_ACTUAL_CLIENT_API_KEY_HERE'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
             // ----------------------------------------------------
 
             const gemsGrid = document.getElementById('gems-grid');
@@ -217,38 +217,53 @@
                     console.log('Raw API result (areaBasedList):', result); // Raw API result 출력
 
                     // 백엔드 응답 구조에 따라 데이터를 파싱
-                    // items.item이 유효한 배열 또는 단일 객체인 경우 처리
-                    if (result.success && result.data && result.data.items && result.data.items.item !== undefined && result.data.items.item !== null) {
-                        const items = Array.isArray(result.data.items.item) ? result.data.items.item : [result.data.items.item];
-
-                        gemsData = items.map((item, index) => ({
-                            id: item.contentid || index + 1,
-                            title: item.title || '제목 없음',
-                            address: item.addr1 || '주소 없음',
-                            contentTypeId: parseInt(item.contenttypeid) || undefined, // contenttypeid를 파싱하고 NaN이면 undefined로 설정
-                            // description은 detailCommon에서 가져오므로 초기에는 빈 값
-                            description: '',
-                            images: [], // detailCommon에서 가져올 예정
-                            thumbnail: item.firstimage ? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
-                        }));
+                    // result.data.items.item이 배열 또는 단일 객체, 또는 null/undefined일 수 있음을 처리
+                    if (result.success && result.data && result.data.items) {
+                        let rawItems = [];
+                        // item이 존재하고 null이 아닌 경우에만 처리
+                        if (result.data.items.item !== undefined && result.data.items.item !== null) {
+                            rawItems = Array.isArray(result.data.items.item) ? result.data.items.item : [result.data.items.item];
+                        }
                         
-                        // 가져온 데이터를 title 기준으로 가나다순 정렬
-                        gemsData.sort((a, b) => a.title.localeCompare(b.title));
+                        if (rawItems.length > 0) {
+                            gemsData = rawItems.map((item, index) => ({
+                                id: item.contentid || index + 1,
+                                title: item.title || '제목 없음',
+                                address: item.addr1 || '주소 없음',
+                                contentTypeId: parseInt(item.contenttypeid) || undefined, // contenttypeid를 파싱하고 NaN이면 undefined로 설정
+                                description: '', // detailCommon에서 가져오므로 초기에는 빈 값
+                                images: [], // detailCommon에서 가져올 예정
+                                thumbnail: item.firstimage ? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
+                            }));
+                            
+                            // 가져온 데이터를 title 기준으로 가나다순 정렬
+                            gemsData.sort((a, b) => a.title.localeCompare(b.title));
 
-                        console.log(`Successfully fetched and sorted ${gemsData.length} items from backend.`);
+                            console.log(`Successfully processed and sorted ${gemsData.length} items from backend.`);
+                        } else if (result.data.totalCount === 0) {
+                            // totalCount가 0이고 실제 item이 없는 경우 (정상)
+                            gemsData = [];
+                            console.log('Backend returned success with 0 items. Displaying empty grid.');
+                        } else {
+                            // totalCount > 0 이지만 item이 없거나 유효하지 않은 경우 (API 응답 불일치)
+                            gemsData = []; // 데이터 초기화
+                            console.warn('Backend returned success with totalCount > 0 but no valid items.item found. Displaying empty grid.');
+                            // 이 경우는 오류를 throw하지 않고 경고만 남기고 진행.
+                        }
+
                     } else if (result.success && result.data && result.data.totalCount === 0) {
-                        // 백엔드에서 성공을 반환했지만, totalCount가 0인 경우 (정상적인 결과 없음)
+                        // totalCount만 있고 items 객체가 없는 경우 (정상)
                         gemsData = [];
-                        console.log('Backend returned success with 0 items. Displaying empty grid.');
+                        console.log('Backend returned success with 0 items (no "items" object). Displaying empty grid.');
                     }
                     else {
-                        // 성공 응답이지만 데이터가 없거나 예상과 다른 경우
+                        // 예상치 못한 최상위 데이터 구조 (result.success가 false이거나 data/items가 없는 경우)
                         gemsData = []; // 데이터 초기화
-                        console.warn('Backend returned success but no valid items found or unexpected data structure in areaBasedList.');
+                        console.warn('Backend returned an unexpected top-level data structure in areaBasedList.');
                         if (result.error) {
                              throw new Error(result.error.message || '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
                         } else {
-                            throw new Error('데이터 구조가 예상과 다릅니다. (result.success=true 이지만 items.item 없음)');
+                            throw new Error('API 응답 구조가 예상과 다릅니다.');
                         }
                     }
                 } catch (error) {
@@ -493,7 +508,7 @@
                             modalHomepage.classList.add('hidden');
                         }
 
-                    } else if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item === undefined && detailResult.data.totalCount === 0) {
+                    } else if (detailResult.success && detailResult.data && detailResult.data.totalCount === 0) {
                          modalDescription.textContent = '상세 정보가 없습니다.';
                          modalHomepage.classList.add('hidden');
                     }
