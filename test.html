@@ -3,581 +3,965 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>숨겨진 10대 보석 관광지 | 한국관광공사 공식 선정</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>🎊 전국 실시간 축제 & 이벤트 정보</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: #F8F5F2;
-            color: #4B423D;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-       .hero-bg {
-            background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://placehold.co/1920x1080/a7c4a0/4B423D?text=Explore+Korea');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-       .modal {
-            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
         }
-       .modal-content {
-            transition: transform 0.3s ease-in-out;
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-       .card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
         }
-       .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
-       .fade-in {
-            animation: fadeIn 1s ease-in-out forwards;
-            opacity: 0;
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
-       .slide-in-up {
-            animation: slideInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-            opacity: 0;
+
+        .control-group label {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+
+        select, input, button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
         }
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+
+        select, input {
+            background: rgba(255,255,255,0.9);
+            min-width: 200px;
         }
-       .animated {
-            opacity: 0;
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255,107,107,0.3);
         }
-       .is-visible {
-            opacity: 1;
-            transform: translateY(0);
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,107,107,0.4);
         }
-       .gallery-image {
-            transition: opacity 0.5s ease-in-out;
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
-        /* 추가: 상세 정보 로딩 스피너 스타일 */
-       .detail-loading-spinner {
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .loading::after {
+            content: '';
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4B423D;
+            border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
         }
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .festivals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .festival-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .festival-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .festival-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .festival-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .festival-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-ongoing {
+            background: #4caf50;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-upcoming {
+            background: #ff9800;
+            color: white;
+        }
+
+        .status-ended {
+            background: #757575;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .festival-content {
+            padding: 25px;
+        }
+
+        .festival-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .festival-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .info-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .festival-description {
+            color: #777;
+            font-size: 0.9em;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .no-results h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .control-group {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            select, input {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .festivals-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
         }
     </style>
 </head>
-<body class="overflow-x-hidden">
-
-    <header id="hero" class="hero-bg h-screen flex flex-col justify-center items-center text-white text-center p-4">
-        <div class="animated fade-in" style="animation-delay: 0.2s;">
-            <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 tracking-tight">숨겨진 10대 보석 관광지</h1>
-            <p class="text-lg md:text-2xl mb-2 font-light">한국관광공사 공식 선정 | 실시간 추천</p>
-            <p class="max-w-3xl mx-auto text-base md:text-xl font-light">
-                서버리스 기술 기반으로 당신만을 위해 찾아낸, 대한민국에 숨겨진 진짜 보물들을 만나보세요.
-            </p>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎊 전국 실시간 축제 & 이벤트</h1>
+            <p>지금 진행중인 축제와 곧 열릴 이벤트를 한눈에!</p>
         </div>
-        <a href="#intro" class="animated fade-in absolute bottom-10 animate-bounce" style="animation-delay: 1s;">
-            <svg class="w-10 h-10 text-white" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
-        </a>
-    </header>
 
-    <main>
-        <section id="intro" class="py-20 px-6 bg-white">
-            <div class="max-w-4xl mx-auto text-center">
-                <h2 class="animated text-3xl md:text-4xl font-bold mb-6">진정한 한국을 발견하는 여정</h2>
-                <p class="animated text-lg md:text-xl text-gray-600 leading-relaxed">
-                    이곳에 소개되는 10개의 관광지는 단순히 유명한 곳이 아닙니다. 한국관광공사의 방대한 데이터를 기반으로, 오직 당신과 같은 여행자들을 위해 특별히 큐레이션된 '숨겨진 보석'들입니다. 잘 알려지지 않았지만 깊은 역사와 아름다운 자연, 그리고 독특한 문화를 품고 있는 곳들로 떠날 준비가 되셨나요? 저희가 제공하는 실시간 정보와 함께, 잊지 못할 '극강의 체험'을 시작해보세요.
-                </p>
+        <div class="controls">
+            <div class="control-group">
+                <label>🗺️ 지역 선택</label>
+                <select id="areaSelect">
+                    <option value="">전국</option>
+                    <option value="1">서울</option>
+                    <option value="2">인천</option>
+                    <option value="3">대전</option>
+                    <option value="4">대구</option>
+                    <option value="5">광주</option>
+                    <option value="6">부산</option>
+                    <option value="7">울산</option>
+                    <option value="8">세종</option>
+                    <option value="31">경기도</option>
+                    <option value="32">강원도</option>
+                    <option value="33">충청북도</option>
+                    <option value="34">충청남도</option>
+                    <option value="35">경상북도</option>
+                    <option value="36">경상남도</option>
+                    <option value="37">전라북도</option>
+                    <option value="38">전라남도</option>
+                    <option value="39">제주도</option>
+                </select>
             </div>
-        </section>
-
-        <section id="gems-section" class="py-20 px-6">
-            <div class="max-w-7xl mx-auto">
-                <h2 class="animated text-3xl md:text-4xl font-bold text-center mb-12">대한민국의 숨은 보석 10선</h2>
-                <div id="loading-indicator" class="text-center text-lg text-gray-600 mb-8">데이터 로딩 중...</div>
-                <div id="gems-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                </div>
+            
+            <div class="control-group">
+                <label>🔍 축제 검색</label>
+                <input type="text" id="searchInput" placeholder="축제명 또는 키워드 입력">
             </div>
-        </section>
-    </main>
-
-    <footer class="bg-gray-800 text-white py-8 px-6 text-center">
-        <p>&copy; 2025 숨겨진 보석 관광지. All rights reserved.</p>
-        <p class="text-sm text-gray-400 mt-2">Powered by an advanced serverless architecture and official data from the Korea Tourism Organization.</p>
-    </footer>
-
-    <div id="modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 opacity-0 pointer-events-none p-4">
-        <div class="modal-content bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row transform scale-95">
-            <div class="w-full md:w-1/2 h-64 md:h-auto relative">
-                <div id="modal-gallery" class="relative h-full w-full overflow-hidden rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
-                </div>
-                <button id="prev-btn" class="absolute top-1/2 left-2 transform -translate-y-1/2 bg-white bg-opacity-50 hover:bg-opacity-75 rounded-full p-2 focus:outline-none transition">
-                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </button>
-                <button id="next-btn" class="absolute top-1/2 right-2 transform -translate-y-1/2 bg-white bg-opacity-50 hover:bg-opacity-75 rounded-full p-2 focus:outline-none transition">
-                     <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
+            
+            <div class="control-group">
+                <label>📅 상태 필터</label>
+                <select id="statusFilter">
+                    <option value="">전체</option>
+                    <option value="ongoing">진행중</option>
+                    <option value="upcoming">예정</option>
+                    <option value="ended">종료</option>
+                </select>
             </div>
-            <div class="w-full md:w-1/2 p-6 overflow-y-auto">
-                 <div class="flex justify-between items-start">
-                    <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
-                    <button id="close-modal" class="text-gray-500 hover:text-gray-800 transition">&times;</button>
-                </div>
-                <p id="modal-address" class="text-sm text-gray-500 mb-2"></p>
-                <div id="modal-detail-loading" class="text-gray-500 text-center py-4 flex items-center justify-center hidden">
-                    <div class="detail-loading-spinner"></div> 상세 정보 로딩 중...
-                </div>
-                <p id="modal-description" class="text-gray-700 leading-relaxed mb-4"></p>
-                <a id="modal-homepage" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium hidden">
-                    <svg class="inline-block w-4 h-4 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    공식 홈페이지 방문하기
-                </a>
+            
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button onclick="festivalTracker.searchFestivals()">🔍 검색하기</button>
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">총 축제 수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="ongoingCount">0</div>
+                <div class="stat-label">진행중</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="upcomingCount">0</div>
+                <div class="stat-label">예정</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayCount">0</div>
+                <div class="stat-label">오늘 시작</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            🎪 축제 정보를 불러오는 중입니다
+        </div>
+
+        <div id="festivalsContainer" class="festivals-grid"></div>
+    </div>
+
+    <!-- 상세 정보 모달 -->
+    <div id="festivalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle"></h2>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 상세 정보가 여기에 들어갑니다 -->
             </div>
         </div>
     </div>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            let gemsData =; // 데이터를 동적으로 가져올 것이므로 빈 배열로 초기화
-            // IMPORTANT: 아래 BASE_BACKEND_URL을 사용자가 배포한 실제 Vercel 백엔드 URL로 변경해야 합니다.
-            const BASE_BACKEND_URL = 'https://healingk.vercel.app/api/tourism'; 
-            console.log('Attempting to fetch data from:', BASE_BACKEND_URL); // API 호출 URL 콘솔 출력
+        class FestivalTracker {
+            constructor() {
+                this.apiUrl = 'https://healingk.vercel.app/api/tourism';
+                this.apiKey = 'tXbO20526GJdtz87o80a2iuLIdPeIzBGT74mNa3egwJM82gRrXSe4g0fO91Vgm2a95czrqpeuCfU2Rsely2ClQ=='; // 실제 사용시 여기에 API 키 설정
+                this.festivals = [];
+                this.filteredFestivals = [];
+                
+                this.init();
+            }
 
-            // --- 여기에 사용자님의 실제 클라이언트 API 키를 입력하세요! ---
-            // 이 키는 Vercel 백엔드 프로젝트의 환경 변수 ALLOWED_API_KEYS에 설정된 키 중 하나여야 합니다.
-            // 예시: const CLIENT_API_KEY = 'MySuperSecureClientKey123ABC';
-            const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; // <<< 이 부분을 실제 API 키 문자열로 변경해주세요!
-            // ----------------------------------------------------
+            async init() {
+                // 페이지 로드시 자동으로 축제 정보 불러오기
+                await this.loadFestivals();
+                this.setupEventListeners();
+            }
 
-            const gemsGrid = document.getElementById('gems-grid');
-            const loadingIndicator = document.getElementById('loading-indicator');
-            const modal = document.getElementById('modal');
-            const closeModalBtn = document.getElementById('close-modal');
-            const modalTitle = document.getElementById('modal-title');
-            const modalAddress = document.getElementById('modal-address');
-            const modalDescription = document.getElementById('modal-description');
-            const modalGallery = document.getElementById('modal-gallery');
-            const prevBtn = document.getElementById('prev-btn');
-            const nextBtn = document.getElementById('next-btn');
-            const modalDetailLoading = document.getElementById('modal-detail-loading');
-            const modalHomepage = document.getElementById('modal-homepage');
+            setupEventListeners() {
+                // 검색 입력 실시간 필터링
+                document.getElementById('searchInput').addEventListener('input', () => {
+                    this.filterFestivals();
+                });
 
+                // 상태 필터 변경
+                document.getElementById('statusFilter').addEventListener('change', () => {
+                    this.filterFestivals();
+                });
 
-            let currentImages =;
-            let currentImageIndex = 0;
+                // 모달 닫기
+                document.querySelector('.close').addEventListener('click', () => {
+                    document.getElementById('festivalModal').style.display = 'none';
+                });
 
-            // 백엔드에서 관광지 데이터를 가져오는 함수
-            async function fetchGemsData() {
-                loadingIndicator.style.display = 'block'; // 로딩 인디케이터 표시
-                gemsGrid.innerHTML = ''; // 기존 콘텐츠 비우기
-
-                try {
-                    // 클라이언트 API 키가 비어있는 경우 오류 발생
-                    if (CLIENT_API_KEY.trim() === '') {
-                        throw new Error("클라이언트 API 키가 비어 있습니다. 'YOUR_ACTUAL_CLIENT_API_KEY_HERE' 대신 유효한 실제 키 문자열을 입력해주세요. 이 키는 백엔드의 ALLOWED_API_KEYS에 등록되어야 합니다.");
+                // 모달 외부 클릭시 닫기
+                window.addEventListener('click', (event) => {
+                    const modal = document.getElementById('festivalModal');
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
                     }
+                });
+            }
 
-                    // 'operation' 매개변수를 URL 쿼리 스트링으로 전달
-                    const apiUrl = `${BASE_BACKEND_URL}?operation=areaBasedList&numOfRows=100&pageNo=1&MobileOS=ETC&MobileApp=AppTest&listYN=Y&arrange=A`; // arrange=A 추가하여 가나다순 정렬 요청
-                    console.log('Fetching from:', apiUrl); // 실제 fetch URL 콘솔 출력
-
-                    const response = await fetch(apiUrl, {
-                        method: 'GET',
+            async loadFestivals() {
+                this.showLoading(true);
+                
+                try {
+                    const response = await fetch(`${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=R`, {
                         headers: {
-                            'X-API-Key': CLIENT_API_KEY // 프론트엔드 API 키 헤더 추가
+                            'X-API-Key': this.apiKey
                         }
                     });
 
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({})); // 오류 응답 본문을 파싱 시도
-                        const errorMessage = errorData.error? errorData.error.message : `HTTP error! status: ${response.status}`;
-                        throw new Error(errorMessage);
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    const result = await response.json();
-                    console.log('Raw API result (areaBasedList):', result); // Raw API result 출력
 
-                    // 백엔드 응답 구조에 따라 데이터를 파싱
-                    // result.data.items.item이 배열 또는 단일 객체, 또는 null/undefined일 수 있음을 처리
-                    if (result.success && result.data && result.data.items) {
-                        let rawItems =;
-                        // item이 존재하고 null이 아닌 경우에만 처리
-                        if (result.data.items.item!== undefined && result.data.items.item!== null) {
-                            rawItems = Array.isArray(result.data.items.item)? result.data.items.item : [result.data.items.item];
-                        }
+                    const data = await response.json();
+                    console.log('API Response:', data);
+
+                    if (data.success && data.data && data.data.items) {
+                        // items가 배열인지 객체인지 확인
+                        const items = Array.isArray(data.data.items.item) 
+                            ? data.data.items.item 
+                            : (data.data.items.item ? [data.data.items.item] : []);
                         
-                        if (rawItems.length > 0) {
-                            gemsData = rawItems.map((item, index) => ({
-                                id: item.contentid |
-| index + 1,
-                                title: item.title |
-| '제목 없음',
-                                address: item.addr1 |
-| '주소 없음',
-                                contentTypeId: parseInt(item.contenttypeid) |
-| undefined, // contenttypeid를 파싱하고 NaN이면 undefined로 설정
-                                description: '', // detailCommon에서 가져오므로 초기에는 빈 값
-                                images:, // detailCommon에서 가져올 예정
-                                thumbnail: item.firstimage? item.firstimage.replace('http://', 'https://') : `https://placehold.co/600x400/CCCCCC/000000?text=No+Thumbnail+${index+1}`
-                            }));
-                            
-                            // 가져온 데이터를 title 기준으로 가나다순 정렬
-                            gemsData.sort((a, b) => a.title.localeCompare(b.title));
-
-                            console.log(`Successfully processed and sorted ${gemsData.length} items from backend.`);
-                        } else if (result.data.totalCount === 0) {
-                            // totalCount가 0이고 실제 item이 없는 경우 (정상)
-                            gemsData =;
-                            console.log('Backend returned success with 0 items. Displaying empty grid.');
-                        } else {
-                            // totalCount > 0 이지만 item이 없거나 유효하지 않은 경우 (API 응답 불일치)
-                            gemsData =; // 데이터 초기화
-                            console.warn('Backend returned success with totalCount > 0 but no valid items.item found. Displaying empty grid.');
-                            // 이 경우는 오류를 throw하지 않고 경고만 남기고 진행.
-                        }
-
-                    } else if (result.success && result.data && result.data.totalCount === 0) {
-                        // totalCount만 있고 items 객체가 없는 경우 (정상)
-                        gemsData =;
-                        console.log('Backend returned success with 0 items (no "items" object). Displaying empty grid.');
-                    }
-                    else {
-                        // 예상치 못한 최상위 데이터 구조 (result.success가 false이거나 data/items가 없는 경우)
-                        gemsData =; // 데이터 초기화
-                        console.warn('Backend returned an unexpected top-level data structure in areaBasedList.');
-                        if (result.error) {
-                             throw new Error(result.error.message |
-| '데이터를 불러오지 못했습니다. 백엔드 오류 확인.');
-                        } else {
-                            throw new Error('API 응답 구조가 예상과 다릅니다.');
-                        }
+                        this.festivals = items;
+                        this.processFilterDates();
+                        this.filterFestivals();
+                        this.updateStats();
+                    } else {
+                        throw new Error('Invalid API response structure');
                     }
                 } catch (error) {
-                    console.error('Error fetching data:', error);
-                    // 오류 발생 시 샘플 데이터를 사용하도록 폴백 (이전처럼 하드코딩된 데이터로)
-                    gemsData = [
-                             {
-                                id: 1,
-                                title: '안동 지례예술촌',
-                                address: '경북 안동시 임동면 지례예술촌길 427',
-                                description: '고택의 정취와 예술의 향기가 어우러진 곳. 수백 년 된 고택에서 하룻밤을 보내며, 자연의 소리를 배경으로 진정한 쉼을 경험할 수 있는 비밀스러운 공간입니다.',
-                                images: [
-                                    'https://placehold.co/800x600/8d9b8a/FFFFFF?text=Jirye+Art+Village+1',
-                                    'https://placehold.co/800x600/a7c4a0/FFFFFF?text=Jirye+Art+Village+2',
-                                    'https://placehold.co/800x600/6b7d6a/FFFFFF?text=Jirye+Art+Village+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/8d9b8a/FFFFFF?text=지례예술촌'
-                            },
-                            {
-                                id: 2,
-                                title: '강릉 사근진 해변',
-                                address: '강원 강릉시 해안로604번길 16',
-                                description: '경포대의 화려함 뒤에 숨겨진 조용하고 평화로운 해변. 끝없이 펼쳐진 백사장과 맑은 동해 바다를 오롯이 즐길 수 있는, 아는 사람만 아는 힐링 스팟입니다.',
-                                images:,
-                                thumbnail: 'https://placehold.co/600x400/a0c4e0/FFFFFF?text=사근진+해변'
-                            },
-                            {
-                                id: 3,
-                                title: '순천 낙안읍성',
-                                address: '전남 순천시 낙안면 충민길 30',
-                                description: '조선 시대의 모습이 그대로 보존된 살아있는 민속촌. 초가집 사이를 거닐며 타임머신을 탄 듯한 특별한 경험을 할 수 있는 역사적인 장소입니다.',
-                                images: [
-                                    'https://placehold.co/800x600/d9c4a0/FFFFFF?text=Naganeupseong+1',
-                                    'https://placehold.co/800x600/c7b282/FFFFFF?text=Naganeupseong+2',
-                                    'https://placehold.co/800x600/b5a069/FFFFFF?text=Naganeupseong+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/d9c4a0/FFFFFF?text=낙안읍성'
-                            },
-                            {
-                                id: 4,
-                                title: '울릉도 행남해안산책로',
-                                address: '경북 울릉군 울릉읍 도동리',
-                                description: '화산섬의 기암절벽과 에메랄드빛 바다를 따라 걷는 환상의 트레킹 코스. 자연이 빚어낸 경이로운 풍경 속에서 자연과 하나가 되는 짜릿한 경험을 선사합니다.',
-                                images: [
-                                    'https://placehold.co/800x600/69c7b5/FFFFFF?text=Haengnam+Coastal+Walk+1',
-                                    'https://placehold.co/800x600/50b5a3/FFFFFF?text=Haengnam+Coastal+Walk+2',
-                                    'https://placehold.co/800x600/3a9e8d/FFFFFF?text=Haengnam+Coastal+Walk+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/69c7b5/FFFFFF?text=행남해안산책로'
-                            },
-                             {
-                                id: 5,
-                                title: '고창 학원농장',
-                                address: '전북 고창군 공음면 학원농장길 158-6',
-                                description: '계절마다 다른 색의 옷을 갈아입는 광활한 구릉지. 봄에는 청보리, 여름에는 해바라기, 가을에는 메밀꽃이 만개하여 동화 같은 풍경을 자아냅니다.',
-                                images: [
-                                    'https://placehold.co/800x600/c3d9a0/FFFFFF?text=Hagwon+Farm+1',
-                                    'https://placehold.co/800x600/b0c782/FFFFFF?text=Hagwon+Farm+2',
-                                    'https://placehold.co/800x600/9eb569/FFFFFF?text=Hagwon+Farm+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/c3d9a0/FFFFFF?text=학원농장'
-                            },
-                            {
-                                id: 6,
-                                title: '신안 퍼플섬',
-                                address: '전남 신안군 안좌면 소곡리',
-                                description: '온통 보랏빛으로 물든 신비로운 섬. 다리, 지붕, 길까지 모든 것이 보라색으로 꾸며져 있어 비현실적인 풍경 속에서 인생 사진을 남길 수 있습니다.',
-                                images: [
-                                    'https://placehold.co/800x600/c4a0d9/FFFFFF?text=Purple+Island+1',
-                                    'https://placehold.co/800x600/b282c7/FFFFFF?text=Purple+Island+2',
-                                    'https://placehold.co/800x600/a069b5/FFFFFF?text=Purple+Island+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/c4a0d9/FFFFFF?text=퍼플섬'
-                            },
-                            {
-                                id: 7,
-                                title: '제주 사려니숲길',
-                                address: '제주 제주시 조천읍 교래리',
-                                description: '하늘을 향해 뻗은 삼나무가 빽빽하게 들어선 신비로운 숲길. 피톤치드 가득한 공기를 마시며 걷다 보면 몸과 마음이 정화되는 치유의 시간을 가질 수 있습니다.',
-                                images:,
-                                thumbnail: 'https://placehold.co/600x400/8aa08d/FFFFFF?text=사려니숲길'
-                            },
-                            {
-                                id: 8,
-                                title: '부산 흰여울문화마을',
-                                address: '부산 영도구 영선동4가',
-                                description: '절영해안산책로 위, 가파른 담벼락을 따라 작은 집들이 옹기종기 모여 있는 마을. 골목 사이로 보이는 푸른 바다가 그리스 산토리니를 연상시킵니다.',
-                                images: [
-                                    'https://placehold.co/800x600/a0c0d9/FFFFFF?text=Huinnyeoul+Village+1',
-                                    'https://placehold.co/800x600/82aec7/FFFFFF?text=Huinnyeoul+Village+2',
-                                    'https://placehold.co/800x600/699bb5/FFFFFF?text=Huinnyeoul+Village+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/a0c0d9/FFFFFF?text=흰여울문화마을'
-                            },
-                             {
-                                id: 9,
-                                title: '단양 이끼터널',
-                                address: '충북 단양군 적성면 애곡리',
-                                description: '오래된 철길 터널의 벽면을 초록빛 이끼가 가득 메운 신비로운 공간. 연인들의 사랑의 언약 장소로도 유명하며, 독특한 분위기 속에서 특별한 사진을 남길 수 있습니다.',
-                                images:,
-                                thumbnail: 'https://placehold.co/600x400/7a997e/FFFFFF?text=이끼터널'
-                            },
-                            {
-                                id: 10,
-                                title: '태안 팜카밀레 허브농원',
-                                address: '충남 태안군 남면 우운길 56-19',
-                                description: '100여종의 허브와 500여종의 야생화가 가득한 향기로운 농원. 다채로운 정원을 거닐며 향기로운 허브차를 마시는 여유를 즐길 수 있는 힐링 공간입니다.',
-                                images: [
-                                    'https://placehold.co/800x600/d9a0b8/FFFFFF?text=Farm+Kamille+1',
-                                    'https://placehold.co/800x600/c782a2/FFFFFF?text=Farm+Kamille+2',
-                                    'https://placehold.co/800x600/b5698d/FFFFFF?text=Farm+Kamille+3'
-                                ],
-                                thumbnail: 'https://placehold.co/600x400/d9a0b8/FFFFFF?text=팜카밀레'
-                            }
-                        ];
-                    console.error(`Error fetching data: ${error.message}. Using static sample data. Ensure your backend is deployed, CLIENT_API_KEY is correct, and ALLOWED_DOMAINS includes this origin.`);
+                    console.error('축제 정보 로드 실패:', error);
+                    this.showError('축제 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
                 } finally {
-                    loadingIndicator.style.display = 'none'; // 로딩 인디케이터 숨기기
-                    renderGems(); // 데이터 로드 또는 폴백 후 관광지 렌더링
-                    setupIntersectionObserver(); // Intersection Observer 설정
+                    this.showLoading(false);
                 }
             }
 
-            function renderGems() {
-                if (gemsData.length === 0) {
-                    gemsGrid.innerHTML = '<p class="text-center text-red-500 text-xl">관광지 데이터를 불러오지 못했습니다. 백엔드 URL, API 키, 또는 ALLOWED_DOMAINS 설정을 확인해 주세요.</p>';
+            async searchFestivals() {
+                const areaCode = document.getElementById('areaSelect').value;
+                const keyword = document.getElementById('searchInput').value.trim();
+                
+                this.showLoading(true);
+                
+                try {
+                    let url = `${this.apiUrl}?operation=areaBasedList&contentTypeId=15&numOfRows=100&arrange=R`;
+                    
+                    if (areaCode) {
+                        url += `&areaCode=${areaCode}`;
+                    }
+
+                    // 키워드가 있으면 searchKeyword API 사용
+                    if (keyword) {
+                        url = `${this.apiUrl}?operation=searchKeyword&keyword=${encodeURIComponent(keyword)}&contentTypeId=15&numOfRows=100&arrange=R`;
+                        if (areaCode) {
+                            url += `&areaCode=${areaCode}`;
+                        }
+                    }
+
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-API-Key': this.apiKey
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success && data.data && data.data.items) {
+                        const items = Array.isArray(data.data.items.item) 
+                            ? data.data.items.item 
+                            : (data.data.items.item ? [data.data.items.item] : []);
+                        
+                        this.festivals = items;
+                        this.processFilterDates();
+                        this.filterFestivals();
+                        this.updateStats();
+                    } else {
+                        this.festivals = [];
+                        this.filteredFestivals = [];
+                        this.displayFestivals();
+                        this.updateStats();
+                    }
+                } catch (error) {
+                    console.error('축제 검색 실패:', error);
+                    this.showError('축제 검색에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            processFilterDates() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                this.festivals.forEach(festival => {
+                    // 축제 기간 정보 파싱
+                    festival.parsedDates = this.parseFestivalDates(festival);
+                    festival.status = this.getFestivalStatus(festival.parsedDates, today);
+                });
+            }
+
+            parseFestivalDates(festival) {
+                const result = {
+                    startDate: null,
+                    endDate: null,
+                    hasValidDates: false
+                };
+
+                // API 데이터에서 날짜 정보 추출 시도
+                if (festival.eventstartdate && festival.eventenddate) {
+                    try {
+                        result.startDate = this.parseApiDate(festival.eventstartdate);
+                        result.endDate = this.parseApiDate(festival.eventenddate);
+                        result.hasValidDates = true;
+                    } catch (e) {
+                        console.warn('날짜 파싱 실패:', festival.title, e);
+                    }
+                }
+
+                // 제목에서 날짜 정보 추출 시도 (fallback)
+                if (!result.hasValidDates) {
+                    const titleDates = this.extractDatesFromTitle(festival.title);
+                    if (titleDates.startDate) {
+                        result.startDate = titleDates.startDate;
+                        result.endDate = titleDates.endDate || titleDates.startDate;
+                        result.hasValidDates = true;
+                    }
+                }
+
+                return result;
+            }
+
+            parseApiDate(dateString) {
+                if (!dateString) return null;
+                
+                // YYYYMMDD 형식 파싱
+                const dateStr = String(dateString);
+                if (dateStr.length === 8) {
+                    const year = parseInt(dateStr.substring(0, 4));
+                    const month = parseInt(dateStr.substring(4, 6)) - 1; // month는 0-based
+                    const day = parseInt(dateStr.substring(6, 8));
+                    return new Date(year, month, day);
+                }
+                
+                return null;
+            }
+
+            extractDatesFromTitle(title) {
+                // 제목에서 날짜 패턴 추출
+                const datePatterns = [
+                    /(\d{4})[-\.\/](\d{1,2})[-\.\/](\d{1,2})/g,
+                    /(\d{1,2})월\s*(\d{1,2})일/g,
+                    /(\d{4})년\s*(\d{1,2})월/g
+                ];
+
+                const result = { startDate: null, endDate: null };
+                const currentYear = new Date().getFullYear();
+
+                for (let pattern of datePatterns) {
+                    const matches = [...title.matchAll(pattern)];
+                    if (matches.length > 0) {
+                        const match = matches[0];
+                        try {
+                            if (pattern === datePatterns[0]) { // YYYY-MM-DD 형식
+                                result.startDate = new Date(
+                                    parseInt(match[1]),
+                                    parseInt(match[2]) - 1,
+                                    parseInt(match[3])
+                                );
+                            } else if (pattern === datePatterns[1]) { // MM월 DD일 형식
+                                result.startDate = new Date(
+                                    currentYear,
+                                    parseInt(match[1]) - 1,
+                                    parseInt(match[2])
+                                );
+                            } else if (pattern === datePatterns[2]) { // YYYY년 MM월 형식
+                                result.startDate = new Date(
+                                    parseInt(match[1]),
+                                    parseInt(match[2]) - 1,
+                                    1
+                                );
+                            }
+                            break;
+                        } catch (e) {
+                            continue;
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            getFestivalStatus(parsedDates, today) {
+                if (!parsedDates.hasValidDates) {
+                    return 'unknown';
+                }
+
+                const startDate = parsedDates.startDate;
+                const endDate = parsedDates.endDate;
+
+                if (endDate && today > endDate) {
+                    return 'ended';
+                } else if (startDate && today < startDate) {
+                    return 'upcoming';
+                } else if (startDate && (!endDate || today <= endDate) && today >= startDate) {
+                    return 'ongoing';
+                } else {
+                    return 'unknown';
+                }
+            }
+
+            filterFestivals() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+
+                this.filteredFestivals = this.festivals.filter(festival => {
+                    // 검색어 필터
+                    const matchesSearch = !searchTerm || 
+                        festival.title.toLowerCase().includes(searchTerm) ||
+                        (festival.addr1 && festival.addr1.toLowerCase().includes(searchTerm));
+
+                    // 상태 필터
+                    const matchesStatus = !statusFilter || festival.status === statusFilter;
+
+                    return matchesSearch && matchesStatus;
+                });
+
+                this.displayFestivals();
+            }
+
+            displayFestivals() {
+                const container = document.getElementById('festivalsContainer');
+                
+                if (this.filteredFestivals.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-results">
+                            <h3>🎭 축제를 찾을 수 없습니다</h3>
+                            <p>다른 지역이나 키워드로 검색해보세요!</p>
+                        </div>
+                    `;
                     return;
                 }
-                gemsGrid.innerHTML = gemsData.map(gem => `
-                    <div class="animated card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer" data-id="${gem.id}" data-contenttypeid="${gem.contentTypeId}">
-                        <div class="relative h-48">
-                            <img src="${gem.thumbnail}" alt="${gem.title}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CCCCCC/000000?text=Image+Load+Error';">
-                            <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                            <h3 class="absolute bottom-4 left-4 text-white text-xl font-bold">${gem.title}</h3>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            function showImage(index) {
-                modalGallery.innerHTML = '';
-                const img = document.createElement('img');
-                img.src = currentImages[index];
-                img.alt = modalTitle.textContent;
-                img.className = 'gallery-image w-full h-full object-cover opacity-0';
-                img.onerror = function() { // onerror 속성을 JavaScript로 설정
-                    this.onerror = null; // 무한 루프 방지
-                    this.src = 'https://placehold.co/800x600/CCCCCC/000000?text=Image+Load+Error';
-                };
-                modalGallery.appendChild(img);
-                setTimeout(() => img.classList.add('opacity-100'), 50);
-            }
 
-            // openModal 함수 수정
-            async function openModal(gem) {
-                modalTitle.textContent = gem.title;
-                modalAddress.textContent = gem.address;
-                modalDescription.textContent = '상세 정보 로딩 중...'; // 로딩 메시지 표시
-                modalHomepage.classList.add('hidden'); // 홈페이지 링크 숨김
-                modalDetailLoading.classList.remove('hidden'); // 로딩 스피너 표시
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                modal.querySelector('.modal-content').classList.remove('scale-95');
-                document.body.style.overflow = 'hidden';
-
-                currentImages = gem.images ||; // 기본 이미지로 초기화 (현재 gem.images는 비어 있음)
-                showImage(currentImageIndex);
-
-                try {
-                    // detailCommon API 호출을 위한 파라미터 구성
-                    const detailParams = {
-                        operation: 'detailCommon',
-                        contentId: gem.id,
-                        defaultYN: 'Y',
-                        firstImageYN: 'Y',
-                        areacodeYN: 'Y',
-                        catcodeYN: 'Y',
-                        addrinfoYN: 'Y',
-                        mapinfoYN: 'Y',
-                        overviewYN: 'Y'
-                    };
-                    // contentTypeId가 유효한 경우에만 파라미터에 추가
-                    if (gem.contentTypeId!== undefined &&!isNaN(gem.contentTypeId)) {
-                        detailParams.contentTypeId = gem.contentTypeId;
-                    }
+                const festivalsHtml = this.filteredFestivals.map(festival => {
+                    const statusClass = `status-${festival.status}`;
+                    const statusText = this.getStatusText(festival.status);
+                    const dateText = this.getDateText(festival.parsedDates);
                     
-                    const detailApiUrl = `${BASE_BACKEND_URL}?${new URLSearchParams(detailParams).toString()}`;
-                    console.log('Fetching detail from:', detailApiUrl);
+                    return `
+                        <div class="festival-card" onclick="festivalTracker.showFestivalDetail('${festival.contentid}')">
+                            <div class="festival-image">
+                                ${festival.firstimage ? 
+                                    `<img src="${festival.firstimage}" alt="${festival.title}" onerror="this.style.display='none'">` : 
+                                    '🎪'
+                                }
+                                <div class="festival-status ${statusClass}">${statusText}</div>
+                            </div>
+                            <div class="festival-content">
+                                <h3 class="festival-title">${festival.title}</h3>
+                                <div class="festival-info">
+                                    <div class="info-item">
+                                        <span class="info-icon">📍</span>
+                                        <span>${festival.addr1 || '주소 정보 없음'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-icon">📅</span>
+                                        <span>${dateText}</span>
+                                    </div>
+                                    ${festival.tel ? `
+                                        <div class="info-item">
+                                            <span class="info-icon">📞</span>
+                                            <span>${festival.tel}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                ${festival.overview ? `
+                                    <div class="festival-description">${festival.overview}</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
-                    const response = await fetch(detailApiUrl, {
-                        method: 'GET',
-                        headers: {
-                            'X-API-Key': CLIENT_API_KEY
+                container.innerHTML = festivalsHtml;
+            }
+
+            getStatusText(status) {
+                const statusMap = {
+                    'ongoing': '진행중',
+                    'upcoming': '예정',
+                    'ended': '종료',
+                    'unknown': '정보없음'
+                };
+                return statusMap[status] || '정보없음';
+            }
+
+            getDateText(parsedDates) {
+                if (!parsedDates.hasValidDates) {
+                    return '날짜 정보 없음';
+                }
+
+                const formatDate = (date) => {
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                };
+
+                if (parsedDates.startDate && parsedDates.endDate && 
+                    parsedDates.startDate.getTime() !== parsedDates.endDate.getTime()) {
+                    return `${formatDate(parsedDates.startDate)} ~ ${formatDate(parsedDates.endDate)}`;
+                } else if (parsedDates.startDate) {
+                    return formatDate(parsedDates.startDate);
+                }
+
+                return '날짜 정보 없음';
+            }
+
+            updateStats() {
+                const total = this.festivals.length;
+                const ongoing = this.festivals.filter(f => f.status === 'ongoing').length;
+                const upcoming = this.festivals.filter(f => f.status === 'upcoming').length;
+                
+                // 오늘 시작하는 축제
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const todayStart = this.festivals.filter(f => {
+                    return f.parsedDates.startDate && 
+                           f.parsedDates.startDate.getTime() === today.getTime();
+                }).length;
+
+                document.getElementById('totalCount').textContent = total;
+                document.getElementById('ongoingCount').textContent = ongoing;
+                document.getElementById('upcomingCount').textContent = upcoming;
+                document.getElementById('todayCount').textContent = todayStart;
+
+                // 통계가 있을 때만 표시
+                const statsElement = document.getElementById('stats');
+                if (total > 0) {
+                    statsElement.style.display = 'grid';
+                } else {
+                    statsElement.style.display = 'none';
+                }
+            }
+
+            async showFestivalDetail(contentId) {
+                try {
+                    // 상세 정보 API 호출
+                    const response = await fetch(
+                        `${this.apiUrl}?operation=detailCommon&contentId=${contentId}&defaultYN=Y&firstImageYN=Y&areacodeYN=Y&catcodeYN=Y&addrinfoYN=Y&mapinfoYN=Y&overviewYN=Y`,
+                        {
+                            headers: {
+                                'X-API-Key': this.apiKey
+                            }
                         }
-                    });
+                    );
 
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error? errorData.error.message : `상세 정보 HTTP 오류! 상태: ${response.status}`);
+                        throw new Error('상세 정보를 불러올 수 없습니다.');
                     }
-                    const detailResult = await response.json();
-                    console.log('Raw API result (detailCommon):', detailResult); // detailCommon Raw API result 출력
 
-                    if (detailResult.success && detailResult.data && detailResult.data.items && detailResult.data.items.item) {
-                        const detailItem = Array.isArray(detailResult.data.items.item)? detailResult.data.items.item : detailResult.data.items.item;
-                        
-                        // HTML 태그 제거 및 상세 설명 표시
-                        modalDescription.innerHTML = detailItem.overview? detailItem.overview.replace(/<[^>]*>/g, '') : '상세 정보가 없습니다.';
-                        modalAddress.textContent = detailItem.addr1 |
-| gem.address |
-| '주소 정보 없음'; // 주소 업데이트
-
-                        // 이미지 갤러리 업데이트
-                        const newImages =;
-                        if (detailItem.firstimage) newImages.push(detailItem.firstimage.replace('http://', 'https://'));
-                        if (detailItem.firstimage2) newImages.push(detailItem.firstimage2.replace('http://', 'https://'));
-                        // imginfo (여러 이미지)가 있다면 추가 로직 필요
-                        currentImages = newImages.length > 0? newImages :;
-                        currentImageIndex = 0;
-                        showImage(currentImageIndex);
-
-                        // 홈페이지 링크 업데이트
-                        if (detailItem.homepage) {
-                            // HTML 태그 제거 및 URL 유효성 검증은 백엔드에서 처리했겠지만, 혹시 몰라 프론트엔드에서도 한 번 더 처리
-                            const homepageUrl = detailItem.homepage.replace(/<[^>]*>/g, '').trim(); 
-                            if (homepageUrl.startsWith('http')) { // 유효한 URL인지 간단히 확인
-                                modalHomepage.href = homepageUrl;
-                                modalHomepage.classList.remove('hidden');
-                            } else {
-                                modalHomepage.classList.add('hidden');
-                            }
-                        } else {
-                            modalHomepage.classList.add('hidden');
-                        }
-
-                    } else if (detailResult.success && detailResult.data && detailResult.data.totalCount === 0) {
-                         modalDescription.textContent = '상세 정보가 없습니다.';
-                         modalHomepage.classList.add('hidden');
-                    }
-                    else {
-                        modalDescription.textContent = '상세 정보를 불러오지 못했습니다. 데이터가 없거나 형식이 다릅니다.';
-                        modalHomepage.classList.add('hidden');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data && data.data.items) {
+                        const detail = Array.isArray(data.data.items.item) 
+                            ? data.data.items.item[0] 
+                            : data.data.items.item;
+                            
+                        this.displayFestivalModal(detail);
+                    } else {
+                        throw new Error('상세 정보가 없습니다.');
                     }
                 } catch (error) {
-                    console.error('Error fetching detail data:', error);
-                    modalDescription.textContent = `상세 정보 로드 실패: ${error.message}. 백엔드 로그를 확인해주세요.`;
-                    modalHomepage.classList.add('hidden');
-                    // 이미지도 대체 이미지로 설정
-                    currentImages =;
-                    currentImageIndex = 0;
-                    showImage(currentImageIndex);
-                } finally {
-                    modalDetailLoading.classList.add('hidden'); // 로딩 스피너 숨김
+                    console.error('상세 정보 로드 실패:', error);
+                    alert('상세 정보를 불러오는데 실패했습니다.');
                 }
             }
 
+            displayFestivalModal(festival) {
+                const modal = document.getElementById('festivalModal');
+                const title = document.getElementById('modalTitle');
+                const body = document.getElementById('modalBody');
 
-            function closeModal() {
-                modal.classList.add('opacity-0');
-                modal.querySelector('.modal-content').classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('pointer-events-none');
-                    document.body.style.overflow = 'auto';
-                }, 300);
+                title.textContent = festival.title;
+
+                const parsedDates = this.parseFestivalDates(festival);
+                const dateText = this.getDateText(parsedDates);
+
+                body.innerHTML = `
+                    ${festival.firstimage ? `
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="${festival.firstimage}" alt="${festival.title}" 
+                                 style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #333; margin-bottom: 10px;">📅 일정</h4>
+                        <p style="color: #666; line-height: 1.6;">${dateText}</p>
+                    </div>
+
+                    ${festival.addr1 ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #333; margin-bottom: 10px;">📍 위치</h4>
+                            <p style="color: #666; line-height: 1.6;">${festival.addr1}</p>
+                            ${festival.addr2 ? `<p style="color: #666; line-height: 1.6;">${festival.addr2}</p>` : ''}
+                        </div>
+                    ` : ''}
+
+                    ${festival.tel ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #333; margin-bottom: 10px;">📞 연락처</h4>
+                            <p style="color: #666; line-height: 1.6;"><a href="tel:${festival.tel}" style="color: #667eea; text-decoration: none;">${festival.tel}</a></p>
+                        </div>
+                    ` : ''}
+
+                    ${festival.overview ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #333; margin-bottom: 10px;">📝 상세 정보</h4>
+                            <p style="color: #666; line-height: 1.8;">${festival.overview}</p>
+                        </div>
+                    ` : ''}
+
+                    ${festival.homepage ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #333; margin-bottom: 10px;">🌐 홈페이지</h4>
+                            <div style="color: #666; line-height: 1.6;">${festival.homepage}</div>
+                        </div>
+                    ` : ''}
+
+                    ${festival.mapx && festival.mapy ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #333; margin-bottom: 10px;">🗺️ 지도</h4>
+                            <a href="https://map.kakao.com/link/map/${encodeURIComponent(festival.title)},${festival.mapy},${festival.mapx}" 
+                               target="_blank" 
+                               style="display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 25px; transition: all 0.3s ease;">
+                                카카오맵에서 보기
+                            </a>
+                        </div>
+                    ` : ''}
+                `;
+
+                modal.style.display = 'block';
             }
 
-            gemsGrid.addEventListener('click', (e) => {
-                const card = e.target.closest('.card');
-                if (card) {
-                    const gemId = parseInt(card.dataset.id);
-                    // contenttypeid는 dataset에서 문자열로 가져오므로, gemsData에서 직접 찾아서 사용
-                    const gem = gemsData.find(g => g.id === gemId);
-                    if (gem) {
-                        openModal(gem); // gem 객체에 이미 contentTypeId가 파싱되어 있음
-                    }
+            showLoading(show) {
+                const loading = document.getElementById('loading');
+                const container = document.getElementById('festivalsContainer');
+                
+                if (show) {
+                    loading.style.display = 'block';
+                    container.style.display = 'none';
+                } else {
+                    loading.style.display = 'none';
+                    container.style.display = 'grid';
                 }
-            });
-
-            closeModalBtn.addEventListener('click', closeModal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-            
-            nextBtn.addEventListener('click', () => {
-                currentImageIndex = (currentImageIndex + 1) % currentImages.length;
-                showImage(currentImageIndex);
-            });
-
-            prevBtn.addEventListener('click', () => {
-                currentImageIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
-                showImage(currentImageIndex);
-            });
-
-            function setupIntersectionObserver() {
-                const animatedElements = document.querySelectorAll('.animated');
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            entry.target.classList.add(
-                                entry.target.matches('.card, #intro p, #intro h2, #gems-section h2')? 'slide-in-up' : 'fade-in'
-                            );
-                            entry.target.classList.add('is-visible');
-                            observer.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.1 });
-
-                animatedElements.forEach(el => observer.observe(el));
             }
-            
-            fetchGemsData(); // 페이지 로드 시 데이터 가져오기 함수 호출
-        });
+
+            showError(message) {
+                const container = document.getElementById('festivalsContainer');
+                container.innerHTML = `
+                    <div class="no-results">
+                        <h3>😔 오류 발생</h3>
+                        <p>${message}</p>
+                        <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 20px; cursor: pointer;">
+                            새로고침
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 인스턴스 생성 및 초기화
+        const festivalTracker = new FestivalTracker();
     </script>
 </body>
 </html>
