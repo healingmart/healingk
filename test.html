@@ -252,6 +252,11 @@
             39: '음식점'
         };
 
+        // TODO: 아래 YOUR_ACTUAL_API_KEY_HERE를 Vercel 환경변수에 설정한 API 키 중 하나로 바꿔주세요.
+        // 예: const CLIENT_API_KEY = 'your_api_key_from_vercel';
+        const CLIENT_API_KEY = 'DFGHJKLMNBVCXZ-api-dkfk2jak'; 
+
+
         let currentPage = 1;
         const itemsPerPage = 9; // Grid layout makes 9 items per page visually appealing
         let totalCount = 0;
@@ -329,7 +334,11 @@
         async function fetchAPI(operation, params) {
             const urlParams = new URLSearchParams({ operation, ...params }).toString();
             try {
-                const response = await fetch(`${API_ENDPOINT}?${urlParams}`);
+                const response = await fetch(`${API_ENDPOINT}?${urlParams}`, {
+                    headers: {
+                        'X-API-Key': CLIENT_API_KEY // API 키를 헤더에 포함
+                    }
+                });
                 const data = await response.json();
                 if (!response.ok || !data.success) {
                     throw new Error(data.error?.message || 'API 호출 실패');
@@ -666,7 +675,7 @@
         document.getElementById('resetButton').addEventListener('click', () => {
             keywordInput.value = '';
             areaCodeSelect.value = '';
-            startDateInput.value = ''; 
+            startDateInput.value = '';
             endDateInput.value = '';
             statusFilterSelect.value = 'all';
             fetchFestivals(true); // Reset and fetch
